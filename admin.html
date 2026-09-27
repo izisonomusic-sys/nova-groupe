@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration — NOVA</title>
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/icons/icon-192.png" />
+  <meta name="theme-color" content="#0b1434" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <style>
+    .admin-wrap { width: min(980px, 94%); margin: 0 auto; padding: 36px 0 70px; }
+    .admin-login { max-width: 400px; margin: 50px auto 0; }
+    .admin-h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .admin-row {
+      display: grid; grid-template-columns: 92px 1fr auto; gap: 16px;
+      align-items: center; background: #f8f9fd; border: 1px solid var(--line);
+      border-radius: 14px; padding: 14px; margin-bottom: 12px;
+    }
+    .ar-img { width: 92px; height: 66px; object-fit: cover; border-radius: 10px; }
+    .ar-info .badge { margin-bottom: 6px; }
+    .ar-info b { display: block; font-size: 15px; }
+    .ar-info small { color: var(--muted); font-size: 12.5px; }
+    .ar-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+    .ar-stats { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .ar-stat { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; text-align: center; }
+    .ar-stat span { display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
+    .ar-stat b { font-size: 12.5px; }
+    .ar-actions { display: flex; gap: 8px; align-items: center; }
+    .ar-date { font-size: 11px; color: var(--muted); }
+    @media (max-width: 760px) {
+      .admin-row { grid-template-columns: 1fr; }
+      .ar-img { width: 100%; height: 140px; }
+      .ar-right { align-items: flex-start; }
+      .ar-stats { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== BARRE SUPÉRIEURE ===================== -->
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a href="index.html" class="logo">
+        <img src="assets/img/logo.svg" alt="Logo NOVA" />
+        <span>NOVA<small>IMMOBILIER &amp; ÉNERGIES</small></span>
+      </a>
+      <div class="topbar-actions">
+        <a href="index.html" class="btn btn-ghost btn-sm">Voir le site</a>
+        <a href="app.html" class="btn btn-ghost btn-sm">Mon espace</a>
+        <button class="btn btn-primary btn-sm" id="adminLogout" style="display:none">
+          <svg class="ic ic-sm"><use href="#i-logout"/></svg> Se déconnecter
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-wrap">
+
+    <!-- ===================== CONNEXION ADMIN ===================== -->
+    <div class="admin-login" id="adminLogin">
+      <div class="auth-logo">
+        <img src="assets/img/logo.svg" alt="" />
+        <b>ADMINISTRATION</b>
+      </div>
+      <div class="card">
+        <h1 class="center" style="font-size:20px">Espace administrateur</h1>
+        <p class="center muted" style="font-size:13.5px;margin-bottom:20px">Publiez et gérez les projets affichés sur la page d'accueil</p>
+        <form id="adminLoginForm" novalidate>
+          <div class="field" id="f-adm-user">
+            <label for="admUser">Téléphone du compte administrateur</label>
+            <input class="input" id="admUser" type="tel" placeholder="+228XXXXXXXX" autocomplete="username" required />
+            <div class="err">Identifiants incorrects.</div>
+          </div>
+          <div class="field" id="f-adm-pass">
+            <label for="admPass">Mot de passe</label>
+            <input class="input" id="admPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <svg class="ic ic-sm"><use href="#i-shield"/></svg> Se connecter
+          </button>
+        </form>
+        <p class="hint muted center" style="font-size:12.5px;margin-top:14px">Connectez-vous avec le numéro et le mot de passe de votre compte Supabase ayant le rôle administrateur.</p>
+      </div>
+    </div>
+
+    <!-- ===================== PANNEAU ADMIN ===================== -->
+    <div id="adminPanel" style="display:none">
+
+      <h1 class="admin-h1">Gestion des projets</h1>
+      <p class="muted" style="margin:8px 0 26px;font-size:14.5px">
+        Un projet publié s'affiche automatiquement sur la <b>page d'accueil</b> et dans le <b>tableau de bord</b> des membres,
+        avec le montant à investir, le gain/jour, la durée et le gain total.
+        Les projets sont triés <b>du plus petit au plus grand</b> montant.
+      </p>
+
+      <!-- ---- Formulaire de publication ---- -->
+      <div class="card" style="margin-bottom:26px">
+        <h3 style="font-size:17px;margin-bottom:18px">
+          <svg class="ic" style="color:var(--brand)"><use href="#i-plus"/></svg>
+          Publier un nouveau projet
+        </h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 18px" class="admin-form-grid">
+          <div class="field">
+            <label for="pType">Type</label>
+            <select class="select" id="pType">
+              <option value="0">Projet — onglet « Projets »</option>
+              <option value="1">Plan Spécial — onglet « Plans Spéciaux »</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pBadge">Badge (étiquette)</label>
+            <input class="input" id="pBadge" type="text" placeholder="ex. NOVA 5" />
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label for="pTitle">Titre du projet</label>
+            <input class="input" id="pTitle" type="text" placeholder="ex. Solaire — École de Tsévié" />
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label for="pDesc">Description</label>
+            <textarea class="input" id="pDesc" rows="2" placeholder="Courte description du projet"></textarea>
+          </div>
+          <div class="field">
+            <label for="pPrice">Montant à investir (FCFA)</label>
+            <input class="input" id="pPrice" type="number" min="100" step="100" placeholder="ex. 10000" />
+          </div>
+          <div class="field">
+            <label for="pDaily">Gain par jour estimé (FCFA)</label>
+            <input class="input" id="pDaily" type="number" min="1" step="1" placeholder="ex. 2" />
+          </div>
+          <div class="field">
+            <label for="pDays">Durée (jours)</label>
+            <input class="input" id="pDays" type="number" min="7" step="1" placeholder="ex. 90" />
+          </div>
+          <div class="field">
+            <label for="pImg">Image</label>
+            <select class="select" id="pImg">
+              <option value="assets/img/projet-solaire.jpg">Champ solaire</option>
+              <option value="assets/img/projet-immobilier.jpg">Immobilier</option>
+              <option value="assets/img/projet-vent.jpg">Éolien</option>
+              <option value="assets/img/projet-agri.jpg">Agriculture / irrigation</option>
+              <option value="assets/img/hero.jpg">Immeuble avec panneaux</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Aperçu en direct -->
+        <p class="hint muted" style="font-size:12.5px;margin:4px 0 10px">Aperçu de la carte telle qu'elle s'affichera :</p>
+        <div id="previewCard"></div>
+
+        <button class="btn btn-primary btn-lg mt-2" id="btnPublish">
+          <svg class="ic ic-sm"><use href="#i-arrow-up"/></svg> Publier le projet
+        </button>
+      </div>
+
+      <!-- ---- Liste des projets ---- -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3 style="font-size:17px">Projets publiés</h3>
+          <span class="badge badge-teal" id="projCount"></span>
+        </div>
+        <p class="hint muted" style="font-size:12.5px;margin:6px 0 16px">
+          Tri automatique du plus petit au plus grand montant d'investissement.
+        </p>
+        <div id="projTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer style="background:var(--dark1);color:#7d84ad;margin-top:0;padding:18px 0;font-size:12px">
+    <div class="container" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <span>© <span id="year">2026</span> NOVA — Espace administrateur</span>
+      <span id="ftDisclaimer"></span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/admin.js"></script>
+
+<script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
+</body>
+</html>

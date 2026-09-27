@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon espace — NOVA</title>
+  <meta name="description" content="Espace membre NOVA : solde, projets, parrainage, assistance." />
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/icons/icon-192.png" />
+  <meta name="theme-color" content="#0b1434" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<div id="app-shell">
+
+  <!-- ===================== EN-TÊTE ===================== -->
+  <header class="app-header">
+    <a href="#/home" class="logo">
+      <img src="assets/img/logo.svg" alt="Logo NOVA" />
+      <span>NOVA<small>IMMOBILIER &amp; ÉNERGIES</small></span>
+    </a>
+    <div class="h-right">
+      <span class="badge pill-verified status-pill">
+        <svg class="ic ic-sm"><use href="#i-shield"/></svg> Vérifié
+      </span>
+      <div class="avatar" id="headerAvatar">?</div>
+    </div>
+  </header>
+
+  <!-- ===================== BANDEAU ACCUEIL ===================== -->
+  <div class="app-hero" id="appHero">
+    <div class="greet">
+      <img src="assets/img/logo.svg" alt="" />
+      <div>
+        <h2 id="greetName">Bonjour</h2>
+        <span class="idline" id="greetId">ID : —</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-content">
+
+    <!-- ============ VUE : ACCUEIL ============ -->
+    <section class="view" id="view-home">
+      <div class="balances">
+        <div class="bal-card solde"><span>Solde</span><b id="balSolde">0 FCFA</b></div>
+        <div class="bal-card revenus"><span>Revenus</span><b id="balRevenus">0 FCFA</b></div>
+        <div class="bal-card recharge"><span>Recharge</span><b id="balRecharge">0 FCFA</b></div>
+      </div>
+
+      <div class="actions">
+        <a class="action" href="#/recharger">
+          <span class="a-ic a-teal"><svg class="ic"><use href="#i-wallet"/></svg></span>
+          <span>Recharger</span>
+        </a>
+        <a class="action" href="#/retrait">
+          <span class="a-ic a-purple"><svg class="ic"><use href="#i-arrow-up"/></svg></span>
+          <span>Retrait</span>
+        </a>
+        <a class="action" href="#/presence">
+          <span class="a-ic a-amber"><svg class="ic"><use href="#i-calendar"/></svg></span>
+          <span>Présence</span>
+        </a>
+        <a class="action" href="#/assistance">
+          <span class="a-ic a-blue"><svg class="ic"><use href="#i-headphones"/></svg></span>
+          <span>Assistance</span>
+        </a>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="plans">Projets</button>
+        <button class="tab" data-tab="speciaux">Plans Spéciaux</button>
+      </div>
+
+      <div class="plan-list" id="planListHome"><!-- rendu par app.js --></div>
+
+      <p class="app-note">
+        <svg class="ic ic-sm"><use href="#i-info"/></svg>
+        <span>Rendements estimés à titre indicatif — aucun gain n'est garanti. Démonstration.</span>
+      </p>
+    </section>
+
+    <!-- ============ VUE : RECHARGER ============ -->
+    <section class="view" id="view-recharger">
+      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-wallet"/></svg> Recharger mon portefeuille</h2>
+
+      <div class="form-card">
+        <div class="field">
+          <label for="rcAmount">Montant à recharger (FCFA)</label>
+          <input class="input" id="rcAmount" type="number" min="1000" step="100" placeholder="Ex. 10000" />
+          <div class="amount-chips" id="rcChips">
+            <button type="button" class="chip">2 000</button>
+            <button type="button" class="chip">5 000</button>
+            <button type="button" class="chip active">10 000</button>
+            <button type="button" class="chip">25 000</button>
+            <button type="button" class="chip">50 000</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3><svg class="ic ic-sm" style="color:var(--brand)"><use href="#i-phone"/></svg> Portefeuille mobile money</h3>
+        <div class="field">
+          <label for="rcCountry">Pays</label>
+          <select class="select" id="rcCountry"></select>
+        </div>
+        <div class="field">
+          <label for="rcOperator">Opérateur</label>
+          <select class="select" id="rcOperator"></select>
+        </div>
+        <div class="field">
+          <label for="rcPhone">Numéro de récepteur</label>
+          <div class="phone-row">
+            <select class="select" id="rcDial"></select>
+            <input class="input" id="rcPhone" type="tel" inputmode="numeric" placeholder="90 00 00 00" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="rcName">Nom complet</label>
+          <input class="input" id="rcName" type="text" placeholder="Nom du titulaire du compte" />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="btnRecharge">
+          <svg class="ic ic-sm"><use href="#i-check"/></svg> Enregistrer &amp; payer
+        </button>
+        <p class="hint muted" style="font-size:12px;margin-top:10px">Le portefeuille sera crédité uniquement après confirmation du paiement par le prestataire.</p>
+      </div>
+    </section>
+
+    <!-- ============ VUE : RETRAIT ============ -->
+    <section class="view" id="view-retrait">
+      <h2 class="view-title"><svg class="ic" style="color:#5b4bc4"><use href="#i-arrow-up"/></svg> Demander un retrait</h2>
+
+      <div class="balances" style="grid-template-columns:1fr">
+        <div class="bal-card solde" style="text-align:left;display:flex;justify-content:space-between;align-items:center">
+          <span>Solde disponible</span><b id="wdAvail" style="color:var(--brand-dk)">0 FCFA</b>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="field">
+          <label for="wdAmount">Montant à retirer (FCFA)</label>
+          <input class="input" id="wdAmount" type="number" min="1000" step="100" placeholder="Ex. 5000" />
+        </div>
+        <div class="field">
+          <label for="wdCountry">Pays</label>
+          <select class="select" id="wdCountry"></select>
+        </div>
+        <div class="field">
+          <label for="wdOperator">Opérateur</label>
+          <select class="select" id="wdOperator"></select>
+        </div>
+        <div class="field">
+          <label for="wdPhone">Numéro de récepteur</label>
+          <div class="phone-row">
+            <select class="select" id="wdDial"></select>
+            <input class="input" id="wdPhone" type="tel" inputmode="numeric" placeholder="90 00 00 00" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="wdName">Nom complet</label>
+          <input class="input" id="wdName" type="text" placeholder="Nom du titulaire du compte" />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="btnWithdraw">
+          <svg class="ic ic-sm"><use href="#i-arrow-up"/></svg> Confirmer le retrait
+        </button>
+        <p class="hint muted" style="font-size:12px;margin-top:10px">Les retraits sont soumis à validation.</p>
+      </div>
+    </section>
+
+    <!-- ============ VUE : PRÉSENCE ============ -->
+    <section class="view" id="view-presence">
+      <h2 class="view-title"><svg class="ic" style="color:#b97a1a"><use href="#i-calendar"/></svg> Pointage de présence</h2>
+      <div class="presence-card">
+        <div class="a-ic"><svg class="ic ic-lg"><use href="#i-calendar"/></svg></div>
+        <h3>Présence du jour</h3>
+        <p id="presenceDate"></p>
+        <div class="presence-stats">
+          <div class="ts-card" style="background:rgba(255,255,255,.1);box-shadow:none"><b id="streakCount" style="color:#8ab6ff">0</b><span style="color:#aab1d6">Jours consécutifs</span></div>
+          <div class="ts-card" style="background:rgba(255,255,255,.1);box-shadow:none"><b id="presenceLast" style="color:#8ab6ff">—</b><span style="color:#aab1d6">Dernier pointage</span></div>
+        </div>
+        <button class="btn btn-primary btn-lg btn-block" id="btnPresence" style="margin-top:20px">
+          <svg class="ic ic-sm"><use href="#i-check"/></svg> Pointer ma présence
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ VUE : MES INVESTISSEMENTS ============ -->
+    <section class="view" id="view-investissements">
+      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-chart"/></svg> Mes Investissements</h2>
+
+      <div class="balances" style="margin-top:0">
+        <div class="bal-card solde"><span>Total investi</span><b id="invTotal">0 FCFA</b></div>
+        <div class="bal-card revenus"><span>En cours</span><b id="invActive">0</b></div>
+        <div class="bal-card recharge"><span>Gains (est.)</span><b id="invEarned">0 FCFA</b></div>
+      </div>
+
+      <div class="hist-list" id="invList"><!-- rendu par app.js --></div>
+    </section>
+
+    <!-- ============ VUE : ASSISTANCE ============ -->
+    <section class="view" id="view-assistance">
+      <h2 class="view-title"><svg class="ic" style="color:#2f6fd0"><use href="#i-headphones"/></svg> Assistance</h2>
+      <div class="assist-hero">
+        <div class="a-ic"><svg class="ic ic-lg"><use href="#i-headphones"/></svg></div>
+        <h3>Besoin d'aide ?</h3>
+        <p>Notre équipe est disponible pour vous 7j/7</p>
+      </div>
+      <div class="assist-list">
+        <a class="assist-item" id="assistWa" href="#" target="_blank" rel="noopener">
+          <span class="a-ic ai-wa"><svg class="ic"><use href="#i-whatsapp"/></svg></span>
+          <div><b>Rejoindre WhatsApp</b><span>Réponse rapide, 24h/24</span></div>
+        </a>
+        <a class="assist-item" id="assistTg" href="#" target="_blank" rel="noopener">
+          <span class="a-ic ai-tg"><svg class="ic"><use href="#i-telegram"/></svg></span>
+          <div><b>Télégramme du service client</b><span>Assistance technique</span></div>
+        </a>
+        <a class="assist-item" id="assistGroup" href="#" target="_blank" rel="noopener">
+          <span class="a-ic ai-tg"><svg class="ic"><use href="#i-users"/></svg></span>
+          <div><b>Groupe de discussion Télégramme</b><span>Communauté des membres</span></div>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============ VUE : ÉQUIPE (parrainage) ============ -->
+    <section class="view" id="view-equipe">
+      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-users"/></svg> Invitez vos amis &amp; gagnez</h2>
+
+      <div class="team-invite">
+        <h3>Partagez votre lien de parrainage</h3>
+        <div class="ref-link" id="teamRefLink"></div>
+        <button class="btn btn-light" id="copyTeamLink">
+          <svg class="ic ic-sm"><use href="#i-copy"/></svg> Copier le lien
+        </button>
+      </div>
+
+      <h2 class="view-title" style="font-size:15.5px">Aperçu de l'équipe</h2>
+      <div class="team-stats">
+        <div class="ts-card"><b id="teamSize">0</b><span>Taille de l'équipe</span></div>
+        <div class="ts-card"><b id="teamInvest">0 FCFA</b><span>Total de l'investissement</span></div>
+        <div class="ts-card teal"><b id="teamComm">0 FCFA</b><span>Commissions</span></div>
+        <div class="ts-card"><b>Niveau 1</b><span>Niveau actif</span></div>
+      </div>
+      <div class="levels-row">
+        <div>L1 (<span id="teamL1">0</span>)<small>Parrainés directs</small></div>
+        <div>L2 (0)<small>—</small></div>
+        <div>L3 (0)<small>—</small></div>
+      </div>
+
+      <div class="ref-rules">
+        <ul>
+          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span><b>Niveau 1</b> — 3 % de commission sur le premier versement de chaque filleul.</span></li>
+          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span>Parrainage simple à un seul niveau, sans chaine ni multi-niveaux.</span></li>
+          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span>Les commissions sont créditées sur votre solde et visibles dans l'historique.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ VUE : PUBLICATIONS ============ -->
+    <section class="view" id="view-publications">
+      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-news"/></svg> Publications</h2>
+      <div id="newsList"><!-- rendu par app.js --></div>
+    </section>
+
+    <!-- ============ VUE : HISTORIQUE ============ -->
+    <section class="view" id="view-historique">
+      <h2 class="view-title"><svg class="ic" style="color:#5b4bc4"><use href="#i-clock"/></svg> Historique des transactions</h2>
+      <div class="hist-list" id="histList"><!-- rendu par app.js --></div>
+    </section>
+
+    <!-- ============ VUE : COMPTE ============ -->
+    <section class="view" id="view-compte">
+      <div class="profile-card">
+        <div class="avatar" id="profileAvatar">?</div>
+        <h3 id="profileName">—</h3>
+        <span class="idline" id="profileId">ID : —</span>
+        <div class="status-row">
+          <span class="badge pill-verified" style="background:var(--brand-soft);color:var(--brand-dk);border-color:#bfe9e2">
+            <svg class="ic ic-sm"><use href="#i-shield"/></svg> Compte vérifié
+          </span>
+        </div>
+        <div class="mini-balances">
+          <div class="mini-b"><span>Solde</span><b id="accSolde">0 FCFA</b></div>
+          <div class="mini-b"><span>Recharge</span><b id="accRecharge">0 FCFA</b></div>
+          <div class="mini-b"><span>Revenus</span><b id="accRevenus">0 FCFA</b></div>
+        </div>
+      </div>
+
+      <h2 class="view-title" style="font-size:15.5px">Paramètres</h2>
+      <div class="settings-list">
+        <button class="setting-item" id="btnPassword">
+          <span class="a-ic a-teal"><svg class="ic"><use href="#i-shield"/></svg></span>
+          <div><b>Sécurité</b><span>Modifier votre mot de passe</span></div>
+          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <a class="setting-item" href="#/recharger">
+          <span class="a-ic a-amber"><svg class="ic"><use href="#i-wallet"/></svg></span>
+          <div><b>Portefeuille de retrait</b><span>Pays, opérateur, numéro</span></div>
+          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <a class="setting-item" href="#/historique">
+          <span class="a-ic a-purple"><svg class="ic"><use href="#i-clock"/></svg></span>
+          <div><b>Historique</b><span>Vos transactions</span></div>
+          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <a class="setting-item" href="#/publications">
+          <span class="a-ic a-teal"><svg class="ic"><use href="#i-news"/></svg></span>
+          <div><b>Publications</b><span>Actualités des projets</span></div>
+          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <button class="setting-item" id="btnLogout" style="color:var(--red)">
+          <span class="a-ic" style="background:#fdecec;color:var(--red)"><svg class="ic"><use href="#i-logout"/></svg></span>
+          <div><b>Se déconnecter</b><span>Quitter votre session</span></div>
+        </button>
+      </div>
+    </section>
+
+  </div><!-- /app-content -->
+
+  <!-- ===================== NAVIGATION BASSE ===================== -->
+  <nav class="bottom-nav">
+    <a class="bn-item" href="#/home" data-nav="home">
+      <svg class="ic"><use href="#i-home"/></svg><span>Accueil</span>
+    </a>
+    <a class="bn-item" href="#/equipe" data-nav="equipe">
+      <svg class="ic"><use href="#i-users"/></svg><span>Équipe</span>
+    </a>
+    <a class="bn-item" href="#/investissements" data-nav="investissements">
+      <svg class="ic"><use href="#i-chart"/></svg><span>Investisse&#173;ments</span>
+    </a>
+    <a class="bn-item" href="#/assistance" data-nav="assistance">
+      <svg class="ic"><use href="#i-headphones"/></svg><span>Assistance</span>
+    </a>
+    <a class="bn-item" href="#/compte" data-nav="compte">
+      <svg class="ic bn-icon-account" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1-3.5 4-5 8-5s7 1.5 8 5"></path></svg><span>Mon Compte</span>
+    </a>
+  </nav>
+</div><!-- /app-shell -->
+
+<!-- ===================== MODALE BIENVENUE ===================== -->
+<div class="modal-overlay" id="welcomeModal">
+  <div class="modal">
+    <div class="m-ic mi-teal"><svg class="ic ic-lg"><use href="#i-whatsapp"/></svg></div>
+    <h3>NOVA GROUP</h3>
+    <p>Bienvenue chez NOVA ! Rejoignez notre communauté WhatsApp pour rester informé de toutes les nouveautés.</p>
+    <div class="m-actions">
+      <a class="btn btn-primary btn-block" id="welcomeWa" href="#" target="_blank" rel="noopener">
+        <svg class="ic ic-sm"><use href="#i-whatsapp"/></svg> Rejoindre la communauté
+      </a>
+      <button class="btn btn-outline btn-block" id="welcomeLater">Plus tard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALE INVESTISSEMENT ===================== -->
+<div class="modal-overlay" id="investModal">
+  <div class="modal">
+    <div class="m-ic mi-teal"><svg class="ic ic-lg"><use href="#i-chart"/></svg></div>
+    <h3>Confirmer l'investissement</h3>
+    <p id="investModalText"></p>
+    <div class="m-actions">
+      <button class="btn btn-primary btn-block" id="investConfirm">
+        <svg class="ic ic-sm"><use href="#i-check"/></svg> Investir maintenant
+      </button>
+      <button class="btn btn-outline btn-block" id="investCancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALE MOT DE PASSE ===================== -->
+<div class="modal-overlay" id="passModal">
+  <div class="modal">
+    <div class="m-ic mi-amber"><svg class="ic ic-lg"><use href="#i-shield"/></svg></div>
+    <h3>Modifier le mot de passe</h3>
+    <div style="text-align:left">
+      <div class="field" style="margin-top:14px">
+        <label for="npOld">Mot de passe actuel</label>
+        <input class="input" id="npOld" type="password" />
+      </div>
+      <div class="field">
+        <label for="npNew">Nouveau mot de passe</label>
+        <input class="input" id="npNew" type="password" />
+      </div>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-primary btn-block" id="npSave">Enregistrer</button>
+      <button class="btn btn-outline btn-block" id="npCancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/app.js"></script>
+
+<script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
+</body>
+</html>

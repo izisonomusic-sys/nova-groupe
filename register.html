@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>S'inscrire — NOVA</title>
+  <meta name="description" content="Créez votre compte NOVA et investissez dans l'immobilier et les énergies renouvelables." />
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/icons/icon-192.png" />
+  <meta name="theme-color" content="#0b1434" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="auth-page">
+
+    <!-- ===================== FORMULAIRE ===================== -->
+    <div class="auth-form-side">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <img src="assets/img/logo.svg" alt="Logo NOVA" />
+          <b>NOVA GROUP</b>
+        </div>
+        <h1>Créer un compte</h1>
+        <p class="sub">Rejoignez la communauté NOVA en 2 minutes</p>
+
+        <form id="registerForm" novalidate>
+          <div class="field" id="f-user">
+            <label for="username">Nom d'utilisateur</label>
+            <input class="input" id="username" type="text" placeholder="Votre nom" autocomplete="username" />
+            <div class="err">Veuillez saisir un nom d'au moins 3 caractères.</div>
+          </div>
+
+          <div class="field" id="f-country">
+            <label for="country">Pays</label>
+            <select class="select" id="country"><!-- rendu par main.js --></select>
+            <div class="err">Veuillez choisir un pays.</div>
+          </div>
+
+          <div class="field" id="f-phone">
+            <label for="phone">Numéro de téléphone</label>
+            <div class="phone-row">
+              <select class="select" id="dial"></select>
+              <input class="input" id="phone" type="tel" inputmode="numeric" placeholder="90 00 00 00" />
+            </div>
+            <div class="err">Veuillez saisir un numéro valide (8 à 10 chiffres).</div>
+          </div>
+
+          <div class="field" id="f-pass">
+            <label for="pass">Mot de passe</label>
+            <input class="input" id="pass" type="password" placeholder="••••••••" autocomplete="new-password" />
+            <div class="err">Le mot de passe doit contenir au moins 6 caractères.</div>
+          </div>
+
+          <div class="field" id="f-pass2">
+            <label for="pass2">Confirmation du mot de passe</label>
+            <input class="input" id="pass2" type="password" placeholder="••••••••" autocomplete="new-password" />
+            <div class="hint" id="passMatch">Les mots de passe doivent correspondre.</div>
+            <div class="err">Les mots de passe ne correspondent pas.</div>
+          </div>
+
+          <div class="field">
+            <label for="ref">Code de parrainage (optionnel)</label>
+            <input class="input" id="ref" type="text" placeholder="Code de parrainage" />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:6px">S'inscrire</button>
+        </form>
+
+        <p class="auth-foot">Déjà inscrit ? <a href="login.html">Se connecter</a></p>
+      </div>
+    </div>
+
+    <!-- ===================== PANNEAU LATERAL ===================== -->
+    <aside class="auth-side">
+      <h2>Investissez dans l'immobilier et l'énergie propre, au cœur de l'Afrique de l'Ouest</h2>
+      <p>Des projets solaires, éoliens et immobiliers concrets, une recharge par mobile money et un suivi en temps réel.</p>
+      <ul>
+        <li><svg class="ic"><use href="#i-check"/></svg> Inscription gratuite avec votre téléphone</li>
+        <li><svg class="ic"><use href="#i-check"/></svg> Recharge Togocom, Moov, Orange, MTN…</li>
+        <li><svg class="ic"><use href="#i-check"/></svg> Bonus de parrainage : 3 % du 1er versement</li>
+        <li><svg class="ic"><use href="#i-check"/></svg> Assistance WhatsApp / Telegram 24/7</li>
+      </ul>
+      <div class="auth-demo-note">
+        Création de compte sécurisée via Supabase.
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/icons.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/auth.js"></script>
+
+<script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
+</body>
+</html>

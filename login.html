@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Se connecter — NOVA</title>
+  <meta name="description" content="Accédez à votre compte NOVA." />
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/icons/icon-192.png" />
+  <meta name="theme-color" content="#0b1434" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="auth-page">
+
+    <!-- ===================== FORMULAIRE ===================== -->
+    <div class="auth-form-side">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <img src="assets/img/logo.svg" alt="Logo NOVA" />
+          <b>NOVA GROUP</b>
+        </div>
+        <h1>Connexion</h1>
+        <p class="sub">Accédez à votre compte NOVA</p>
+
+        <form id="loginForm" novalidate>
+          <div class="field" id="f-luser">
+            <label for="luser">Nom d'utilisateur ou téléphone</label>
+            <input class="input" id="luser" type="text" placeholder="Votre identifiant" autocomplete="username" />
+            <div class="err">Veuillez saisir votre identifiant.</div>
+          </div>
+
+          <div class="field" id="f-country">
+            <label for="country">Pays</label>
+            <select class="select" id="country"><!-- rendu par auth.js --></select>
+          </div>
+
+          <div class="field" id="f-phone">
+            <label for="phone">Numéro de téléphone</label>
+            <div class="phone-row">
+              <select class="select" id="dial"></select>
+              <input class="input" id="phone" type="tel" inputmode="numeric" placeholder="90 00 00 00" />
+            </div>
+            <div class="err">Veuillez saisir votre numéro de téléphone.</div>
+          </div>
+
+          <div class="field" id="f-pass">
+            <label for="pass">Mot de passe</label>
+            <input class="input" id="pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+            <div class="err">Mot de passe requis.</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:6px">Se connecter</button>
+        </form>
+
+        <p class="auth-foot">Pas encore de compte ? <a href="register.html">Créer un compte</a></p>
+      </div>
+    </div>
+
+    <!-- ===================== PANNEAU LATERAL ===================== -->
+    <aside class="auth-side">
+      <h2>Bon retour !</h2>
+      <p>Suivez vos projets, vos revenus et votre équipe depuis votre espace personnel.</p>
+      <ul>
+        <li><svg class="ic"><use href="#i-wallet"/></svg> Portefeuille &amp; historique des transactions</li>
+        <li><svg class="ic"><use href="#i-chart"/></svg> Projets et revenus en temps réel</li>
+        <li><svg class="ic"><use href="#i-users"/></svg> Votre équipe de parrainage</li>
+        <li><svg class="ic"><use href="#i-headphones"/></svg> Assistance en direct</li>
+      </ul>
+      <div class="auth-demo-note">
+        Connexion sécurisée avec votre numéro de téléphone et votre mot de passe.
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/icons.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/auth.js"></script>
+
+<script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
+</body>
+</html>

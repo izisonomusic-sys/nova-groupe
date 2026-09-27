@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NOVA — Immobilier & Énergies renouvelables</title>
+  <meta name="description" content="NOVA finance des projets immobiliers et d'énergies renouvelables. Investissez dès 3 000 FCFA." />
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/icons/icon-192.png" />
+  <meta name="theme-color" content="#0b1434" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body class="has-bottom-nav">
+
+  <!-- ===================== HERO (bannière + photos) ===================== -->
+  <header class="home-hero">
+    <div class="container hh-inner">
+      <div class="hh-row">
+        <div class="hh-brand">
+          <img src="assets/img/logo.svg" alt="Logo NOVA" />
+          <div>
+            <b>GROUPE NOVA</b>
+            <span id="homeGreet">Bienvenue</span>
+          </div>
+        </div>
+        <div class="hh-ctas">
+          <a href="login.html" class="btn btn-ghost btn-sm">Se connecter</a>
+          <a href="register.html" class="btn btn-primary btn-sm">S'inscrire</a>
+        </div>
+      </div>
+      <p class="hh-sub">Investissez dans l'immobilier et les énergies renouvelables, dès <b>3 000 FCFA</b>.</p>
+      <div class="hh-photos">
+        <div class="hh-photo">
+          <img src="assets/img/projet-solaire.jpg" alt="Panneaux solaires" />
+          <span><svg class="ic ic-sm"><use href="#i-sun"/></svg> Panneaux solaires</span>
+        </div>
+        <div class="hh-photo">
+          <img src="assets/img/hero.jpg" alt="Immeuble avec panneaux solaires" />
+          <span><svg class="ic ic-sm"><use href="#i-building"/></svg> Immeubles</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container home-main">
+
+    <!-- ===================== SOLDE / REVENUS / RECHARGE ===================== -->
+    <div class="balances" style="margin-top:16px">
+      <div class="bal-card solde"><span>Solde</span><b id="homeSolde">0 FCFA</b></div>
+      <div class="bal-card revenus"><span>Revenus</span><b id="homeRevenus">0 FCFA</b></div>
+      <div class="bal-card recharge"><span>Recharge</span><b id="homeRecharge">0 FCFA</b></div>
+    </div>
+
+    <!-- ===================== ACTIONS RAPIDES ===================== -->
+    <div class="actions">
+      <a class="action" data-app="/recharger" href="login.html">
+        <span class="a-ic a-teal"><svg class="ic"><use href="#i-wallet"/></svg></span>
+        <span>Recharger</span>
+      </a>
+      <a class="action" data-app="/retrait" href="login.html">
+        <span class="a-ic a-purple"><svg class="ic"><use href="#i-arrow-up"/></svg></span>
+        <span>Retrait</span>
+      </a>
+      <a class="action" data-app="/presence" href="login.html">
+        <span class="a-ic a-amber"><svg class="ic"><use href="#i-calendar"/></svg></span>
+        <span>Présence</span>
+      </a>
+      <a class="action" data-app="/assistance" href="login.html">
+        <span class="a-ic a-blue"><svg class="ic"><use href="#i-headphones"/></svg></span>
+        <span>Assistance</span>
+      </a>
+    </div>
+
+    <!-- ===================== ONGLETS ===================== -->
+    <div class="tabs">
+      <button class="tab active" data-tab="plans">Projets</button>
+      <button class="tab" data-tab="speciaux">Plans Spéciaux</button>
+    </div>
+
+    <!-- ===================== PROJETS ===================== -->
+    <div class="plan-list" id="homePlanList"><!-- rendu par main.js --></div>
+
+    <p class="app-note">
+      <svg class="ic ic-sm"><use href="#i-info"/></svg>
+      <span>Rendements estimés à titre indicatif — aucun gain n'est garanti. Démonstration.</span>
+    </p>
+  </main>
+
+  <!-- ===================== NAVIGATION BASSE (icônes) ===================== -->
+  <nav class="bottom-nav">
+    <a class="bn-item active" href="#top">
+      <svg class="ic"><use href="#i-home"/></svg><span>Accueil</span>
+    </a>
+    <a class="bn-item" data-app="/equipe" href="login.html">
+      <svg class="ic"><use href="#i-users"/></svg><span>Équipe</span>
+    </a>
+    <a class="bn-item" data-app="/investissements" href="login.html">
+      <svg class="ic"><use href="#i-chart"/></svg><span>Investisse&#173;ments</span>
+    </a>
+    <a class="bn-item" data-app="/assistance" href="login.html">
+      <svg class="ic"><use href="#i-headphones"/></svg><span>Assistance</span>
+    </a>
+    <a class="bn-item" data-app="/compte" href="login.html">
+      <svg class="ic bn-icon-account" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1-3.5 4-5 8-5s7 1.5 8 5"></path></svg><span>Mon Compte</span>
+    </a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/main.js"></script>
+
+<script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
+</body>
+</html>
