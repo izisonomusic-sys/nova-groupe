@@ -612,3 +612,407 @@ footer { background: var(--dark1); color: #aab1d6; margin-top: 80px; }
   overflow: visible;
   flex: none;
 }
+
+
+/* Ajustement ciblé : accueil mobile uniquement (version v9).
+   Le logo du bandeau était dans .greet, mais l'ancienne règle ciblait .logo img :
+   l'image SVG gardait donc sa taille naturelle et agrandissait le bandeau. */
+#appHero .greet > img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  flex: 0 0 42px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+}
+@media (max-width: 640px) {
+  #appHero { padding: 10px 16px 14px; margin-top: 0; }
+  #appHero .greet { gap: 10px; min-width: 0; }
+  #appHero .greet > div { min-width: 0; }
+  #appHero h2 { font-size: 17px; line-height: 1.25; }
+  #appHero .idline { font-size: 10px; overflow-wrap: anywhere; }
+  #view-home { padding: 12px 14px 18px; }
+  #view-home .balances { gap: 8px; margin-top: 0; }
+  #view-home .bal-card { padding: 11px 6px; border-radius: 12px; }
+  #view-home .bal-card span { font-size: 10px; letter-spacing: .35px; }
+  #view-home .bal-card b { font-size: clamp(12px, 3.5vw, 16px); line-height: 1.25; overflow-wrap: anywhere; }
+  #view-home .actions { gap: 8px; margin-top: 12px; }
+  #view-home .action { padding: 10px 5px; gap: 6px; border-radius: 12px; }
+  #view-home .action .a-ic { width: 38px; height: 38px; border-radius: 11px; }
+  #view-home .action span { font-size: 10.5px; line-height: 1.2; text-align: center; }
+  #view-home .tabs { margin-top: 14px; }
+  #view-home .plan-list { gap: 12px; margin-top: 12px; }
+}
+@media (max-width: 380px) {
+  #appHero { padding: 8px 12px 12px; }
+  #appHero .greet > img { width: 36px; height: 36px; min-width: 36px; flex-basis: 36px; }
+  #appHero h2 { font-size: 16px; }
+  #view-home { padding: 10px 10px 16px; }
+  #view-home .balances { gap: 5px; }
+  #view-home .bal-card { padding: 9px 3px; }
+  #view-home .bal-card span { font-size: 9px; }
+  #view-home .bal-card b { font-size: 12px; }
+  #view-home .actions { gap: 5px; }
+  #view-home .action { padding: 9px 2px; }
+  #view-home .action .a-ic { width: 34px; height: 34px; }
+  #view-home .action span { font-size: 9.5px; }
+}
+
+/* =========================================================
+   FIX MOBILE — ACCUEIL UNIQUEMENT (2026-09-29)
+   Objectif : empêcher le bandeau d'accueil et son logo de
+   dépasser la largeur du viewport mobile.
+   Aucun JS, aucune fonctionnalité, aucune autre vue modifiée.
+   ========================================================= */
+#appHero,
+#appHero .greet,
+#view-home {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#appHero {
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+#appHero .greet {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+#appHero .greet > img {
+  display: block !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  flex: 0 0 42px !important;
+  object-fit: contain !important;
+  border-radius: 10px;
+}
+
+#appHero .greet > div {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+#appHero h2,
+#appHero .idline {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  #appHero {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 14px 14px;
+    margin-top: 0;
+  }
+
+  #appHero .greet {
+    width: 100%;
+    gap: 10px;
+  }
+
+  #appHero .greet > img {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    flex-basis: 40px !important;
+  }
+
+  #appHero h2 {
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  #appHero .idline {
+    display: block;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  /* Accueil : cartes toujours contenues dans l'écran. */
+  #view-home {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px 14px 18px;
+    overflow: hidden;
+  }
+
+  #view-home .balances,
+  #view-home .actions,
+  #view-home .tabs,
+  #view-home .plan-list {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #view-home .balances {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  #view-home .bal-card {
+    min-width: 0;
+    padding: 11px 5px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  #view-home .bal-card span,
+  #view-home .bal-card b {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #view-home .bal-card span {
+    font-size: 10px;
+    letter-spacing: .25px;
+  }
+
+  #view-home .bal-card b {
+    font-size: clamp(12px, 3.6vw, 16px);
+    line-height: 1.25;
+  }
+
+  #view-home .actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  #view-home .action {
+    min-width: 0;
+    padding: 10px 4px;
+    gap: 6px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  #view-home .action .a-ic {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 11px;
+  }
+
+  #view-home .action > span:last-child {
+    max-width: 100%;
+    font-size: 10.5px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #view-home .tabs {
+    margin-top: 14px;
+  }
+
+  #view-home .plan-list {
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  #view-home .plan {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #view-home .plan .pb {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  #appHero {
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  #appHero .greet > img {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    flex-basis: 36px !important;
+  }
+
+  #appHero h2 { font-size: 16px; }
+
+  #view-home {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  #view-home .balances { gap: 5px; }
+  #view-home .bal-card { padding-left: 3px; padding-right: 3px; }
+  #view-home .bal-card span { font-size: 9px; }
+  #view-home .bal-card b { font-size: 12px; }
+  #view-home .actions { gap: 5px; }
+  #view-home .action { padding-left: 2px; padding-right: 2px; }
+  #view-home .action .a-ic { width: 34px; height: 34px; min-width: 34px; }
+  #view-home .action > span:last-child { font-size: 9.5px; }
+}
+
+
+/* =========================================================
+   FIX FINAL — ACCUEIL MOBILE / LARGEUR DU VIEWPORT
+   Cible: app.html uniquement. Ne modifie aucune fonctionnalité.
+   ========================================================= */
+html, body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+#app-shell {
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  #app-shell {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  .app-header,
+  .app-hero,
+  .app-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .app-header {
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 8px;
+  }
+
+  .app-header .logo {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .app-header .logo span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-header .h-right {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .app-header .status-pill {
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 10px;
+  }
+
+  .app-content {
+    padding: 12px 10px 18px;
+  }
+
+  #view-home {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  #view-home .balances,
+  #view-home .actions {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #view-home .actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  #view-home .bal-card,
+  #view-home .action,
+  #view-home .tabs,
+  #view-home .plan-list,
+  #view-home .plan {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #view-home .plan {
+    display: block;
+    width: 100%;
+  }
+
+  #view-home .plan .ph {
+    position: relative;
+    width: 100%;
+    height: 170px;
+    min-height: 170px;
+  }
+
+  #view-home .plan .pb {
+    width: 100%;
+    min-width: 0;
+    padding: 13px 14px 14px;
+  }
+
+  #view-home .plan .stats {
+    min-width: 0;
+  }
+
+  #view-home .plan .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-content { padding-left: 8px; padding-right: 8px; }
+
+  #view-home .plan .ph {
+    height: 155px;
+    min-height: 155px;
+  }
+
+  #view-home .plan .pb {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

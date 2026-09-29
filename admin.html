@@ -17,6 +17,11 @@
     .admin-wrap { width: min(980px, 94%); margin: 0 auto; padding: 36px 0 70px; }
     .admin-login { max-width: 400px; margin: 50px auto 0; }
     .admin-h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .dashboard-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0 28px; }
+    .dashboard-card { background:#fff; border:1px solid var(--line); border-radius:15px; padding:17px; box-shadow:0 5px 18px rgba(12,24,64,.04); }
+    .dashboard-card span { display:block; color:var(--muted); font-size:12px; font-weight:700; }
+    .dashboard-card b { display:block; margin-top:8px; color:var(--dark1); font-size:clamp(18px,2vw,25px); line-height:1.2; overflow-wrap:anywhere; }
+    .dashboard-card small { display:block; margin-top:7px; color:var(--muted); font-size:11px; }
     .admin-row {
       display: grid; grid-template-columns: 92px 1fr auto; gap: 16px;
       align-items: center; background: #f8f9fd; border: 1px solid var(--line);
@@ -34,6 +39,8 @@
     .ar-actions { display: flex; gap: 8px; align-items: center; }
     .ar-date { font-size: 11px; color: var(--muted); }
     @media (max-width: 760px) {
+      .dashboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+      .dashboard-card { padding:13px; }
       .admin-row { grid-template-columns: 1fr; }
       .ar-img { width: 100%; height: 140px; }
       .ar-right { align-items: flex-start; }
@@ -92,7 +99,19 @@
     <!-- ===================== PANNEAU ADMIN ===================== -->
     <div id="adminPanel" style="display:none">
 
-      <h1 class="admin-h1">Gestion des projets</h1>
+      <h1 class="admin-h1">Tableau de bord NOVA</h1>
+      <p class="muted" style="margin:8px 0 14px;font-size:14px">Vue d’ensemble des comptes, dépôts, retraits, investissements et parrainages.</p>
+      <div class="dashboard-grid" id="adminStatsGrid" aria-live="polite">
+        <div class="dashboard-card"><span>Membres inscrits</span><b id="statMembers">—</b><small id="statMembersToday">—</small></div>
+        <div class="dashboard-card"><span>Dépôts confirmés</span><b id="statDeposits">—</b><small id="statDepositAmount">—</small></div>
+        <div class="dashboard-card"><span>Dépôts en attente</span><b id="statDepositsPending">—</b><small>Transactions non confirmées</small></div>
+        <div class="dashboard-card"><span>Demandes de retrait</span><b id="statWithdrawals">—</b><small id="statWithdrawalsPending">—</small></div>
+        <div class="dashboard-card"><span>Montant des retraits en attente</span><b id="statWithdrawalsAmount">—</b><small id="statWithdrawalsPaid">—</small></div>
+        <div class="dashboard-card"><span>Investissements actifs</span><b id="statInvestments">—</b><small id="statInvestmentsAmount">—</small></div>
+        <div class="dashboard-card"><span>Projets publiés</span><b id="statProjects">—</b><small>Disponibles sur la plateforme</small></div>
+        <div class="dashboard-card"><span>Parrainages enregistrés</span><b id="statReferrals">—</b><small id="statReferralBonuses">—</small></div>
+      </div>
+      <h2 class="admin-h1" style="font-size:21px;margin-bottom:6px">Gestion des projets</h2>
       <p class="muted" style="margin:8px 0 26px;font-size:14.5px">
         Un projet publié s'affiche automatiquement sur la <b>page d'accueil</b> et dans le <b>tableau de bord</b> des membres,
         avec le montant à investir, le gain/jour, la durée et le gain total.

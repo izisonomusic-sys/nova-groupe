@@ -226,6 +226,35 @@ app.get('/api/payments/paydunya/:reference', requireUser, async (req, res) => {
   }
 });
 
+// Retour navigateur : vérifie le token côté PayDunya puis crédite via la RPC idempotente.
+app.post('/api/payments/paydunya/confirm-return', requireUser, async (req, res) => {
+  try {
+    const token = String(req.body.token || '').trim();
+    if (!token || token.length > 300) return res.status(400).json({ error: 'Jeton de paiement invalide.' });
+    const { data: tx, error: lookupError } = await supabase.from('payment_transactions')
+      .select('id,reference,amount,status,provider_token,user_id')
+      .eq('provider_token', token).eq('user_id', req.user.id).maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!tx) return res.status(404).json({ error: 'Paiement introuvable pour ce compte.' });
+    if (tx.status === 'completed') return res.json({ ok: true, status: 'completed', reference: tx.reference });
+    const response = await fetch(`${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`, { method: 'GET', headers: paydunyaHeaders() });
+    const confirmed = await response.json();
+    if (!response.ok || confirmed.response_code !== '00' || confirmed.invoice?.status !== 'completed') {
+      return res.json({ ok: true, status: tx.status || 'pending', reference: tx.reference });
+    }
+    const amount = Number(confirmed.invoice.total_amount);
+    if (!Number.isSafeInteger(amount) || amount !== Number(tx.amount)) return res.status(409).json({ error: 'Le montant confirmé ne correspond pas à la transaction.' });
+    const { error: creditError } = await supabase.rpc('nova_confirm_paydunya_payment', {
+      p_payment_id: tx.id, p_provider_token: token, p_paid_amount: amount, p_provider_payload: confirmed
+    });
+    if (creditError) throw creditError;
+    return res.json({ ok: true, status: 'completed', reference: tx.reference });
+  } catch (err) {
+    console.error('PayDunya return confirmation error:', err.message);
+    return res.status(500).json({ error: 'Impossible de confirmer le paiement pour le moment.' });
+  }
+});
+
 // Notification PayDunya: vérifier le hash puis confirmer le statut auprès de l'API PayDunya.
 app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], async (req, res) => {
   try {
@@ -287,6 +316,50 @@ app.get('/api/admin/me', requireUser, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Admin profile read error:', err.message);
     return res.status(500).json({ error: 'Impossible de charger le profil administrateur.' });
+  }
+});
+
+app.get('/api/admin/stats', requireUser, requireAdmin, async (_req, res) => {
+  try {
+    const { data, error } = await supabase.rpc('nova_admin_dashboard_stats');
+    if (error) throw error;
+    return res.json({ stats: data || {} });
+  } catch (err) {
+    console.error('Admin dashboard stats error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger les statistiques administrateur.' });
+  }
+});
+
+app.get('/api/referrals/me', requireUser, async (req, res) => {
+  try {
+    const { data: referrals, error } = await supabase.from('referrals')
+      .select('id,referred_user_id,bonus_amount,status,created_at')
+      .eq('referrer_id', req.user.id).order('created_at', { ascending: false }).limit(500);
+    if (error) throw error;
+    const rows = referrals || [];
+    const ids = rows.map(r => r.referred_user_id);
+    let profiles = [], investments = [];
+    if (ids.length) {
+      const [p, i] = await Promise.all([
+        supabase.from('profiles').select('id,display_name').in('id', ids),
+        supabase.from('investments').select('user_id,principal_amount,status').in('user_id', ids)
+      ]);
+      if (p.error) throw p.error; if (i.error) throw i.error;
+      profiles = p.data || []; investments = i.data || [];
+    }
+    const names = new Map(profiles.map(p => [p.id, p.display_name]));
+    const investmentTotal = investments.filter(i => ['active','completed'].includes(i.status)).reduce((sum, i) => sum + Number(i.principal_amount || 0), 0);
+    const { data: bonusRows, error: bonusError } = await supabase.from('wallet_ledger').select('amount').eq('user_id', req.user.id).eq('entry_type', 'referral_bonus').eq('status', 'posted');
+    if (bonusError) throw bonusError;
+    return res.json({
+      team_size: rows.length,
+      investment_total: investmentTotal,
+      commission_total: (bonusRows || []).reduce((sum, row) => sum + Number(row.amount || 0), 0),
+      referrals: rows.map(r => ({ ...r, display_name: names.get(r.referred_user_id) || 'Membre NOVA' }))
+    });
+  } catch (err) {
+    console.error('Referral summary error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger votre équipe.' });
   }
 });
 

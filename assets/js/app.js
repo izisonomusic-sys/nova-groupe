@@ -23,9 +23,19 @@
     }
     return data;
   }
+  async function confirmPaymentReturn(){
+    var params=new URLSearchParams(location.search);var token=params.get("token")||params.get("invoice_token");
+    if(!token)return;
+    try{
+      var result=await api("/api/payments/paydunya/confirm-return",{method:"POST",body:JSON.stringify({token:token})});
+      if(result.status==="completed"){await loadAll();S.toast("Paiement confirmé : votre portefeuille a été crédité.");}
+      else S.toast("Paiement en cours de confirmation. Actualisez votre portefeuille dans quelques instants.");
+    }catch(err){console.warn("PayDunya return confirmation:",err.message);S.toast(err.message||"La confirmation du paiement est encore en cours.");}
+    params.delete("token");params.delete("invoice_token");var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;history.replaceState(null,"",clean);
+  }
   async function loadAll(){
     var results=await Promise.all([
-      auth.from("profiles").select("id,display_name,phone,country_code,role").eq("id",user.id).maybeSingle(),
+      auth.from("profiles").select("id,member_code,display_name,phone,country_code,role").eq("id",user.id).maybeSingle(),
       auth.from("wallet_balances").select("balance").eq("user_id",user.id).maybeSingle(),
       auth.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount"),
       auth.from("investments").select("id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)").eq("user_id",user.id).order("created_at",{ascending:false}),
@@ -36,7 +46,7 @@
   }
   function renderHeader(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
-    setText("greetName","Bonjour, "+name.split(/\s+/)[0]);setText("greetId","ID : "+user.id);setText("headerAvatar",S.initials(name));
+    setText("greetName","Bonjour, "+name.split(/\s+/)[0]);setText("greetId","ID : "+(profile.member_code||"—"));setText("headerAvatar",S.initials(name));
   }
   function planCard(p){
     var daily=Number(p.daily_return_amount)||0,days=Number(p.duration_days)||0,amount=Number(p.minimum_amount)||0;
@@ -93,13 +103,20 @@
       return '<div class="hist-item"><span class="h-ic '+(a>=0?"h-in":"h-out")+'">↔</span><div class="h-info"><b>'+esc(x.description||x.entry_type)+'</b><span>'+esc(S.dateFr(x.created_at))+' · '+esc(x.status)+'</span></div><span class="h-amt '+cls+'">'+sign+money(a)+'</span></div>';
     }).join(""):'<p class="empty">Aucune transaction pour le moment.</p>';
   }
-  function renderTeam(){
-    setText("teamRefLink",location.origin+location.pathname.replace("app.html","register.html")+"?ref="+user.id);
-    setText("teamSize","0");setText("teamL1","0");setText("teamInvest",money(0));setText("teamComm",money(0));
+  async function renderTeam(){
+    var code=profile.member_code||"";
+    setText("teamRefLink",location.origin+location.pathname.replace("app.html","register.html")+"?ref="+encodeURIComponent(code));
+    setText("teamSize","…");setText("teamL1","…");setText("teamInvest","…");setText("teamComm","…");
+    try{
+      var team=await api("/api/referrals/me");
+      setText("teamSize",String(team.team_size||0));setText("teamL1",String(team.team_size||0));
+      setText("teamInvest",money(team.investment_total||0));setText("teamComm",money(team.commission_total||0));
+      var n=el("teamList");if(n)n.innerHTML=(team.referrals||[]).length?team.referrals.map(function(r){return '<div class="hist-item"><span class="h-ic h-in">↗</span><div class="h-info"><b>'+esc(r.display_name||"Membre NOVA")+'</b><span>'+esc(S.dateFr(r.created_at))+' · '+esc(r.status||"inscrit")+'</span></div><span class="h-amt">'+money(r.bonus_amount||0)+'</span></div>';}).join(""):'<p class="empty">Aucun filleul pour le moment.</p>';
+    }catch(err){console.warn("Referral dashboard:",err.message);setText("teamSize","0");setText("teamL1","0");setText("teamInvest",money(0));setText("teamComm",money(0));}
   }
   function renderAccount(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
-    setText("profileName",name);setText("profileId","ID : "+user.id);setText("profileAvatar",S.initials(name));
+    setText("profileName",name);setText("profileId","ID : "+(profile.member_code||"—"));setText("profileAvatar",S.initials(name));
     setText("accSolde",money(wallet.balance));setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("accRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
   }
@@ -169,6 +186,6 @@
   setExternalContact('assistGroup',C.telegramGroup,'Groupe Telegram en attente');
   if(el("welcomeLater"))el("welcomeLater").addEventListener("click",()=>closeModal("welcomeModal"));
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
-  try{await loadAll();route();}catch(err){console.error("NOVA load:",err);S.toast("Impossible de charger les données Supabase. Rechargez la page.");}
+  try{await loadAll();await confirmPaymentReturn();route();}catch(err){console.error("NOVA load:",err);S.toast("Impossible de charger les données Supabase. Rechargez la page.");}
   window.addEventListener("hashchange",route);
 })();

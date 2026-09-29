@@ -18,6 +18,8 @@
   function clearErrors(){ document.querySelectorAll('.field.invalid').forEach(function(el){el.classList.remove('invalid');}); }
   function toast(msg){ if(window.NovaStore)window.NovaStore.toast(msg,'check'); else {var t=document.getElementById('toast');if(t){t.textContent=msg;t.classList.add('show');}} }
   var rf=document.getElementById('registerForm');
+  var refInput=document.getElementById('ref');
+  if(refInput){var incomingRef=new URLSearchParams(location.search).get('ref');if(incomingRef&&!refInput.value)refInput.value=incomingRef.trim().slice(0,80);}
   if(rf){
     var pass=document.getElementById('pass'), pass2=document.getElementById('pass2'), hint=document.getElementById('passMatch');
     pass2.addEventListener('input',function(){if(hint){hint.textContent=pass2.value===pass.value?'✓ Correspondance des mots de passe':'Les mots de passe doivent correspondre.';hint.className='hint'+(pass2.value===pass.value?' ok':'');}});

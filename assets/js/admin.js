@@ -28,7 +28,18 @@
     var d={};try{d=await r.json();}catch(_){}
     if(!r.ok)throw new Error(d.error||"Erreur serveur.");return d;
   }
-  function showPanel(){login.style.display="none";panel.style.display="block";if(logout)logout.style.display="inline-flex";loadProjects().catch(e=>S.toast(e.message));}
+  function showPanel(){login.style.display="none";panel.style.display="block";if(logout)logout.style.display="inline-flex";loadStats().catch(e=>S.toast(e.message));loadProjects().catch(e=>S.toast(e.message));}
+  function fmtMoney(v){return money(Number(v)||0);}
+  async function loadStats(){
+    var r=await request("/api/admin/stats"),s=r.stats||{};
+    txt("statMembers",Number(s.members_total||0).toLocaleString("fr-FR"));txt("statMembersToday",Number(s.members_today||0).toLocaleString("fr-FR")+" inscription(s) aujourd’hui");
+    txt("statDeposits",Number(s.deposits_confirmed||0).toLocaleString("fr-FR"));txt("statDepositAmount",fmtMoney(s.deposits_amount)+" crédités");
+    txt("statDepositsPending",Number(s.deposits_pending||0).toLocaleString("fr-FR"));
+    txt("statWithdrawals",Number(s.withdrawals_total||0).toLocaleString("fr-FR"));txt("statWithdrawalsPending",Number(s.withdrawals_pending||0).toLocaleString("fr-FR")+" en attente");
+    txt("statWithdrawalsAmount",fmtMoney(s.withdrawals_pending_amount));txt("statWithdrawalsPaid",fmtMoney(s.withdrawals_paid_amount)+" payés");
+    txt("statInvestments",Number(s.investments_active||0).toLocaleString("fr-FR"));txt("statInvestmentsAmount",fmtMoney(s.investments_amount)+" engagés");
+    txt("statProjects",Number(s.projects_published||0).toLocaleString("fr-FR"));txt("statReferrals",Number(s.referrals_total||0).toLocaleString("fr-FR"));txt("statReferralBonuses",fmtMoney(s.referral_bonuses_paid)+" de bonus crédités");
+  }
   function showLogin(){login.style.display="block";panel.style.display="none";if(logout)logout.style.display="none";}
   async function verifyAdmin(){
     var s=await A.auth.getSession();

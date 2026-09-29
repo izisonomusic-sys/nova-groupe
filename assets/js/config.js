@@ -11,9 +11,9 @@ window.NOVA = {
 
   /* ---------- Contacts / assistance ---------- */
   // À remplacer dès réception des vrais contacts officiels. Aucun faux numéro/lien n'est utilisé.
-  whatsapp:"+22872836072",
-  telegramService:"+22879739864",
-  telegramGroup: "https://t.me/novacom1",
+  whatsappcommunauter: "https://chat.whatsapp.com/GdjJdEXsXmv4D2jiR6Nrms",
+  telegramService: "https://t.me/novacom1",
+  whatsappService: "+22872836072",
   email: "contact@nova-immo-energie.tg",
   address: "Boulevard du Mono, Lomé — Togo",
 
@@ -30,15 +30,15 @@ window.NOVA = {
 
   /* ---------- Pays & opérateurs mobile money ---------- */
   countries: [
-    { code: "+228", label: "Togo",          ops: ["Togocom", "Moov Togo"] },
-    { code: "+226", label: "Burkina Faso",  ops: ["Orange Burkina", "Faso Cash", "Telecel Faso"] },
-    { code: "+229", label: "Bénin",         ops: ["MOOV Bénin", "Orange Bénin"] },
+    { code: "+228", label: "Togo", ops: ["Togocom", "Moov Togo"] },
+    { code: "+226", label: "Burkina Faso", ops: ["Orange Burkina", "Faso Cash", "Telecel Faso"] },
+    { code: "+229", label: "Bénin", ops: ["MOOV Bénin", "Orange Bénin"] },
     { code: "+225", label: "Côte d'Ivoire", ops: ["Orange CI", "MTN CI", "Moov CI"] },
-    { code: "+233", label: "Ghana",         ops: ["MTN Ghana", "Telecel Ghana"] },
-    { code: "+221", label: "Sénégal",       ops: ["Orange SN", "Free SN", "Expresso"] },
-    { code: "+237", label: "Cameroun",      ops: ["Orange CM", "MTN CM"] },
-    { code: "+223", label: "Mali",          ops: ["Orange ML", "Moov ML"] },
-    { code: "+222", label: "Mauritanie",    ops: ["Chinguitel", "Expresso MR"] }
+    { code: "+233", label: "Ghana", ops: ["MTN Ghana", "Telecel Ghana"] },
+    { code: "+221", label: "Sénégal", ops: ["Orange SN", "Free SN", "Expresso"] },
+    { code: "+237", label: "Cameroun", ops: ["Orange CM", "MTN CM"] },
+    { code: "+223", label: "Mali", ops: ["Orange ML", "Moov ML"] },
+    { code: "+222", label: "Mauritanie", ops: ["Chinguitel", "Expresso MR"] }
   ],
 
   /* ---------- Projets : aucun projet de démonstration. Les projets réels seront publiés par l’administration. ---------- */
