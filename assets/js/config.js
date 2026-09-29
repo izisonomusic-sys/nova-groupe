@@ -11,9 +11,9 @@ window.NOVA = {
 
   /* ---------- Contacts / assistance ---------- */
   // À remplacer dès réception des vrais contacts officiels. Aucun faux numéro/lien n'est utilisé.
-  whatsappcommunauter: "https://chat.whatsapp.com/GdjJdEXsXmv4D2jiR6Nrms",
+  whatsapp: "+22872836072",
   telegramService: "https://t.me/novacom1",
-  whatsappService: "+22872836072",
+  whatsapp: "+22872836072",
   email: "contact@nova-immo-energie.tg",
   address: "Boulevard du Mono, Lomé — Togo",
 
