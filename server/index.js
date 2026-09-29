@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const crypto = require('node:crypto');
@@ -297,7 +297,10 @@ app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], asy
 
     const confirmResponse = await fetch(`${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`, { method: 'GET', headers: paydunyaHeaders() });
     const confirmed = await confirmResponse.json();
-    console.log('[PAYDUNYA] confirm response', { httpStatus: confirmResponse.status, responseCode: confirmed?.response_code, status: confirmed?.invoice?.status });
+    console.log('[PAYDUNYA] confirm response', { httpStatus: confirmResponse.status, responseCode: confirmed?.response_code, status: confirmed?.invoice?.status });console.log(
+  '[PAYDUNYA] full confirm response:',
+  JSON.stringify(confirmed, null, 2)
+);
     if (!confirmResponse.ok || confirmed.response_code !== '00' || confirmed.invoice?.status !== 'completed') {
       return res.status(200).send('Payment not completed');
     }
