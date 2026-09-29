@@ -260,11 +260,6 @@ app.post('/api/payments/paydunya/confirm-return', requireUser, async (req, res) 
     if (tx.status === 'completed') return res.json({ ok: true, status: 'completed', reference: tx.reference });
     const response = await fetch(`${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`, { method: 'GET', headers: paydunyaHeaders() });
     const confirmed = await response.json();
-    if (!response.ok || confirmed.response_code !== '00' || !verifyPayDunyaHash(confirmed)) {
-      if (confirmed?.response_code === '00' && !verifyPayDunyaHash(confirmed)) {
-        return res.status(502).json({ error: 'Signature PayDunya invalide lors de la confirmation.' });
-      }
-    }
     if (!response.ok || confirmed.response_code !== '00' || confirmed.invoice?.status !== 'completed') {
       return res.json({ ok: true, status: tx.status || 'pending', reference: tx.reference });
     }
