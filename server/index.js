@@ -92,7 +92,19 @@ async function requireUser(req, res, next) {
   } catch (_) { return res.status(401).json({ error: 'Authentification impossible.' }); }
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'nova-api', configured: missing.length === 0, missing, paydunya: { mode: isTest ? 'test' : 'live', base: paydunyaBase, master: maskedKeyInfo(paydunyaKeys.master), privateKey: maskedKeyInfo(paydunyaKeys.privateKey), token: maskedKeyInfo(paydunyaKeys.token) } }));
+app.get('/api/health', (_req, res) => {
+  const callbackConfigured = !!process.env.PAYDUNYA_CALLBACK_URL;
+  const callbackUrl = callbackConfigured ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
+  res.json({
+    ok: true, service: 'nova-api', configured: missing.length === 0, missing,
+    paydunya: {
+      mode: isTest ? 'test' : 'live', base: paydunyaBase,
+      master: maskedKeyInfo(paydunyaKeys.master), privateKey: maskedKeyInfo(paydunyaKeys.privateKey),
+      token: maskedKeyInfo(paydunyaKeys.token), callbackConfigured,
+      callbackUrlValid: !!callbackUrl, callbackUrl: callbackUrl || null
+    }
+  });
+});
 
 // Crée une facture PayDunya pour le compte authentifié. Aucun solde n'est crédité ici.
 app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
@@ -257,26 +269,57 @@ app.post('/api/payments/paydunya/confirm-return', requireUser, async (req, res) 
 
 // Notification PayDunya: vérifier le hash puis confirmer le statut auprès de l'API PayDunya.
 app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], async (req, res) => {
+  console.log('[PAYDUNYA] webhook received', { contentType: req.headers['content-type'], bodyKeys: Object.keys(req.body || {}) });
   try {
-    if (!supabase || !process.env.PAYDUNYA_MASTER_KEY) return res.status(503).send('Not configured');
-    const data = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : req.body.data;
+    if (!supabase || !process.env.PAYDUNYA_MASTER_KEY) {
+      console.error('[PAYDUNYA] webhook not configured');
+      return res.status(503).send('Not configured');
+    }
+    let data = req.body?.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch (parseError) {
+        console.error('[PAYDUNYA] invalid data JSON:', parseError.message);
+        return res.status(400).send('Invalid data payload');
+      }
+    }
     const receivedHash = data?.hash;
     const expectedHash = crypto.createHash('sha512').update(process.env.PAYDUNYA_MASTER_KEY).digest('hex');
     if (typeof receivedHash !== 'string' || receivedHash.length !== expectedHash.length || !crypto.timingSafeEqual(Buffer.from(receivedHash), Buffer.from(expectedHash))) {
+      console.error('[PAYDUNYA] invalid signature');
       return res.status(401).send('Invalid signature');
     }
     const token = data?.invoice?.token || data?.token;
-    if (!token) return res.status(400).send('Missing invoice token');
+    if (!token) {
+      console.error('[PAYDUNYA] missing invoice token');
+      return res.status(400).send('Missing invoice token');
+    }
+    console.log('[PAYDUNYA] token received', token.slice(0, 8) + '…');
 
     const confirmResponse = await fetch(`${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`, { method: 'GET', headers: paydunyaHeaders() });
     const confirmed = await confirmResponse.json();
+    console.log('[PAYDUNYA] confirm response', { httpStatus: confirmResponse.status, responseCode: confirmed?.response_code, status: confirmed?.invoice?.status });
     if (!confirmResponse.ok || confirmed.response_code !== '00' || confirmed.invoice?.status !== 'completed') {
       return res.status(200).send('Payment not completed');
     }
     const amount = Number(confirmed.invoice.total_amount);
-    const custom = confirmed.invoice.custom_data || data.invoice?.custom_data || {};
-    const paymentId = custom.payment_id;
-    if (!paymentId || !Number.isSafeInteger(amount) || amount <= 0) return res.status(400).send('Missing payment metadata');
+    const custom = confirmed.invoice?.custom_data || data?.invoice?.custom_data || data?.custom_data || {};
+    let paymentId = custom.payment_id;
+
+    // Fallback: if PayDunya does not echo custom_data, recover the transaction by its provider token.
+    if (!paymentId) {
+      const { data: txByToken, error: lookupError } = await supabase
+        .from('payment_transactions').select('id, status, amount').eq('provider_token', token).maybeSingle();
+      if (lookupError) {
+        console.error('[PAYDUNYA] transaction lookup error:', lookupError.message);
+        return res.status(500).send('Could not find payment');
+      }
+      paymentId = txByToken?.id;
+      if (paymentId) console.log('[PAYDUNYA] payment matched by provider token');
+    }
+    if (!paymentId || !Number.isSafeInteger(amount) || amount <= 0) {
+      console.error('[PAYDUNYA] missing payment metadata', { hasPaymentId: !!paymentId, amount });
+      return res.status(500).send('Missing payment metadata');
+    }
 
     const { error } = await supabase.rpc('nova_confirm_paydunya_payment', {
       p_payment_id: paymentId,
@@ -285,12 +328,13 @@ app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], asy
       p_provider_payload: confirmed
     });
     if (error) {
-      console.error('Payment credit RPC error:', error.message);
+      console.error('[PAYDUNYA] payment credit RPC error:', error.message);
       return res.status(500).send('Could not record payment');
     }
+    console.log('[PAYDUNYA] payment credited successfully', { paymentId, amount });
     return res.status(200).send('OK');
   } catch (err) {
-    console.error('PayDunya callback error:', err.message);
+    console.error('[PAYDUNYA] callback error:', err.message);
     return res.status(500).send('Callback error');
   }
 });

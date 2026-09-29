@@ -59,7 +59,7 @@ begin
 
     if v_referrer_id is not null then
       insert into public.referrals(referrer_id,referred_user_id,bonus_amount,status)
-      values(v_referrer_id,new.id,v_bonus,'paid')
+      values(v_referrer_id,new.id,v_bonus,'credited')
       on conflict (referred_user_id) do nothing
       returning id into v_referral_id;
 
@@ -71,8 +71,8 @@ begin
 
         insert into public.wallet_ledger(user_id,entry_type,amount,status,reference,description,related_user_id,posted_at)
         values
-          (v_referrer_id,'referral_bonus',v_bonus,'posted','REF-'||v_referral_id::text,'Bonus de parrainage pour une nouvelle inscription',new.id,now()),
-          (new.id,'referral_bonus',v_bonus,'posted','REF-'||v_referral_id::text,'Bonus de bienvenue par parrainage',v_referrer_id,now());
+          (v_referrer_id,'referral_bonus',v_bonus,'posted','REF-'||v_referral_id::text||'-PARRAIN','Bonus de parrainage pour une nouvelle inscription',new.id,now()),
+          (new.id,'referral_bonus',v_bonus,'posted','REF-'||v_referral_id::text||'-FILLEUL','Bonus de bienvenue par parrainage',v_referrer_id,now());
       end if;
     end if;
   end if;
@@ -99,7 +99,7 @@ returns jsonb language sql security definer set search_path = '' as $$
     'investments_amount',(select coalesce(sum(principal_amount),0) from public.investments where status in ('active','completed')),
     'projects_published',(select count(*) from public.projects where status='published'),
     'referrals_total',(select count(*) from public.referrals),
-    'referral_bonuses_paid',(select coalesce(sum(bonus_amount),0) from public.referrals where status='paid')
+    'referral_bonuses_paid',(select coalesce(sum(bonus_amount),0) from public.referrals where status='credited')
   );
 $$;
 revoke all on function public.nova_admin_dashboard_stats() from public, anon, authenticated;
