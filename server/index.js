@@ -260,9 +260,24 @@ app.post('/api/payments/paydunya/confirm-return', requireUser, async (req, res) 
     if (tx.status === 'completed') return res.json({ ok: true, status: 'completed', reference: tx.reference });
     const response = await fetch(`${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`, { method: 'GET', headers: paydunyaHeaders() });
     const confirmed = await response.json();
-    if (!response.ok || confirmed.response_code !== '00' || confirmed.invoice?.status !== 'completed') {
-      return res.json({ ok: true, status: tx.status || 'pending', reference: tx.reference });
+    if (!response.ok || confirmed.response_code !== '00' || !verifyPayDunyaHash(confirmed)) {
+      return res.status(502).json({ error: 'Réponse PayDunya invalide lors de la vérification.' });
     }
+
+    const providerStatus = String(confirmed.invoice?.status || 'pending').toLowerCase();
+    if (providerStatus !== 'completed') {
+      if (['pending', 'failed', 'cancelled'].includes(providerStatus)) {
+        const { error: stateError } = await supabase.rpc('nova_reconcile_paydunya_state', {
+          p_payment_id: tx.id,
+          p_provider_token: token,
+          p_provider_status: providerStatus,
+          p_provider_payload: confirmed
+        });
+        if (stateError) throw stateError;
+      }
+      return res.json({ ok: true, status: providerStatus, reference: tx.reference });
+    }
+
     const amount = Number(confirmed.invoice.total_amount);
     if (!Number.isSafeInteger(amount) || amount !== Number(tx.amount)) return res.status(409).json({ error: 'Le montant confirmé ne correspond pas à la transaction.' });
     const { error: creditError } = await supabase.rpc('nova_confirm_paydunya_payment', {
