@@ -202,7 +202,7 @@
     var n=el(id);if(!n)return;
     if(url){n.href=url;n.removeAttribute('aria-disabled');n.classList.remove('is-disabled');}else{n.href='#';n.setAttribute('aria-disabled','true');n.classList.add('is-disabled');var sub=n.querySelector('span:last-child');if(sub&&emptyLabel)sub.textContent=emptyLabel;}
   }
-  var wa=C.whatsapp ? 'https://wa.me/'+String(C.whatsapp).replace(/\D/g,'') : '';
+  var wa=C.whatsapp ? (/^https?:\/\//i.test(String(C.whatsapp).trim()) ? String(C.whatsapp).trim() : 'https://wa.me/'+String(C.whatsapp).replace(/\D/g,'')) : '';
   setExternalContact('assistWa',wa,'Numéro WhatsApp en attente');
   setExternalContact('welcomeWa',wa,'WhatsApp bientôt disponible');
   setExternalContact('assistTg',C.telegramService,'Lien Telegram en attente');
