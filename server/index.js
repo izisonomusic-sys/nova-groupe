@@ -1179,4 +1179,11 @@ app.get('/app.html/:view', (req, res, next) => {
   return res.redirect(302, `/app.html#/${req.params.view}`);
 });
 
+setTimeout(() => {
+  reconcileAllReferralBonuses().catch(err => console.error('[REFERRAL] initial reconciliation error:', err.message));
+}, 5000);
+setInterval(() => {
+  reconcileAllReferralBonuses().catch(err => console.error('[REFERRAL] scheduled reconciliation error:', err.message));
+}, 300000);
+
 app.listen(Number(process.env.PORT || 3000), () => console.log(`NOVA API listening on http://localhost:${process.env.PORT || 3000}`));
