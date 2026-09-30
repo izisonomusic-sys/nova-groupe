@@ -156,7 +156,7 @@ async function requireUser(req, res, next) {
   } catch (_) { return res.status(401).json({ error: 'Authentification impossible.' }); }
 }
 
-async function reconcileReferralBonusForUser(userId) {
+async function reconcileReferralBonusForUserUnlocked(userId) {
   if (!supabase || !userId) return { ok: false, status: 'skipped' };
 
   const { data: authResult, error: authError } = await supabase.auth.admin.getUserById(userId);
@@ -306,6 +306,21 @@ async function reconcileReferralBonusForUser(userId) {
     referral_id: refId,
     credited_count: credited.length
   };
+}
+
+
+const referralReconcileLocks = new Set();
+
+async function reconcileReferralBonusForUser(userId) {
+  if (referralReconcileLocks.has(userId)) {
+    return { ok: true, status: 'already_running' };
+  }
+  referralReconcileLocks.add(userId);
+  try {
+    return await reconcileReferralBonusForUserUnlocked(userId);
+  } finally {
+    referralReconcileLocks.delete(userId);
+  }
 }
 
 async function reconcileAllReferralBonuses() {
