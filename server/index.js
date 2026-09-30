@@ -280,15 +280,24 @@ app.post('/api/payments/paydunya/confirm-return', requireUser, async (req, res) 
 app.post('/api/payments/paydunya/sync', requireUser, async (req, res) => {
   try {
     if (missing.length) return res.status(503).json({ error: 'Configuration serveur PayDunya incomplète.', missing });
-    const { data: rows, error } = await supabase.from('payment_transactions')
+    const requestedReference = String(req.body?.reference || '').trim();
+    let query = supabase.from('payment_transactions')
       .select('id,reference,amount,status,provider_token,created_at')
       .eq('user_id', req.user.id)
       .eq('provider', 'paydunya')
       .eq('status', 'pending')
-      .not('provider_token', 'is', null)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: false })
-      .limit(30);
+      .not('provider_token', 'is', null);
+
+    if (requestedReference) {
+      query = query.eq('reference', requestedReference).limit(1);
+    } else {
+      query = query
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10);
+    }
+
+    const { data: rows, error } = await query;
     if (error) throw error;
 
     const results = [];
