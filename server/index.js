@@ -322,6 +322,15 @@ app.post('/api/payments/paydunya/sync', requireUser, async (req, res) => {
           });
           if (creditError) throw creditError;
           results.push({ reference: tx.reference, status: 'completed', amount });
+        } else if (['pending', 'failed', 'cancelled'].includes(status)) {
+          const { error: stateError } = await supabase.rpc('nova_reconcile_paydunya_state', {
+            p_payment_id: tx.id,
+            p_provider_token: token,
+            p_provider_status: status,
+            p_provider_payload: confirmed
+          });
+          if (stateError) throw stateError;
+          results.push({ reference: tx.reference, status });
         } else {
           results.push({ reference: tx.reference, status: status || 'pending' });
         }
@@ -374,10 +383,13 @@ app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], asy
   '[PAYDUNYA] full confirm response:',
   JSON.stringify(confirmed, null, 2)
 );
-    if (!confirmResponse.ok || confirmed.response_code !== '00' || confirmed.invoice?.status !== 'completed') {
-      return res.status(200).send('Payment not completed');
+    if (!confirmResponse.ok || confirmed.response_code !== '00' || !verifyPayDunyaHash(confirmed)) {
+      console.error('[PAYDUNYA] invalid confirmation response');
+      return res.status(502).send('Invalid PayDunya confirmation');
     }
-    const amount = Number(confirmed.invoice.total_amount);
+
+    const providerStatus = String(confirmed.invoice?.status || 'pending').toLowerCase();
+    const amount = Number(confirmed.invoice?.total_amount);
     const custom = confirmed.custom_data || confirmed.invoice?.custom_data || data?.custom_data || data?.invoice?.custom_data || {};
     let paymentId = custom.payment_id;
 
@@ -393,8 +405,25 @@ app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], asy
       if (paymentId) console.log('[PAYDUNYA] payment matched by provider token');
     }
     if (!paymentId || !Number.isSafeInteger(amount) || amount <= 0) {
-      console.error('[PAYDUNYA] missing payment metadata', { hasPaymentId: !!paymentId, amount });
+      console.error('[PAYDUNYA] missing payment metadata', { hasPaymentId: !!paymentId, amount, providerStatus });
       return res.status(500).send('Missing payment metadata');
+    }
+
+    if (providerStatus !== 'completed') {
+      if (['pending', 'failed', 'cancelled'].includes(providerStatus)) {
+        const { error: stateError } = await supabase.rpc('nova_reconcile_paydunya_state', {
+          p_payment_id: paymentId,
+          p_provider_token: token,
+          p_provider_status: providerStatus,
+          p_provider_payload: confirmed
+        });
+        if (stateError) {
+          console.error('[PAYDUNYA] payment state RPC error:', stateError.message);
+          return res.status(500).send('Could not record payment state');
+        }
+      }
+      console.log('[PAYDUNYA] payment state recorded', { paymentId, status: providerStatus, amount });
+      return res.status(200).send('OK');
     }
 
     const { error } = await supabase.rpc('nova_confirm_paydunya_payment', {
