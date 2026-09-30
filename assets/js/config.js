@@ -10,8 +10,8 @@ window.NOVA = {
   currency: "FCFA",
 
   /* ---------- Contacts / assistance ---------- */
-  // À remplacer dès réception des vrais contacts officiels. Aucun faux numéro/lien n'est utilisé.
-  whatsapp: "",
+  // Lien officiel de la communauté WhatsApp NOVA Group.
+  whatsapp: "https://chat.whatsapp.com/GdjJdEXsXmv4D2jiR6Nrms",
   telegramService: "",
   telegramGroup: "",
   email: "contact@nova-immo-energie.tg",
