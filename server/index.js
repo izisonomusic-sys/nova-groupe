@@ -264,7 +264,7 @@ app.post('/api/payments/paydunya/confirm-return', requireUser, async (req, res) 
       return res.status(502).json({ error: 'Réponse PayDunya invalide lors de la vérification.' });
     }
 
-    const providerStatus = String(confirmed.invoice?.status || 'pending').toLowerCase();
+    const providerStatus = String(confirmed.status ?? confirmed.invoice?.status ?? 'pending').toLowerCase();
     if (providerStatus !== 'completed') {
       if (['pending', 'failed', 'cancelled'].includes(providerStatus)) {
         const { error: stateError } = await supabase.rpc('nova_reconcile_paydunya_state', {
@@ -390,20 +390,12 @@ app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], asy
 
     const confirmResponse = await fetch(`${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`, { method: 'GET', headers: paydunyaHeaders() });
     const confirmed = await confirmResponse.json();
-    console.log('[PAYDUNYA] confirm response', { httpStatus: confirmResponse.status, responseCode: confirmed?.response_code, status: confirmed?.invoice?.status });
+    console.log('[PAYDUNYA] confirm response', { httpStatus: confirmResponse.status, responseCode: confirmed?.response_code, status: confirmed?.status ?? confirmed?.invoice?.status });
     if (!confirmResponse.ok || confirmed?.response_code !== '00' || !verifyPayDunyaHash(confirmed)) {
       console.error('[PAYDUNYA] invalid confirmation hash or response');
       return res.status(502).send('Invalid PayDunya confirmation');
-    }console.log(
-  '[PAYDUNYA] full confirm response:',
-  JSON.stringify(confirmed, null, 2)
-);
-    if (!confirmResponse.ok || confirmed.response_code !== '00' || !verifyPayDunyaHash(confirmed)) {
-      console.error('[PAYDUNYA] invalid confirmation response');
-      return res.status(502).send('Invalid PayDunya confirmation');
     }
-
-    const providerStatus = String(confirmed.invoice?.status || 'pending').toLowerCase();
+    const providerStatus = String(confirmed.status ?? confirmed.invoice?.status ?? 'pending').toLowerCase();
     const amount = Number(confirmed.invoice?.total_amount);
     const custom = confirmed.custom_data || confirmed.invoice?.custom_data || data?.custom_data || data?.invoice?.custom_data || {};
     let paymentId = custom.payment_id;
@@ -516,8 +508,7 @@ app.get('/api/referrals/me', requireUser, async (req, res) => {
     const { data: bonusRows, error: bonusError } = await supabase.from('wallet_ledger').select('amount').eq('user_id', req.user.id).eq('entry_type', 'referral_bonus').eq('status', 'posted');
     if (bonusError) throw bonusError;
     return res.json({
-      team_size: rows.length,
-      investment_total: investmentTotal,
+      team_size: rows.length,      investment_total: investmentTotal,
       commission_total: (bonusRows || []).reduce((sum, row) => sum + Number(row.amount || 0), 0),
       referrals: rows.map(r => ({ ...r, display_name: names.get(r.referred_user_id) || 'Membre NOVA' }))
     });
