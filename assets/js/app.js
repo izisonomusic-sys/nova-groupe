@@ -23,13 +23,36 @@
     }
     return data;
   }
+  async function syncPendingPayment(reference) {
+    try {
+      var body = reference ? { reference: reference } : {};
+      return await api("/api/payments/paydunya/sync", {
+        method: "POST",
+        body: JSON.stringify(body)
+      });
+    } catch (err) {
+      console.warn("PayDunya sync:", err.message);
+      return null;
+    }
+  }
   async function confirmPaymentReturn(){
     var params=new URLSearchParams(location.search);var token=params.get("token")||params.get("invoice_token");
-    if(!token)return;
+    if(!token){
+      var pendingReference=localStorage.getItem("nova:lastPendingPaymentReference");
+      if(pendingReference) await syncPendingPayment(pendingReference);
+      return;
+    }
     try{
       var result=await api("/api/payments/paydunya/confirm-return",{method:"POST",body:JSON.stringify({token:token})});
-      if(result.status==="completed"){await loadAll();S.toast("Paiement confirmé : votre portefeuille a été crédité.");}
-      else S.toast("Paiement en cours de confirmation. Actualisez votre portefeuille dans quelques instants.");
+      if(result.status==="completed"){
+        localStorage.removeItem("nova:lastPendingPaymentReference");
+        await loadAll();
+        S.toast("Paiement confirmé : votre portefeuille a été crédité.");
+      } else {
+        await syncPendingPayment(localStorage.getItem("nova:lastPendingPaymentReference")||"");
+        await loadAll();
+        S.toast("Paiement en cours de confirmation. Actualisez votre portefeuille dans quelques instants.");
+      }
     }catch(err){console.warn("PayDunya return confirmation:",err.message);S.toast(err.message||"La confirmation du paiement est encore en cours.");}
     params.delete("token");params.delete("invoice_token");var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;history.replaceState(null,"",clean);
   }
@@ -186,6 +209,18 @@
   setExternalContact('assistGroup',C.telegramGroup,'Groupe Telegram en attente');
   if(el("welcomeLater"))el("welcomeLater").addEventListener("click",()=>closeModal("welcomeModal"));
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
-  try{await loadAll();await confirmPaymentReturn();route();}catch(err){console.error("NOVA load:",err);S.toast("Impossible de charger les données Supabase. Rechargez la page.");}
+  try{
+    await loadAll();
+    await confirmPaymentReturn();
+    var lastRef=localStorage.getItem("nova:lastPendingPaymentReference");
+    if(lastRef){
+      var syncResult=await syncPendingPayment(lastRef);
+      if(syncResult && Array.isArray(syncResult.results) && syncResult.results.some(function(x){return x.status==="completed";})){
+        localStorage.removeItem("nova:lastPendingPaymentReference");
+        await loadAll();
+      }
+    }
+    route();
+  }catch(err){console.error("NOVA load:",err);S.toast("Impossible de charger les données Supabase. Rechargez la page.");}
   window.addEventListener("hashchange",route);
 })();
