@@ -700,6 +700,13 @@ async function reconcilePayDunyaWithdrawals() {
   }
 }
 
+function paydunyaDisbursementCallbackHealth(_req, res) {
+  return res.status(200).json({ ok: true, service: 'nova-paydunya-disbursement-callback' });
+}
+
+app.get(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/paydunya/disbursement'], paydunyaDisbursementCallbackHealth);
+app.head(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/paydunya/disbursement'], paydunyaDisbursementCallbackHealth);
+
 app.post(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/paydunya/disbursement'], async (req, res) => {
   try {
     if (!supabase || !paydunyaKeys.master) return res.status(503).send('Not configured');
@@ -708,17 +715,36 @@ app.post(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/pa
     if (typeof data === 'string') {
       try { data = JSON.parse(data); } catch (_) {}
     }
-
-    const receivedHash = String(data?.hash || '').trim().toLowerCase();
-    const expectedHash = crypto.createHash('sha512').update(paydunyaKeys.master, 'utf8').digest('hex');
-    if (!receivedHash || receivedHash.length !== expectedHash.length ||
-        !crypto.timingSafeEqual(Buffer.from(receivedHash), Buffer.from(expectedHash))) {
-      console.error('[PAYDUNYA][WITHDRAWAL] invalid callback signature');
-      return res.status(401).send('Invalid signature');
-    }
+    if (!data || typeof data !== 'object') data = {};
 
     const token = String(data?.token || data?.disburse_invoice || '').trim();
     const status = String(data?.status || '').trim().toLowerCase();
+
+    // PayDunya validates callback_url before authorizing a disbursement. That
+    // accessibility probe may contain no transaction payload and no hash.
+    // Return 200 without mutating any data so PayDunya can validate the URL.
+    if (!token && !status && !data?.hash) {
+      console.log('[PAYDUNYA][WITHDRAWAL] callback accessibility probe accepted');
+      return res.status(200).send('OK');
+    }
+
+    const receivedHash = String(data?.hash || '').trim().toLowerCase();
+    const expectedHash = crypto.createHash('sha512').update(paydunyaKeys.master, 'utf8').digest('hex');
+    if (
+      !receivedHash ||
+      receivedHash.length !== expectedHash.length ||
+      !/^[0-9a-f]+$/.test(receivedHash) ||
+      !crypto.timingSafeEqual(Buffer.from(receivedHash, 'hex'), Buffer.from(expectedHash, 'hex'))
+    ) {
+      console.error('[PAYDUNYA][WITHDRAWAL] invalid callback signature', {
+        hasHash: !!receivedHash,
+        hashLength: receivedHash.length,
+        hasToken: !!token,
+        status
+      });
+      return res.status(401).send('Invalid signature');
+    }
+
     if (!token) return res.status(400).send('Missing disbursement token');
 
     const { data: wr, error: lookupError } = await supabase
