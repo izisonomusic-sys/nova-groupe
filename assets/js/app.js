@@ -23,6 +23,19 @@
     }
     return data;
   }
+  async function reconcileReferralBonus(){
+    try{
+      var result=await api("/api/referrals/reconcile",{method:"POST",body:JSON.stringify({})});
+      if(result && result.status==="credited"){
+        await loadAll();
+        S.toast("Bonus de parrainage vérifié et crédité automatiquement.");
+      }
+      return result;
+    }catch(err){
+      console.warn("Referral bonus reconciliation:",err.message);
+      return null;
+    }
+  }
   async function syncPendingPayment(reference) {
     try {
       var body = reference ? { reference: reference } : {};
@@ -211,6 +224,7 @@
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
   try{
     await loadAll();
+    await reconcileReferralBonus();
     await confirmPaymentReturn();
     var lastRef=localStorage.getItem("nova:lastPendingPaymentReference");
     if(lastRef){
