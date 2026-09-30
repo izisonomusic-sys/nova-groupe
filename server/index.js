@@ -156,6 +156,188 @@ async function requireUser(req, res, next) {
   } catch (_) { return res.status(401).json({ error: 'Authentification impossible.' }); }
 }
 
+async function reconcileReferralBonusForUser(userId) {
+  if (!supabase || !userId) return { ok: false, status: 'skipped' };
+
+  const { data: authResult, error: authError } = await supabase.auth.admin.getUserById(userId);
+  if (authError || !authResult?.user) {
+    throw authError || new Error('Utilisateur introuvable.');
+  }
+
+  const metadata = authResult.user.user_metadata || authResult.user.raw_user_meta_data || {};
+  const referralCode = String(metadata.referral_code || '').trim();
+  if (!referralCode) return { ok: true, status: 'no_referral' };
+
+  let referrer = null;
+  const { data: byMemberCode, error: memberCodeError } = await supabase
+    .from('profiles')
+    .select('id,member_code')
+    .eq('member_code', referralCode)
+    .maybeSingle();
+  if (memberCodeError) throw memberCodeError;
+  referrer = byMemberCode;
+
+  if (!referrer && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(referralCode)) {
+    const { data: byId, error: byIdError } = await supabase
+      .from('profiles')
+      .select('id,member_code')
+      .eq('id', referralCode)
+      .maybeSingle();
+    if (byIdError) throw byIdError;
+    referrer = byId;
+  }
+
+  if (!referrer || referrer.id === userId) return { ok: true, status: 'referrer_not_found' };
+
+  const bonus = 500;
+  let { data: referral, error: referralLookupError } = await supabase
+    .from('referrals')
+    .select('id,status,bonus_amount')
+    .eq('referred_user_id', userId)
+    .maybeSingle();
+  if (referralLookupError) throw referralLookupError;
+
+  if (!referral) {
+    let created;
+    ({ data: created, error: referralLookupError } = await supabase
+      .from('referrals')
+      .insert({
+        referrer_id: referrer.id,
+        referred_user_id: userId,
+        bonus_amount: bonus,
+        status: 'paid'
+      })
+      .select('id,status,bonus_amount')
+      .maybeSingle());
+
+    // Some older NOVA databases used "credited" instead of "paid".
+    if (referralLookupError) {
+      ({ data: created, error: referralLookupError } = await supabase
+        .from('referrals')
+        .insert({
+          referrer_id: referrer.id,
+          referred_user_id: userId,
+          bonus_amount: bonus,
+          status: 'credited'
+        })
+        .select('id,status,bonus_amount')
+        .maybeSingle());
+    }
+
+    if (!referralLookupError && created) {
+      referral = created;
+    } else if (referralLookupError) {
+      // A concurrent repair may have created the row. Re-read before failing.
+      const { data: existing, error: existingError } = await supabase
+        .from('referrals')
+        .select('id,status,bonus_amount')
+        .eq('referred_user_id', userId)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      referral = existing;
+      if (!referral) throw referralLookupError;
+    }
+  }
+
+  if (!referral?.id) return { ok: false, status: 'referral_not_created' };
+
+  const refId = String(referral.id);
+  const referrerReference = `REF-${refId}-PARRAIN`;
+  const referredReference = `REF-${refId}-FILLEUL`;
+  const { data: ledgerRows, error: ledgerError } = await supabase
+    .from('wallet_ledger')
+    .select('user_id,reference,amount,entry_type,status')
+    .in('reference', [referrerReference, referredReference]);
+  if (ledgerError) throw ledgerError;
+
+  const hasReferrerLedger = (ledgerRows || []).some(row =>
+    row.user_id === referrer.id && row.reference === referrerReference &&
+    row.entry_type === 'referral_bonus' && row.status === 'posted' && Number(row.amount) === bonus
+  );
+  const hasReferredLedger = (ledgerRows || []).some(row =>
+    row.user_id === userId && row.reference === referredReference &&
+    row.entry_type === 'referral_bonus' && row.status === 'posted' && Number(row.amount) === bonus
+  );
+
+  const credited = [];
+  for (const item of [
+    { userId: referrer.id, reference: referrerReference, description: 'Bonus de parrainage pour une nouvelle inscription', relatedUserId: userId, missing: !hasReferrerLedger },
+    { userId, reference: referredReference, description: 'Bonus de bienvenue par parrainage', relatedUserId: referrer.id, missing: !hasReferredLedger }
+  ]) {
+    if (!item.missing) continue;
+
+    const { error: walletEnsureError } = await supabase
+      .from('wallet_balances')
+      .upsert({ user_id: item.userId, balance: 0 }, { onConflict: 'user_id', ignoreDuplicates: true });
+    if (walletEnsureError) throw walletEnsureError;
+
+    const { data: wallet, error: walletReadError } = await supabase
+      .from('wallet_balances')
+      .select('balance')
+      .eq('user_id', item.userId)
+      .maybeSingle();
+    if (walletReadError || !wallet) throw walletReadError || new Error('Portefeuille introuvable.');
+
+    const { error: balanceError } = await supabase
+      .from('wallet_balances')
+      .update({ balance: Number(wallet.balance || 0) + bonus, updated_at: new Date().toISOString() })
+      .eq('user_id', item.userId);
+    if (balanceError) throw balanceError;
+
+    const { error: ledgerInsertError } = await supabase
+      .from('wallet_ledger')
+      .insert({
+        user_id: item.userId,
+        entry_type: 'referral_bonus',
+        amount: bonus,
+        status: 'posted',
+        reference: item.reference,
+        description: item.description,
+        related_user_id: item.relatedUserId,
+        posted_at: new Date().toISOString()
+      });
+    if (ledgerInsertError) throw ledgerInsertError;
+    credited.push(item.userId);
+  }
+
+  return {
+    ok: true,
+    status: credited.length ? 'credited' : 'already_credited',
+    referral_id: refId,
+    credited_count: credited.length
+  };
+}
+
+async function reconcileAllReferralBonuses() {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (error) throw error;
+    let repaired = 0;
+    for (const authUser of data?.users || []) {
+      try {
+        const result = await reconcileReferralBonusForUser(authUser.id);
+        if (result?.status === 'credited') repaired += Number(result.credited_count || 0);
+      } catch (err) {
+        console.error('[REFERRAL] reconciliation error', { userId: authUser.id, message: err.message });
+      }
+    }
+    if (repaired) console.log('[REFERRAL] automatic bonus recovery completed', { ledgerEntriesRepaired: repaired });
+  } catch (err) {
+    console.error('[REFERRAL] automatic reconciliation failed:', err.message);
+  }
+}
+
+app.post('/api/referrals/reconcile', requireUser, async (req, res) => {
+  try {
+    const result = await reconcileReferralBonusForUser(req.user.id);
+    return res.json(result);
+  } catch (err) {
+    console.error('[REFERRAL] user reconciliation error:', err.message);
+    return res.status(500).json({ error: 'Impossible de vérifier automatiquement votre bonus de parrainage.' });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   const callbackConfigured = !!process.env.PAYDUNYA_CALLBACK_URL;
   const callbackUrl = callbackConfigured ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
