@@ -454,6 +454,231 @@ app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
   }
 });
 
+// PayDunya SoftPay Togo : le client reste sur NOVA et valide la demande sur son téléphone.
+// Le crédit du wallet reste exclusivement déclenché par la confirmation PayDunya/IPN.
+const PAYDUNYA_SOFTPAY_MODES = new Map([
+  ['+228|togocom', 't-money-togo'],
+  ['+228|moov togo', 'moov-togo']
+]);
+
+function paydunyaSoftPayMode(countryCode, operator) {
+  return PAYDUNYA_SOFTPAY_MODES.get(`${String(countryCode || '').trim()}|${normalizeOperator(operator)}`) || '';
+}
+
+async function paydunyaJsonRequest(url, method, payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: paydunyaHeaders(),
+      ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      signal: controller.signal
+    });
+    const raw = await response.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (_) { data = { response_text: raw }; }
+    return { response, data };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
+    const countryCode = String(req.body.country_code || '').trim();
+    const operator = String(req.body.operator || '').trim();
+    const phone = String(req.body.phone || '').replace(/[^0-9+]/g, '');
+    const localPhone = localPhoneForPayDunya(phone, countryCode);
+    const softpayMode = paydunyaSoftPayMode(countryCode, operator);
+
+    if (!Number.isSafeInteger(amount) || amount < 1000 || amount > 5000000) {
+      return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 1 000 et 5 000 000 FCFA.' });
+    }
+    if (countryCode !== '+228' || !softpayMode) {
+      return res.status(400).json({ error: 'PayDunya SoftPay est actuellement configuré pour T-Money et Moov Togo.' });
+    }
+    if (!/^\d{8}$/.test(localPhone)) {
+      return res.status(400).json({ error: 'Entrez un numéro Togo valide à 8 chiffres.' });
+    }
+    if (missing.length) {
+      return res.status(503).json({ error: 'Configuration serveur PayDunya incomplète.', missing });
+    }
+
+    const callbackUrl = publicHttpsUrl(
+      process.env.PAYDUNYA_CALLBACK_URL ||
+      'https://nova-groupe-dpnx.onrender.com/payments/webhooks/paydunya'
+    );
+    if (!callbackUrl) {
+      return res.status(503).json({ error: 'URL de callback PayDunya invalide.' });
+    }
+
+    const reference = `NOVA-${crypto.randomUUID()}`;
+    const { data: pending, error: dbError } = await supabase.from('payment_transactions').insert({
+      user_id: req.user.id,
+      reference,
+      amount,
+      provider: 'paydunya',
+      status: 'pending',
+      currency: 'XOF'
+    }).select('id,reference,amount').single();
+    if (dbError) throw dbError;
+
+    const profileResult = await supabase.from('profiles')
+      .select('display_name,phone,country_code')
+      .eq('id', req.user.id)
+      .maybeSingle();
+    if (profileResult.error) throw profileResult.error;
+
+    const customerName = String(
+      profileResult.data?.display_name ||
+      req.user.user_metadata?.full_name ||
+      'Client NOVA'
+    ).trim().slice(0, 120);
+    const customerEmail = String(req.user.email || '').trim();
+    const invoicePayload = {
+      invoice: {
+        total_amount: amount,
+        description: `Recharge portefeuille NOVA — ${reference}`,
+        customer: {
+          name: customerName,
+          ...(customerEmail ? { email: customerEmail } : {}),
+          phone: localPhone
+        }
+      },
+      store: { name: process.env.PAYDUNYA_STORE_NAME || 'NOVA Immobilier & Energies' },
+      custom_data: {
+        reference,
+        user_id: req.user.id,
+        payment_id: pending.id,
+        softpay_mode: softpayMode,
+        phone: localPhone
+      },
+      actions: { callback_url: callbackUrl }
+    };
+
+    const invoiceResult = await paydunyaJsonRequest(
+      `${paydunyaBase}/checkout-invoice/create`,
+      'POST',
+      invoicePayload
+    );
+    if (
+      !invoiceResult.response.ok ||
+      invoiceResult.data?.response_code !== '00' ||
+      !invoiceResult.data?.token
+    ) {
+      await supabase.from('payment_transactions').update({
+        status: 'failed',
+        provider_payload: invoiceResult.data || { http_status: invoiceResult.response.status }
+      }).eq('id', pending.id);
+      const detail = invoiceResult.data?.response_text || invoiceResult.data?.description || `Réponse HTTP ${invoiceResult.response.status}`;
+      return res.status(502).json({ error: 'PayDunya n’a pas pu initialiser le paiement SoftPay.', detail });
+    }
+
+    const token = String(invoiceResult.data.token);
+    await supabase.from('payment_transactions').update({
+      provider_token: token,
+      provider_payload: invoiceResult.data
+    }).eq('id', pending.id);
+
+    const softpayPayload =
+      softpayMode === 't-money-togo'
+        ? {
+            name_t_money: customerName,
+            ...(customerEmail ? { email_t_money: customerEmail } : {}),
+            phone_t_money: localPhone,
+            payment_token: token
+          }
+        : {
+            moov_togo_customer_fullname: customerName,
+            ...(customerEmail ? { moov_togo_email: customerEmail } : {}),
+            moov_togo_customer_address: 'Lomé, Togo',
+            moov_togo_phone_number: localPhone,
+            payment_token: token
+          };
+
+    const softpayResult = await paydunyaJsonRequest(
+      `${paydunyaBase}/softpay/${softpayMode}`,
+      'POST',
+      softpayPayload
+    );
+
+    await supabase.from('payment_transactions').update({
+      provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data }
+    }).eq('id', pending.id);
+
+    if (!softpayResult.response.ok || softpayResult.data?.success !== true) {
+      const detail = softpayResult.data?.message || softpayResult.data?.response_text || `Réponse HTTP ${softpayResult.response.status}`;
+      await supabase.from('payment_transactions').update({
+        status: 'failed',
+        provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data }
+      }).eq('id', pending.id);
+      return res.status(502).json({ error: 'PayDunya a refusé la demande SoftPay.', detail });
+    }
+
+    // Le SoftPay peut répondre "en cours". On demande alors l'état réel de la facture.
+    // Si la facture est déjà COMPLETED, la RPC idempotente crédite immédiatement.
+    let finalStatus = 'pending';
+    try {
+      const confirmResult = await paydunyaJsonRequest(
+        `${paydunyaBase}/checkout-invoice/confirm/${encodeURIComponent(token)}`,
+        'GET'
+      );
+      if (
+        confirmResult.response.ok &&
+        confirmResult.data?.response_code === '00' &&
+        verifyPayDunyaHash(confirmResult.data)
+      ) {
+        finalStatus = String(confirmResult.data.status ?? confirmResult.data.invoice?.status ?? 'pending').toLowerCase();
+        if (finalStatus === 'completed') {
+          const confirmedAmount = Number(confirmResult.data.invoice?.total_amount);
+          if (!Number.isSafeInteger(confirmedAmount) || confirmedAmount !== amount) {
+            throw new Error('Le montant confirmé par PayDunya ne correspond pas au montant demandé.');
+          }
+          const { error: creditError } = await supabase.rpc('nova_confirm_paydunya_payment', {
+            p_payment_id: pending.id,
+            p_provider_token: token,
+            p_paid_amount: confirmedAmount,
+            p_provider_payload: confirmResult.data
+          });
+          if (creditError) throw creditError;
+        } else if (['failed', 'cancelled'].includes(finalStatus)) {
+          await supabase.rpc('nova_reconcile_paydunya_state', {
+            p_payment_id: pending.id,
+            p_provider_token: token,
+            p_provider_status: finalStatus,
+            p_provider_payload: confirmResult.data
+          });
+        }
+      }
+    } catch (confirmError) {
+      // Une confirmation momentanément indisponible ne transforme pas une demande SoftPay
+      // acceptée en échec : le callback/IPN et le scheduler de réconciliation restent actifs.
+      console.warn('[PAYDUNYA][SOFTPAY] immediate confirmation deferred:', confirmError.message);
+      finalStatus = 'pending';
+    }
+
+    return res.status(201).json({
+      ok: true,
+      reference,
+      amount,
+      operator,
+      phone: `+228 ${localPhone}`,
+      status: finalStatus,
+      message: finalStatus === 'completed'
+        ? 'Paiement confirmé. Votre portefeuille NOVA a été crédité.'
+        : (softpayResult.data.message || 'La demande a été envoyée. Validez le paiement directement sur votre téléphone.')
+    });
+  } catch (err) {
+    console.error('[PAYDUNYA][SOFTPAY] create error:', err.message);
+    if (err?.name === 'AbortError') {
+      return res.status(504).json({ error: 'PayDunya a mis trop de temps à répondre. Vérifiez votre téléphone et réessayez la vérification.' });
+    }
+    return res.status(500).json({ error: 'Impossible de démarrer le paiement SoftPay.', detail: err?.message || 'Erreur serveur inconnue.' });
+  }
+});
+
 // Demande de retrait sécurisée : solde débité/réservé dans une RPC atomique.
 app.post('/api/withdrawals', requireUser, async (req, res) => {
   let withdrawalId = null;
