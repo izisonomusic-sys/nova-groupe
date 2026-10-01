@@ -371,8 +371,8 @@ app.get('/api/health', (_req, res) => {
 app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
-    if (!Number.isSafeInteger(amount) || amount < 1000 || amount > 5000000) {
-      return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 1 000 et 5 000 000 FCFA.' });
+    if (!Number.isSafeInteger(amount) || amount < 3000 || amount > 5000000) {
+      return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 3 000 et 5 000 000 FCFA.' });
     }
     if (missing.length) return res.status(503).json({ error: 'Configuration serveur incomplète.', missing });
 
@@ -493,8 +493,8 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
     const localPhone = localPhoneForPayDunya(phone, countryCode);
     const softpayMode = paydunyaSoftPayMode(countryCode, operator);
 
-    if (!Number.isSafeInteger(amount) || amount < 1000 || amount > 5000000) {
-      return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 1 000 et 5 000 000 FCFA.' });
+    if (!Number.isSafeInteger(amount) || amount < 3000 || amount > 5000000) {
+      return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 3 000 et 5 000 000 FCFA.' });
     }
     if (countryCode !== '+228' || !softpayMode) {
       return res.status(400).json({ error: 'PayDunya SoftPay est actuellement configuré pour T-Money et Moov Togo.' });
@@ -679,6 +679,19 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
   }
 });
 
+// Règle NOVA : au plus 2 retraits non échoués sur une fenêtre glissante de 24 h par compte.
+async function checkWithdrawal24hLimit(userId) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from('withdrawal_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', since)
+    .in('status', ['pending', 'processing', 'paid']);
+  if (error) throw error;
+  return Number(count || 0);
+}
+
 // Demande de retrait sécurisée : solde débité/réservé dans une RPC atomique.
 app.post('/api/withdrawals', requireUser, async (req, res) => {
   let withdrawalId = null;
@@ -691,8 +704,18 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     const withdrawMode = paydunyaWithdrawMode(countryCode, operator);
     const accountAlias = localPhoneForPayDunya(phone, countryCode);
 
-    if (!Number.isSafeInteger(amount) || amount < 1000 || amount > 5000000) {
-      return res.status(400).json({ error: 'Le montant doit être compris entre 1 000 et 5 000 000 FCFA.' });
+    if (!Number.isSafeInteger(amount) || amount < 1500 || amount > 5000000) {
+      return res.status(400).json({ error: 'Le montant doit être compris entre 1 500 et 5 000 000 FCFA.' });
+    }
+
+    const withdrawalsLast24h = await checkWithdrawal24hLimit(req.user.id);
+    if (withdrawalsLast24h >= 2) {
+      return res.status(429).json({
+        error: 'Limite de retrait atteinte.',
+        detail: 'Vous avez déjà effectué 2 retraits sur les dernières 24 heures. Vous pourrez effectuer un nouveau retrait lorsque la fenêtre de 24 heures sera écoulée.',
+        limit: 2,
+        window_hours: 24
+      });
     }
     if (!countryCode || countryCode.length > 8 || !operator || operator.length > 80 ||
         accountAlias.length < 8 || accountAlias.length > 24 ||
