@@ -185,17 +185,153 @@
     try{await api("/api/investments",{method:"POST",body:JSON.stringify({project_id:selectedProject.id})});closeModal("investModal");await loadAll();render(location.hash.replace(/^#\//,"")||"home");S.toast("Investissement confirmé : le solde a été débité.");}
     catch(e){S.toast(e.message||"Investissement impossible.");}finally{b.disabled=false;}
   });
-  var chips=document.querySelectorAll("#rcChips .chip");chips.forEach(ch=>ch.addEventListener("click",()=>{chips.forEach(x=>x.classList.remove("active"));ch.classList.add("active");el("rcAmount").value=ch.textContent.replace(/\s/g,"");}));
+  var softpayPollTimer=null,softpayReference="";
+  var chips=document.querySelectorAll("#rcChips .chip");
+  chips.forEach(ch=>ch.addEventListener("click",function(){
+    chips.forEach(x=>x.classList.remove("active"));
+    ch.classList.add("active");
+    el("rcAmount").value=ch.textContent.replace(/\s/g,"");
+  }));
+
+  function setSoftPayOperator(operator){
+    var select=el("rcOperator");
+    var cards=[el("spOpTmoney"),el("spOpMoov")];
+    cards.forEach(function(card){
+      if(card)card.classList.toggle("active",card.dataset.operator===operator);
+    });
+    if(select){
+      var exists=Array.from(select.options).some(function(o){return o.value===operator;});
+      if(exists)select.value=operator;
+    }
+  }
+
+  function refreshSoftPayOperatorUi(){
+    var country=el("rcCountry"), cards=el("softpayOperators"), select=el("rcOperator");
+    if(!country||!cards||!select)return;
+    var isTogo=country.value==="+228";
+    cards.style.display=isTogo?"grid":"none";
+    select.style.display=isTogo?"none":"block";
+    if(isTogo){
+      var current=select.value==="Moov Togo"?"Moov Togo":"Togocom";
+      setSoftPayOperator(current);
+    }
+  }
+
+  function showSoftPayModal(data){
+    softpayReference=String(data.reference||"");
+    setText("softpayAmount",money(data.amount));
+    setText("softpayOperator",data.operator==="Moov Togo"?"Moov Money":"Yas (Togocom)");
+    setText("softpayPhone",data.phone||"—");
+    setText("softpayStatus",data.status==="completed"?"Confirmé":"En attente");
+    setText("softpayMessage",data.message||"La demande a été envoyée. Validez le paiement directement sur votre téléphone.");
+    var modal=el("softpayModal");if(modal){modal.classList.add("open");modal.setAttribute("aria-hidden","false");}
+    var retry=el("softpayRetry");if(retry)retry.style.display="none";
+  }
+
+  function closeSoftPayModal(){
+    if(softpayPollTimer){clearTimeout(softpayPollTimer);softpayPollTimer=null;}
+    var modal=el("softpayModal");if(modal){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");}
+  }
+
+  async function verifySoftPayPayment(manual){
+    if(!softpayReference)return;
+    var statusNode=el("softpayStatus"),messageNode=el("softpayMessage"),verify=el("softpayVerify");
+    if(verify)verify.disabled=true;
+    if(statusNode)statusNode.textContent="Vérification…";
+    try{
+      var result=await api("/api/payments/paydunya/sync",{method:"POST",body:JSON.stringify({reference:softpayReference})});
+      var row=Array.isArray(result.results)?result.results[0]:null;
+      var status=String(row&&row.status||"pending").toLowerCase();
+      if(status==="completed"){
+        if(statusNode)statusNode.textContent="Confirmé";
+        if(messageNode)messageNode.textContent="Paiement confirmé. Votre portefeuille NOVA a été crédité.";
+        localStorage.removeItem("nova:lastPendingPaymentReference");
+        await loadAll();
+        setText("wdAvail",money(wallet.balance));
+        S.toast("Paiement confirmé : portefeuille crédité.");
+        setTimeout(closeSoftPayModal,700);
+        return true;
+      }
+      if(status==="failed"||status==="cancelled"){
+        if(statusNode)statusNode.textContent=status==="cancelled"?"Annulé":"Échec";
+        if(messageNode)messageNode.textContent=status==="cancelled"?"Le paiement a été annulé. Aucun solde n'a été crédité.":"Le paiement a échoué. Aucun solde n'a été crédité.";
+        var retry=el("softpayRetry");if(retry)retry.style.display="block";
+        return false;
+      }
+      if(statusNode)statusNode.textContent="En attente";
+      if(messageNode)messageNode.textContent=manual?"La validation n'est pas encore confirmée. Validez la demande sur votre téléphone puis réessayez.":"La demande est en attente de validation sur votre téléphone.";
+      return false;
+    }catch(e){
+      if(statusNode)statusNode.textContent="Vérification impossible";
+      if(messageNode)messageNode.textContent=e.message||"Impossible de vérifier le paiement pour le moment.";
+      return false;
+    }finally{
+      if(verify)verify.disabled=false;
+    }
+  }
+
+  function startSoftPayPolling(){
+    if(softpayPollTimer)clearTimeout(softpayPollTimer);
+    var started=Date.now();
+    async function poll(){
+      if(!softpayReference)return;
+      var done=await verifySoftPayPayment(false);
+      if(done)return;
+      if(Date.now()-started<90000){
+        softpayPollTimer=setTimeout(poll,4000);
+      }
+    }
+    softpayPollTimer=setTimeout(poll,4000);
+  }
+
+  el("softpayVerify").addEventListener("click",function(){verifySoftPayPayment(true);});
+  el("softpayClose").addEventListener("click",closeSoftPayModal);
+  el("softpayRetry").addEventListener("click",function(){closeSoftPayModal();el("btnRecharge").click();});
+  el("softpayModal").addEventListener("click",function(e){if(e.target===el("softpayModal"))closeSoftPayModal();});
+
+  el("spOpTmoney").addEventListener("click",function(){setSoftPayOperator("Togocom");});
+  el("spOpMoov").addEventListener("click",function(){setSoftPayOperator("Moov Togo");});
+  el("rcCountry").addEventListener("change",refreshSoftPayOperatorUi);
+  refreshSoftPayOperatorUi();
+
   el("btnRecharge").addEventListener("click",async function(){
-    var amount=Number(el("rcAmount").value);if(!Number.isSafeInteger(amount)||amount<1000){S.toast("Montant minimum : 1 000 FCFA");return;}
+    var amount=Number(el("rcAmount").value);
+    if(!Number.isSafeInteger(amount)||amount<3000){S.toast("Montant minimum : 3 000 FCFA");return;}
+    var country=el("rcCountry").value;
+    var operator=el("rcOperator").value;
+    var phone=(el("rcDial").value||"")+(el("rcPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
+    if(!/^\+228$/.test(country)){ // Preserve the existing PayDunya redirect flow for non-Togo countries.
+      var bLegacy=el("btnRecharge");bLegacy.disabled=true;
+      try{
+        var legacy=await api("/api/payments/paydunya/create",{method:"POST",body:JSON.stringify({amount:amount})});
+        if(!legacy.checkout_url||!/^https:\/\//i.test(legacy.checkout_url))throw new Error("Lien de paiement invalide.");
+        localStorage.setItem("nova:lastPendingPaymentReference",legacy.reference||"");
+        location.assign(legacy.checkout_url);
+      }catch(e){S.toast(e.message||"Paiement impossible. Aucun solde n'a été crédité.");}
+      finally{bLegacy.disabled=false;}
+      return;
+    }
+    if(!["Togocom","Moov Togo"].includes(operator))operator="Togocom";
+    if(!/^\+228\d{8}$/.test(phone)){S.toast("Entrez un numéro Togo valide à 8 chiffres.");return;}
     var b=el("btnRecharge");b.disabled=true;
-    try{var r=await api("/api/payments/paydunya/create",{method:"POST",body:JSON.stringify({amount:amount})});if(!r.checkout_url||!/^https:\/\//i.test(r.checkout_url))throw new Error("Lien de paiement invalide.");location.assign(r.checkout_url);}
-    catch(e){S.toast(e.message||"Paiement impossible. Aucun solde n'a été crédité.");}finally{b.disabled=false;}
+    try{
+      var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone})});
+      localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
+      showSoftPayModal(result);
+      if(result.status==="completed"){
+        localStorage.removeItem("nova:lastPendingPaymentReference");
+        await loadAll();
+        setTimeout(closeSoftPayModal,700);
+      }else{
+        startSoftPayPolling();
+      }
+    }catch(e){S.toast(e.message||"Paiement SoftPay impossible. Aucun solde n'a été crédité.");}
+    finally{b.disabled=false;}
   });
   el("btnWithdraw").addEventListener("click",async function(){
     var amount=Number(el("wdAmount").value),phone=(el("wdDial").value||"")+(el("wdPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
     var payload={amount:amount,country_code:el("wdCountry").value,operator:el("wdOperator").value,phone:phone,account_name:el("wdName").value.trim()};
-    if(!Number.isSafeInteger(amount)||amount<1000){S.toast("Montant minimum : 1 000 FCFA");return;}
+    if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");return;}
     var b=el("btnWithdraw");b.disabled=true;
     try{await api("/api/withdrawals",{method:"POST",body:JSON.stringify(payload)});S.toast("Demande de retrait envoyée pour validation.");el("wdAmount").value="";await loadAll();setText("wdAvail",money(wallet.balance));}
     catch(e){S.toast(e.message||"Retrait impossible.");}finally{b.disabled=false;}
