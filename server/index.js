@@ -353,6 +353,155 @@ app.post('/api/referrals/reconcile', requireUser, async (req, res) => {
   }
 });
 
+
+const investmentReconcileLocks = new Set();
+
+async function reconcileInvestmentIncomeForUser(userId) {
+  if (!supabase || !userId || investmentReconcileLocks.has(userId)) {
+    return { ok: true, credited: 0, amount_credited: 0, status: investmentReconcileLocks.has(userId) ? 'already_running' : 'skipped' };
+  }
+  investmentReconcileLocks.add(userId);
+  try {
+    const { data: investments, error: investmentError } = await supabase
+      .from('investments')
+      .select('id,user_id,principal_amount,status,started_at,ends_at,created_at,project_id,projects(daily_return_amount,duration_days,title)')
+      .eq('user_id', userId)
+      .in('status', ['active', 'completed'])
+      .order('created_at', { ascending: true })
+      .limit(1000);
+    if (investmentError) throw investmentError;
+
+    const now = Date.now();
+    let credited = 0;
+    let amountCredited = 0;
+
+    for (const inv of investments || []) {
+      const project = Array.isArray(inv.projects) ? inv.projects[0] : inv.projects;
+      const daily = Number(project?.daily_return_amount || 0);
+      const durationDays = Number(project?.duration_days || 0);
+      const startedAt = new Date(inv.started_at || inv.created_at || 0);
+      if (!Number.isSafeInteger(daily) || daily <= 0 || !Number.isSafeInteger(durationDays) || durationDays <= 0 || Number.isNaN(startedAt.getTime())) continue;
+
+      const configuredEnd = inv.ends_at ? new Date(inv.ends_at) : new Date(startedAt.getTime() + durationDays * 86400000);
+      const endMs = Math.min(now, configuredEnd.getTime());
+      const dueDays = Math.min(durationDays, Math.max(0, Math.floor((endMs - startedAt.getTime()) / 86400000)));
+      if (dueDays <= 0) continue;
+
+      const refs = Array.from({ length: dueDays }, (_, idx) => `INV-INCOME-${inv.id}-DAY-${idx + 1}`);
+      const { data: existingRows, error: ledgerReadError } = await supabase
+        .from('wallet_ledger')
+        .select('reference')
+        .eq('user_id', userId)
+        .eq('entry_type', 'investment_income')
+        .in('reference', refs);
+      if (ledgerReadError) throw ledgerReadError;
+
+      const existing = new Set((existingRows || []).map(row => row.reference));
+      for (let day = 1; day <= dueDays; day += 1) {
+        const reference = `INV-INCOME-${inv.id}-DAY-${day}`;
+        if (existing.has(reference)) continue;
+
+        const postedAt = new Date(startedAt.getTime() + day * 86400000);
+        if (postedAt.getTime() > now || postedAt.getTime() > configuredEnd.getTime()) continue;
+
+        const { data: wallet, error: walletReadError } = await supabase
+          .from('wallet_balances')
+          .select('balance')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (walletReadError) throw walletReadError;
+        if (!wallet) {
+          const { error: walletCreateError } = await supabase
+            .from('wallet_balances')
+            .insert({ user_id: userId, balance: 0 });
+          if (walletCreateError && !/duplicate|unique/i.test(walletCreateError.message || '')) throw walletCreateError;
+        }
+
+        const { data: latestWallet, error: latestWalletError } = await supabase
+          .from('wallet_balances')
+          .select('balance')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (latestWalletError || !latestWallet) throw latestWalletError || new Error('Portefeuille introuvable.');
+
+        const { error: balanceError } = await supabase
+          .from('wallet_balances')
+          .update({ balance: Number(latestWallet.balance || 0) + daily, updated_at: new Date().toISOString() })
+          .eq('user_id', userId);
+        if (balanceError) throw balanceError;
+
+        const { error: ledgerInsertError } = await supabase
+          .from('wallet_ledger')
+          .insert({
+            user_id: userId,
+            entry_type: 'investment_income',
+            amount: daily,
+            status: 'posted',
+            reference,
+            description: `Gain quotidien investissement — ${project?.title || 'Projet NOVA'} — jour ${day}`,
+            related_investment_id: inv.id,
+            posted_at: postedAt.toISOString()
+          });
+        if (ledgerInsertError) throw ledgerInsertError;
+
+        existing.add(reference);
+        credited += 1;
+        amountCredited += daily;
+      }
+    }
+
+    return { ok: true, status: credited ? 'credited' : 'already_credited', credited, amount_credited: amountCredited };
+  } finally {
+    investmentReconcileLocks.delete(userId);
+  }
+}
+
+async function reconcileAllInvestmentIncome() {
+  if (!supabase) return;
+  try {
+    let page = 0;
+    let totalCredited = 0;
+    let totalAmount = 0;
+    while (true) {
+      const { data: rows, error } = await supabase
+        .from('investments')
+        .select('user_id')
+        .in('status', ['active', 'completed'])
+        .order('created_at', { ascending: true })
+        .range(page * 1000, page * 1000 + 999);
+      if (error) throw error;
+      const ids = [...new Set((rows || []).map(row => row.user_id).filter(Boolean))];
+      for (const userId of ids) {
+        try {
+          const result = await reconcileInvestmentIncomeForUser(userId);
+          totalCredited += Number(result?.credited || 0);
+          totalAmount += Number(result?.amount_credited || 0);
+        } catch (err) {
+          console.error('[INVESTMENT] reconciliation error', { userId, message: err.message });
+        }
+      }
+      if (!rows || rows.length < 1000) break;
+      page += 1;
+    }
+    console.log('[INVESTMENT] automatic daily-income reconciliation completed', {
+      ledgerEntriesCredited: totalCredited,
+      amountCredited: totalAmount
+    });
+  } catch (err) {
+    console.error('[INVESTMENT] automatic reconciliation failed:', err.message);
+  }
+}
+
+app.post('/api/investments/reconcile', requireUser, async (req, res) => {
+  try {
+    const result = await reconcileInvestmentIncomeForUser(req.user.id);
+    return res.json(result);
+  } catch (err) {
+    console.error('[INVESTMENT] user reconciliation error:', err.message);
+    return res.status(500).json({ error: 'Impossible de vérifier les gains quotidiens de votre investissement.' });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   const callbackConfigured = !!process.env.PAYDUNYA_CALLBACK_URL;
   const callbackUrl = callbackConfigured ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
@@ -1452,6 +1601,13 @@ app.get('/app.html/:view', (req, res, next) => {
   if (!allowedViews.has(req.params.view)) return next();
   return res.redirect(302, `/app.html#/${req.params.view}`);
 });
+
+setTimeout(() => {
+  reconcileAllInvestmentIncome().catch(err => console.error('[INVESTMENT] initial reconciliation error:', err.message));
+}, 15000);
+setInterval(() => {
+  reconcileAllInvestmentIncome().catch(err => console.error('[INVESTMENT] scheduled reconciliation error:', err.message));
+}, 5 * 60 * 1000);
 
 setTimeout(() => {
   reconcileAllReferralBonuses().catch(err => console.error('[REFERRAL] initial reconciliation error:', err.message));
