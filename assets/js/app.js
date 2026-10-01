@@ -296,7 +296,7 @@
 
   el("btnRecharge").addEventListener("click",async function(){
     var amount=Number(el("rcAmount").value);
-    if(!Number.isSafeInteger(amount)||amount<1000){S.toast("Montant minimum : 1 000 FCFA");return;}
+    if(!Number.isSafeInteger(amount)||amount<3000){S.toast("Montant minimum : 3 000 FCFA");return;}
     var country=el("rcCountry").value;
     var operator=el("rcOperator").value;
     var phone=(el("rcDial").value||"")+(el("rcPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
@@ -331,7 +331,7 @@
   el("btnWithdraw").addEventListener("click",async function(){
     var amount=Number(el("wdAmount").value),phone=(el("wdDial").value||"")+(el("wdPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
     var payload={amount:amount,country_code:el("wdCountry").value,operator:el("wdOperator").value,phone:phone,account_name:el("wdName").value.trim()};
-    if(!Number.isSafeInteger(amount)||amount<1000){S.toast("Montant minimum : 1 000 FCFA");return;}
+    if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");return;}
     var b=el("btnWithdraw");b.disabled=true;
     try{await api("/api/withdrawals",{method:"POST",body:JSON.stringify(payload)});S.toast("Demande de retrait envoyée pour validation.");el("wdAmount").value="";await loadAll();setText("wdAvail",money(wallet.balance));}
     catch(e){S.toast(e.message||"Retrait impossible.");}finally{b.disabled=false;}
