@@ -1460,4 +1460,15 @@ setInterval(() => {
   reconcileAllReferralBonuses().catch(err => console.error('[REFERRAL] scheduled reconciliation error:', err.message));
 }, 300000);
 
+console.log('[NOVA][CONFIG] PayDunya/Supabase configuration check', {
+  paydunyaMode: isTest ? 'test' : 'live',
+  supabaseUrlConfigured: !!process.env.SUPABASE_URL,
+  supabaseServiceRoleConfigured: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  paydunyaMasterConfigured: !!paydunyaKeys.master,
+  paydunyaPrivateConfigured: !!paydunyaKeys.privateKey,
+  paydunyaTokenConfigured: !!paydunyaKeys.token,
+  paymentCallback: process.env.PAYDUNYA_CALLBACK_URL ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) || 'invalid' : 'default',
+  disbursementCallback: publicHttpsUrl(paydunyaDisbursementCallbackUrl) || 'invalid'
+});
+
 app.listen(Number(process.env.PORT || 3000), () => console.log(`NOVA API listening on http://localhost:${process.env.PORT || 3000}`));
