@@ -86,49 +86,51 @@
       </p>
     </section>
 
-    <!-- ============ VUE : RECHARGER ============ -->
+    <!-- ============ VUE : RECHARGER (PayDunya SoftPay) ============ -->
     <section class="view" id="view-recharger">
-      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-wallet"/></svg> Recharger mon portefeuille</h2>
+      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-wallet"/></svg> Rechargement</h2>
 
       <div class="form-card">
         <div class="field">
-          <label for="rcAmount">Montant à recharger (FCFA)</label>
-          <input class="input" id="rcAmount" type="number" min="1000" step="100" placeholder="Ex. 10000" />
+          <label for="rcAmount">Choisir un montant</label>
           <div class="amount-chips" id="rcChips">
-            <button type="button" class="chip">2 000</button>
-            <button type="button" class="chip">5 000</button>
-            <button type="button" class="chip active">10 000</button>
+            <button type="button" class="chip">1 000</button>
+            <button type="button" class="chip active">5 000</button>
+            <button type="button" class="chip">10 000</button>
             <button type="button" class="chip">25 000</button>
             <button type="button" class="chip">50 000</button>
+            <button type="button" class="chip">100 000</button>
           </div>
+          <label for="rcAmount" style="margin-top:16px">Montant (FCFA)</label>
+          <input class="input" id="rcAmount" type="number" min="1000" step="100" value="5000" placeholder="Ex. 10000" />
         </div>
       </div>
 
       <div class="form-card">
-        <h3><svg class="ic ic-sm" style="color:var(--brand)"><use href="#i-phone"/></svg> Portefeuille mobile money</h3>
+        <h3><svg class="ic ic-sm" style="color:var(--brand)"><use href="#i-phone"/></svg> Informations de paiement</h3>
         <div class="field">
           <label for="rcCountry">Pays</label>
           <select class="select" id="rcCountry"></select>
         </div>
         <div class="field">
-          <label for="rcOperator">Opérateur</label>
-          <select class="select" id="rcOperator"></select>
+          <label>Opérateur</label>
+          <div id="softpayOperators" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+            <button type="button" class="chip active" id="spOpTmoney" data-operator="Togocom" style="min-height:46px">▣ Yas (Togocom)</button>
+            <button type="button" class="chip" id="spOpMoov" data-operator="Moov Togo" style="min-height:46px">▣ Moov Money</button>
+          </div>
+          <select class="select" id="rcOperator" style="display:none"></select>
         </div>
         <div class="field">
-          <label for="rcPhone">Numéro de récepteur</label>
+          <label for="rcPhone">Numéro Yas / Moov</label>
           <div class="phone-row">
             <select class="select" id="rcDial"></select>
-            <input class="input" id="rcPhone" type="tel" inputmode="numeric" placeholder="90 00 00 00" />
+            <input class="input" id="rcPhone" type="tel" inputmode="numeric" placeholder="90 00 00 00" autocomplete="tel" />
           </div>
         </div>
-        <div class="field">
-          <label for="rcName">Nom complet</label>
-          <input class="input" id="rcName" type="text" placeholder="Nom du titulaire du compte" />
-        </div>
         <button class="btn btn-primary btn-block btn-lg" id="btnRecharge">
-          <svg class="ic ic-sm"><use href="#i-check"/></svg> Enregistrer &amp; payer
+          <svg class="ic ic-sm"><use href="#i-wallet"/></svg> Recharger maintenant
         </button>
-        <p class="hint muted" style="font-size:12px;margin-top:10px">Le portefeuille sera crédité uniquement après confirmation du paiement par le prestataire.</p>
+        <p class="hint muted" style="font-size:12px;margin-top:10px">Paiement sécurisé par PayDunya SoftPay. Vous validez la demande directement sur votre téléphone. Le solde NOVA n'est crédité qu'après confirmation.</p>
       </div>
     </section>
 
@@ -393,6 +395,26 @@
       <button class="btn btn-primary btn-block" id="npSave">Enregistrer</button>
       <button class="btn btn-outline btn-block" id="npCancel">Annuler</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="softpayModal" aria-hidden="true">
+  <div class="modal" style="max-width:430px">
+    <button type="button" id="softpayClose" aria-label="Fermer" style="position:absolute;right:16px;top:12px;border:0;background:none;font-size:24px;cursor:pointer;color:#6b7280">×</button>
+    <div class="m-ic mi-teal"><svg class="ic ic-lg"><use href="#i-phone"/></svg></div>
+    <h3 id="softpayTitle">Validez sur votre téléphone</h3>
+    <p id="softpayMessage">La demande de paiement a été envoyée. Votre portefeuille sera crédité automatiquement après validation.</p>
+    <div style="text-align:left;background:#f7f9fc;border-radius:14px;padding:14px;margin:14px 0">
+      <div style="display:flex;justify-content:space-between;gap:12px"><span class="muted">Montant</span><b id="softpayAmount">—</b></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;margin-top:8px"><span class="muted">Opérateur</span><b id="softpayOperator">—</b></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;margin-top:8px"><span class="muted">Numéro</span><b id="softpayPhone">—</b></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;margin-top:8px"><span class="muted">Statut</span><b id="softpayStatus">En attente</b></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-primary btn-block" id="softpayVerify">Vérifier maintenant</button>
+      <button class="btn btn-outline btn-block" id="softpayRetry" style="display:none">Recharger à nouveau</button>
+    </div>
+    <p id="softpaySecurity" class="muted" style="font-size:12px;margin-top:10px">Ne partagez jamais votre code secret. NOVA ne vous le demandera pas.</p>
   </div>
 </div>
 
