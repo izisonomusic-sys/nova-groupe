@@ -95,14 +95,15 @@
           <label for="rcAmount">Choisir un montant</label>
           <div class="amount-chips" id="rcChips">
             <button type="button" class="chip">1 000</button>
-            <button type="button" class="chip active">5 000</button>
-            <button type="button" class="chip">10 000</button>
-            <button type="button" class="chip">25 000</button>
-            <button type="button" class="chip">50 000</button>
-            <button type="button" class="chip">100 000</button>
+            <button type="button" class="chip">3 000</button>
+            <button type="button" class="chip">6 000</button>
+            <button type="button" class="chip">9 000</button>
+            <button type="button" class="chip">12 000</button>
+            <button type="button" class="chip">20 000</button>
+            <button type="button" class="chip">30 000</button>
           </div>
           <label for="rcAmount" style="margin-top:16px">Montant (FCFA)</label>
-          <input class="input" id="rcAmount" type="number" min="1000" step="100" value="5000" placeholder="Ex. 10000" />
+          <input class="input" id="rcAmount" type="number" min="3000" step="100" value="3000" placeholder="Ex. 10000" />
         </div>
       </div>
 
@@ -147,7 +148,7 @@
       <div class="form-card">
         <div class="field">
           <label for="wdAmount">Montant à retirer (FCFA)</label>
-          <input class="input" id="wdAmount" type="number" min="1000" step="100" placeholder="Ex. 5000" />
+          <input class="input" id="wdAmount" type="number" min="1500" step="100" placeholder="Ex. 5000" />
         </div>
         <div class="field">
           <label for="wdCountry">Pays</label>
@@ -171,7 +172,7 @@
         <button class="btn btn-primary btn-block btn-lg" id="btnWithdraw">
           <svg class="ic ic-sm"><use href="#i-arrow-up"/></svg> Confirmer le retrait
         </button>
-        <p class="hint muted" style="font-size:12px;margin-top:10px">Les retraits sont soumis à validation.</p>
+        <p class="hint muted" style="font-size:12px;margin-top:10px">Minimum de retrait : 1 500 FCFA. Maximum : 2 retraits sur une période glissante de 24 heures par compte.</p>
       </div>
     </section>
 
