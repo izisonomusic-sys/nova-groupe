@@ -23,6 +23,20 @@
     }
     return data;
   }
+  async function reconcileInvestmentIncome(){
+    try{
+      var result=await api("/api/investments/reconcile",{method:"POST",body:JSON.stringify({})});
+      if(result && result.status==="credited"){
+        await loadAll();
+        render(location.hash.replace(/^#\\//,"")||"home");
+        S.toast("Gains quotidiens de l’investissement vérifiés et crédités.");
+      }
+      return result;
+    }catch(err){
+      console.warn("Investment income reconciliation:",err.message);
+      return null;
+    }
+  }
   async function reconcileReferralBonus(){
     try{
       var result=await api("/api/referrals/reconcile",{method:"POST",body:JSON.stringify({})});
@@ -360,6 +374,7 @@
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
   try{
     await loadAll();
+    await reconcileInvestmentIncome();
     await reconcileReferralBonus();
     await confirmPaymentReturn();
     var lastRef=localStorage.getItem("nova:lastPendingPaymentReference");
