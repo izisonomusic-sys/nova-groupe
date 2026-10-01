@@ -28,7 +28,7 @@
     var d={};try{d=await r.json();}catch(_){}
     if(!r.ok)throw new Error(d.error||"Erreur serveur.");return d;
   }
-  function showPanel(){login.style.display="none";panel.style.display="block";if(logout)logout.style.display="inline-flex";loadStats().catch(e=>S.toast(e.message));loadProjects().catch(e=>S.toast(e.message));}
+  function showPanel(){login.style.display="none";panel.style.display="block";if(logout)logout.style.display="inline-flex";loadStats().catch(e=>S.toast(e.message));loadProjects().catch(e=>S.toast(e.message));loadWithdrawals().catch(e=>S.toast(e.message));}
   function fmtMoney(v){return money(Number(v)||0);}
   async function loadStats(){
     var r=await request("/api/admin/stats"),s=r.stats||{};
@@ -62,6 +62,40 @@
     finally{b.disabled=false;}
   });
   if(logout)logout.addEventListener("click",async function(){await A.auth.signOut();showLogin();S.toast("Déconnexion effectuée.");});
+  function withdrawalCard(w){
+    var status=w.status==="pending" && !w.admin_approved_at;
+    var phone=w.phone||w.profile_phone||"";
+    return '<div class="admin-row" style="grid-template-columns:1fr auto"><div class="ar-info"><span class="badge badge-amber">En attente de validation</span><b>'+esc(w.display_name||"Membre NOVA")+'</b><small>Retrait de <strong>'+money(w.amount)+'</strong> — '+esc(w.operator||"")+' — '+esc(phone)+'</small><small>Compte : '+esc(w.account_name||"")+' · '+new Date(w.created_at).toLocaleString("fr-FR")+'</small></div><div class="ar-actions"><button class="btn btn-primary btn-sm" data-approve-withdrawal="'+esc(w.id)+'">Valider et payer</button><button class="btn btn-danger btn-sm" data-reject-withdrawal="'+esc(w.id)+'">Refuser</button></div></div>';
+  }
+  async function loadWithdrawals(){
+    var data=await request("/api/admin/withdrawals"),list=data.withdrawals||[];
+    txt("withdrawalQueue",list.length+" retrait(s) en attente");
+    var box=$("withdrawalQueue");
+    box.innerHTML=list.length?list.map(withdrawalCard).join(""):'<p class="empty">Aucun retrait en attente de validation.</p>';
+  }
+  $("refreshWithdrawals").addEventListener("click",function(){loadWithdrawals().catch(e=>S.toast(e.message));});
+  $("withdrawalQueue").addEventListener("click",async function(e){
+    var approve=e.target.closest("[data-approve-withdrawal]");
+    var reject=e.target.closest("[data-reject-withdrawal]");
+    if(!approve&&!reject)return;
+    var id=(approve||reject).dataset.approveWithdrawal||reject.dataset.rejectWithdrawal;
+    try{
+      if(approve){
+        if(!confirm("Valider ce retrait et autoriser l'envoi PayDunya ?"))return;
+        approve.disabled=true;
+        var r=await request("/api/admin/withdrawals/"+encodeURIComponent(id)+"/approve",{method:"POST",body:"{}"});
+        S.toast(r.message||"Retrait validé.");
+      }else{
+        var note=prompt("Motif du refus (optionnel) :","Retrait refusé par l'administrateur.");
+        if(note===null)return;
+        reject.disabled=true;
+        var r2=await request("/api/admin/withdrawals/"+encodeURIComponent(id)+"/reject",{method:"POST",body:JSON.stringify({note:note})});
+        S.toast(r2.message||"Retrait refusé.");
+      }
+      await Promise.all([loadWithdrawals(),loadStats()]);
+    }catch(err){S.toast(err.message||"Action impossible.");}
+    finally{if(approve)approve.disabled=false;if(reject)reject.disabled=false;}
+  });
   function draft(){
     var title=$("pTitle").value.trim(),slug=title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
     return {title:title,slug:slug,badge:$("pBadge").value.trim(),description:$("pDesc").value.trim(),category:$("pType").value==="1"?"other":categoryFromImage($("pImg").value),
