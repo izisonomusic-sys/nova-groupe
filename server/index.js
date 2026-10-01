@@ -692,9 +692,9 @@ async function checkWithdrawal24hLimit(userId) {
   return Number(count || 0);
 }
 
-// Demande de retrait sécurisée : solde débité/réservé dans une RPC atomique.
+// PayDunya is intentionally NOT called here. The request is reserved in NOVA and
+// remains pending until an authenticated administrator approves it.
 app.post('/api/withdrawals', requireUser, async (req, res) => {
-  let withdrawalId = null;
   try {
     const amount = Number(req.body.amount);
     const countryCode = String(req.body.country_code || '').trim();
@@ -707,14 +707,12 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     if (!Number.isSafeInteger(amount) || amount < 1500 || amount > 5000000) {
       return res.status(400).json({ error: 'Le montant doit être compris entre 1 500 et 5 000 000 FCFA.' });
     }
-
     const withdrawalsLast24h = await checkWithdrawal24hLimit(req.user.id);
     if (withdrawalsLast24h >= 2) {
       return res.status(429).json({
         error: 'Limite de retrait atteinte.',
         detail: 'Vous avez déjà effectué 2 retraits sur les dernières 24 heures. Vous pourrez effectuer un nouveau retrait lorsque la fenêtre de 24 heures sera écoulée.',
-        limit: 2,
-        window_hours: 24
+        limit: 2, window_hours: 24
       });
     }
     if (!countryCode || countryCode.length > 8 || !operator || operator.length > 80 ||
@@ -725,155 +723,119 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     if (!withdrawMode) {
       return res.status(400).json({
         error: 'Ce moyen de retrait n’est pas encore disponible automatiquement via PayDunya.',
-        operator,
-        country_code: countryCode
+        operator, country_code: countryCode
       });
     }
-    if (!paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) {
-      return res.status(503).json({ error: 'Configuration PayDunya de déboursement incomplète.' });
-    }
-    const callbackUrl = publicHttpsUrl(paydunyaDisbursementCallbackUrl);
-    if (!callbackUrl) {
-      return res.status(503).json({ error: 'URL de callback PayDunya pour les retraits invalide.' });
-    }
 
-    const { data: createdId, error: withdrawalError } = await supabase.rpc('nova_request_withdrawal', {
-      p_user_id: req.user.id,
-      p_amount: amount,
-      p_country_code: countryCode,
-      p_operator: operator,
-      p_phone: phone,
-      p_account_name: accountName
+    const { data: withdrawalId, error: withdrawalError } = await supabase.rpc('nova_request_withdrawal', {
+      p_user_id: req.user.id, p_amount: amount, p_country_code: countryCode,
+      p_operator: operator, p_phone: phone, p_account_name: accountName
     });
     if (withdrawalError) {
       if (/Insufficient balance/i.test(withdrawalError.message)) return res.status(409).json({ error: 'Solde insuffisant.' });
       if (/Invalid withdrawal amount|Missing withdrawal details/i.test(withdrawalError.message)) return res.status(400).json({ error: 'Demande de retrait invalide.' });
       throw withdrawalError;
     }
-    withdrawalId = createdId;
 
-    const { response: createResponse, data: created } = await paydunyaDisbursementRequest('get-invoice', {
-      account_alias: accountAlias,
-      amount,
-      withdraw_mode: withdrawMode,
-      callback_url: callbackUrl
-    });
-
-    if (!createResponse.ok || created.response_code !== '00' || !created.disburse_token) {
-      const detail = created?.response_text || created?.description || `Réponse HTTP ${createResponse.status}`;
-      await supabase.rpc('nova_finalize_withdrawal_failure', {
-        p_withdrawal_id: withdrawalId,
-        p_provider_token: '',
-        p_provider_payload: created || { http_status: createResponse.status },
-        p_failure_reason: detail
-      });
-      return res.status(502).json({ error: 'PayDunya n’a pas pu préparer le retrait.', detail });
-    }
-
-    const disburseToken = String(created.disburse_token);
-    const { error: processingError } = await supabase.rpc('nova_set_withdrawal_processing', {
-      p_withdrawal_id: withdrawalId,
-      p_provider_token: disburseToken,
-      p_provider_payload: created
-    });
-    if (processingError) throw processingError;
-
-    const { response: submitResponse, data: submitted } = await paydunyaDisbursementRequest('submit-invoice', {
-      disburse_invoice: disburseToken,
-      disburse_id: withdrawalId
-    });
-
-    if (submitResponse.ok && submitted.response_code === '00') {
-      const providerStatus = String(submitted.status || '').toLowerCase();
-      if (providerStatus === 'success') {
-        await supabase.rpc('nova_finalize_withdrawal_success', {
-          p_withdrawal_id: withdrawalId,
-          p_provider_token: disburseToken,
-          p_provider_payload: submitted
-        });
-        return res.status(201).json({
-          ok: true,
-          withdrawal_id: withdrawalId,
-          status: 'paid',
-          provider: 'paydunya',
-          message: 'Retrait envoyé automatiquement avec succès.'
-        });
-      }
-      if (providerStatus === 'failed') {
-        const detail = submitted.response_text || submitted.description || 'PayDunya a refusé le retrait.';
-        await supabase.rpc('nova_finalize_withdrawal_failure', {
-          p_withdrawal_id: withdrawalId,
-          p_provider_token: disburseToken,
-          p_provider_payload: submitted,
-          p_failure_reason: detail
-        });
-        return res.status(502).json({ error: 'Le retrait PayDunya a échoué.', detail });
-      }
-      return res.status(201).json({
-        ok: true,
-        withdrawal_id: withdrawalId,
-        status: 'processing',
-        provider: 'paydunya',
-        message: 'Retrait envoyé à PayDunya et en cours de traitement.'
-      });
-    }
-
-    // If submit timed out or returned an ambiguous error, verify the disbursement token
-    // before deciding whether the wallet should be refunded.
-    const { response: checkResponse, data: checked } = await paydunyaDisbursementRequest('check-status', {
-      disburse_invoice: disburseToken
-    });
-    if (checkResponse.ok && checked.response_code === '00') {
-      const checkedStatus = String(checked.status || '').toLowerCase();
-      if (checkedStatus === 'success') {
-        await supabase.rpc('nova_finalize_withdrawal_success', {
-          p_withdrawal_id: withdrawalId,
-          p_provider_token: disburseToken,
-          p_provider_payload: checked
-        });
-        return res.status(201).json({ ok: true, withdrawal_id: withdrawalId, status: 'paid', provider: 'paydunya', message: 'Retrait confirmé automatiquement.' });
-      }
-      if (checkedStatus === 'failed') {
-        const detail = checked.response_text || checked.description || 'Retrait PayDunya échoué.';
-        await supabase.rpc('nova_finalize_withdrawal_failure', {
-          p_withdrawal_id: withdrawalId,
-          p_provider_token: disburseToken,
-          p_provider_payload: checked,
-          p_failure_reason: detail
-        });
-        return res.status(502).json({ error: 'Le retrait PayDunya a échoué.', detail });
-      }
-    }
-
-    // Keep funds reserved while PayDunya remains pending/ambiguous; callback + reconciler will settle it.
     return res.status(201).json({
       ok: true,
       withdrawal_id: withdrawalId,
-      status: 'processing',
+      status: 'pending',
       provider: 'paydunya',
-      message: 'Retrait transmis à PayDunya. Le statut sera mis à jour automatiquement.'
+      message: 'Demande reçue. Votre retrait sera envoyé à PayDunya après validation par l’administrateur.'
     });
   } catch (err) {
-    console.error('Automatic withdrawal error:', err?.message || err);
-    if (withdrawalId) {
-      try {
-        await supabase.rpc('nova_finalize_withdrawal_failure', {
-          p_withdrawal_id: withdrawalId,
-          p_provider_token: '',
-          p_provider_payload: { error: err?.message || 'unknown_error' },
-          p_failure_reason: err?.name === 'AbortError'
-            ? 'Délai dépassé lors de la communication avec PayDunya.'
-            : 'Erreur technique lors du traitement du retrait.'
-        });
-      } catch (rollbackError) {
-        console.error('Automatic withdrawal refund error:', rollbackError.message);
-      }
-    }
-    if (err?.name === 'AbortError') return res.status(504).json({ error: 'PayDunya a mis trop de temps à répondre. Le retrait est sécurisé et sera réconcilié automatiquement.' });
-    return res.status(500).json({ error: 'Impossible de traiter automatiquement le retrait.' });
+    console.error('Withdrawal request error:', err?.message || err);
+    return res.status(500).json({ error: 'Impossible d’enregistrer la demande de retrait.' });
   }
 });
 
+// Starts the real PayDunya disbursement only after the admin approval RPC has succeeded.
+async function startApprovedPayDunyaWithdrawal(withdrawalId) {
+  if (!supabase || !withdrawalId) throw new Error('Retrait invalide.');
+  const { data: wr, error: readError } = await supabase
+    .from('withdrawal_requests')
+    .select('id,user_id,amount,country_code,operator,phone,account_name,status,provider,provider_token,admin_approved_at')
+    .eq('id', withdrawalId).maybeSingle();
+  if (readError) throw readError;
+  if (!wr) throw new Error('Withdrawal not found');
+  if (!wr.admin_approved_at) throw new Error('Admin approval required');
+  if (wr.status === 'paid') return { status: 'paid', withdrawal_id: wr.id };
+  if (wr.status === 'rejected' || wr.status === 'cancelled') throw new Error('Withdrawal is closed');
+  if (wr.provider_token) return { status: wr.status || 'processing', withdrawal_id: wr.id };
+
+  const countryCode = String(wr.country_code || '').trim();
+  const operator = String(wr.operator || '').trim();
+  const accountAlias = localPhoneForPayDunya(wr.phone, countryCode);
+  const withdrawMode = paydunyaWithdrawMode(countryCode, operator);
+  if (!withdrawMode) throw new Error('Ce moyen de retrait n’est pas disponible via PayDunya.');
+  if (!paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) throw new Error('Configuration PayDunya de déboursement incomplète.');
+
+  const callbackUrl = publicHttpsUrl(paydunyaDisbursementCallbackUrl);
+  if (!callbackUrl) throw new Error('URL de callback PayDunya pour les retraits invalide.');
+
+  const { response: createResponse, data: created } = await paydunyaDisbursementRequest('get-invoice', {
+    account_alias: accountAlias, amount: Number(wr.amount), withdraw_mode: withdrawMode,
+    callback_url: callbackUrl
+  });
+  if (!createResponse.ok || created.response_code !== '00' || !created.disburse_token) {
+    const detail = created?.response_text || created?.description || `Réponse HTTP ${createResponse.status}`;
+    await supabase.rpc('nova_finalize_withdrawal_failure', {
+      p_withdrawal_id: wr.id, p_provider_token: '', p_provider_payload: created || { http_status: createResponse.status },
+      p_failure_reason: detail
+    });
+    throw new Error(detail);
+  }
+
+  const disburseToken = String(created.disburse_token);
+  const { error: processingError } = await supabase.rpc('nova_set_withdrawal_processing', {
+    p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: created
+  });
+  if (processingError) throw processingError;
+
+  const { response: submitResponse, data: submitted } = await paydunyaDisbursementRequest('submit-invoice', {
+    disburse_invoice: disburseToken, disburse_id: wr.id
+  });
+
+  if (submitResponse.ok && submitted.response_code === '00') {
+    const providerStatus = String(submitted.status || '').toLowerCase();
+    if (providerStatus === 'success') {
+      await supabase.rpc('nova_finalize_withdrawal_success', {
+        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: submitted
+      });
+      return { status: 'paid', withdrawal_id: wr.id };
+    }
+    if (providerStatus === 'failed') {
+      const detail = submitted.response_text || submitted.description || 'PayDunya a refusé le retrait.';
+      await supabase.rpc('nova_finalize_withdrawal_failure', {
+        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: submitted, p_failure_reason: detail
+      });
+      return { status: 'rejected', withdrawal_id: wr.id };
+    }
+    return { status: 'processing', withdrawal_id: wr.id };
+  }
+
+  const { response: checkResponse, data: checked } = await paydunyaDisbursementRequest('check-status', {
+    disburse_invoice: disburseToken
+  });
+  if (checkResponse.ok && checked.response_code === '00') {
+    const checkedStatus = String(checked.status || '').toLowerCase();
+    if (checkedStatus === 'success') {
+      await supabase.rpc('nova_finalize_withdrawal_success', {
+        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: checked
+      });
+      return { status: 'paid', withdrawal_id: wr.id };
+    }
+    if (checkedStatus === 'failed') {
+      const detail = checked.response_text || checked.description || 'Retrait PayDunya échoué.';
+      await supabase.rpc('nova_finalize_withdrawal_failure', {
+        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: checked, p_failure_reason: detail
+      });
+      return { status: 'rejected', withdrawal_id: wr.id };
+    }
+  }
+  return { status: 'processing', withdrawal_id: wr.id };
+}
 // Statut d'une recharge : un utilisateur ne peut consulter que ses propres transactions.
 app.get('/api/payments/paydunya/:reference', requireUser, async (req, res) => {
   try {
@@ -1313,6 +1275,70 @@ app.get('/api/referrals/me', requireUser, async (req, res) => {
   } catch (err) {
     console.error('Referral summary error:', err.message);
     return res.status(500).json({ error: 'Impossible de charger votre équipe.' });
+  }
+});
+
+// Admin withdrawals: a pending withdrawal is only sent to PayDunya after explicit approval.
+app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (_req, res) => {
+  try {
+    const { data: rows, error } = await supabase.from('withdrawal_requests')
+      .select('id,user_id,amount,country_code,operator,phone,account_name,status,provider,provider_token,provider_status,failure_reason,admin_note,admin_approved_at,admin_rejected_at,created_at,processed_at')
+      .eq('status', 'pending')
+      .is('admin_approved_at', null)
+      .order('created_at', { ascending: true })
+      .limit(200);
+    if (error) throw error;
+    const ids = (rows || []).map(r => r.user_id);
+    let profiles = [];
+    if (ids.length) {
+      const p = await supabase.from('profiles').select('id,display_name,phone').in('id', ids);
+      if (p.error) throw p.error;
+      profiles = p.data || [];
+    }
+    const names = new Map(profiles.map(p => [p.id, p]));
+    return res.json({ withdrawals: (rows || []).map(r => ({
+      ...r,
+      display_name: names.get(r.user_id)?.display_name || 'Membre NOVA',
+      profile_phone: names.get(r.user_id)?.phone || ''
+    })) });
+  } catch (err) {
+    console.error('Admin withdrawals list error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger les retraits à valider.' });
+  }
+});
+
+app.post('/api/admin/withdrawals/:id/approve', requireUser, requireAdmin, async (req, res) => {
+  try {
+    const { data: approved, error: approvalError } = await supabase.rpc('nova_admin_approve_withdrawal', {
+      p_withdrawal_id: req.params.id, p_admin_id: req.user.id
+    });
+    if (approvalError) {
+      if (/not awaiting admin approval|already rejected|not found/i.test(approvalError.message)) return res.status(409).json({ error: approvalError.message });
+      throw approvalError;
+    }
+    const result = await startApprovedPayDunyaWithdrawal(approved.id);
+    return res.status(200).json({ ok: true, withdrawal_id: approved.id, status: result.status,
+      message: result.status === 'paid' ? 'Retrait payé avec succès.' : 'Retrait validé et transmis à PayDunya.' });
+  } catch (err) {
+    console.error('Admin withdrawal approval error:', err.message);
+    return res.status(500).json({ error: err.message || 'Impossible de valider le retrait.' });
+  }
+});
+
+app.post('/api/admin/withdrawals/:id/reject', requireUser, requireAdmin, async (req, res) => {
+  try {
+    const note = String(req.body?.note || '').trim().slice(0, 500);
+    const { data, error } = await supabase.rpc('nova_admin_reject_withdrawal', {
+      p_withdrawal_id: req.params.id, p_admin_id: req.user.id, p_admin_note: note || null
+    });
+    if (error) {
+      if (/cannot be rejected|already approved|not found/i.test(error.message)) return res.status(409).json({ error: error.message });
+      throw error;
+    }
+    return res.json({ ok: true, withdrawal_id: data.id, status: 'rejected', message: 'Retrait refusé et montant remboursé au portefeuille.' });
+  } catch (err) {
+    console.error('Admin withdrawal rejection error:', err.message);
+    return res.status(500).json({ error: err.message || 'Impossible de refuser le retrait.' });
   }
 });
 
