@@ -111,6 +111,16 @@
         <div class="dashboard-card"><span>Projets publiés</span><b id="statProjects">—</b><small>Disponibles sur la plateforme</small></div>
         <div class="dashboard-card"><span>Parrainages enregistrés</span><b id="statReferrals">—</b><small id="statReferralBonuses">—</small></div>
       </div>
+      <section class="card" id="withdrawalApprovalCard" style="margin-bottom:26px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <h2 class="admin-h1" style="font-size:21px;margin:0">Retraits à valider</h2>
+            <p class="muted" style="margin:6px 0 0;font-size:13.5px">Aucun retrait n'est envoyé à PayDunya avant votre validation.</p>
+          </div>
+          <button class="btn btn-outline btn-sm" id="refreshWithdrawals">Actualiser</button>
+        </div>
+        <div id="withdrawalQueue" style="margin-top:18px"></div>
+      </section>
       <h2 class="admin-h1" style="font-size:21px;margin-bottom:6px">Gestion des projets</h2>
       <p class="muted" style="margin:8px 0 26px;font-size:14.5px">
         Un projet publié s'affiche automatiquement sur la <b>page d'accueil</b> et dans le <b>tableau de bord</b> des membres,
