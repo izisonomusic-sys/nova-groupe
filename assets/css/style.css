@@ -1017,3 +1017,9 @@ html, body {
     padding-right: 12px;
   }
 }
+
+
+/* Portefeuille bonus — ajout ciblé, sans modifier les autres cartes. */
+@media (min-width: 641px) {
+  #view-home .balances { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
