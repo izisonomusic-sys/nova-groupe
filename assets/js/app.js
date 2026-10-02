@@ -216,6 +216,9 @@
     setText("balRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("balRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("balBonus",money(Number(wallet.bonus_balance)||0));
+    if(!projects.length && Array.isArray(C.publishedProjectsFallback) && C.publishedProjectsFallback.length){
+      projects=C.publishedProjectsFallback.slice();
+    }
     renderPlans(currentTab);fillWalletForm("rc");
   }
   function fillWalletForm(prefix){
@@ -506,6 +509,9 @@
   listen("npSave","click",async function(){var p=el("npNew").value;if(!p||p.length<8){S.toast("Le mot de passe doit contenir au moins 8 caractères.");return;}var r=await auth.auth.updateUser({password:p});if(r.error)S.toast(r.error.message);else{S.toast("Mot de passe modifié.");closeModal("passModal");}});
   document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
     handlersReady=true;
+    // Mark the interactive shell ready immediately after handlers are attached.
+    // Long-running Supabase/background reconciliation must never disable buttons.
+    window.NovaDashboardReady=true;
   } catch (handlerErr) { console.error("NOVA handler setup:", handlerErr); }
   function setExternalContact(id,url,emptyLabel){
     var n=el(id);if(!n)return;
