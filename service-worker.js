@@ -1,5 +1,5 @@
-const CACHE_NAME = "nova-shell-v5-20261002";
-const SHELL = ["./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html", "./assets/css/style.css?v=20261002b", "./assets/js/config.js?v=20261002b", "./assets/js/icons.js?v=20261002b", "./assets/js/store.js?v=20261002b", "./assets/js/main.js?v=20261002b", "./assets/js/auth.js?v=20261002b", "./assets/js/app.js?v=20261002b", "./assets/js/admin.js?v=20261002b", "./assets/img/logo.svg", "./assets/img/icons/icon-192.png", "./assets/img/icons/icon-512.png", "./manifest.webmanifest"];
+const CACHE_NAME = "nova-shell-v6-20261002e";
+const SHELL = ["./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html", "./assets/css/style.css?v=20261002e", "./assets/js/config.js?v=20261002e", "./assets/js/icons.js?v=20261002e", "./assets/js/store.js?v=20261002e", "./assets/js/main.js?v=20261002e", "./assets/js/auth.js?v=20261002e", "./assets/js/app.js?v=20261002e", "./assets/js/admin.js?v=20261002e", "./assets/img/logo.svg", "./assets/img/icons/icon-192.png", "./assets/img/icons/icon-512.png", "./manifest.webmanifest"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)));
   self.skipWaiting();
