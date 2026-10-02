@@ -1,4 +1,4 @@
-const CACHE_NAME = "nova-shell-v6-20261002e";
+const CACHE_NAME = "nova-shell-v5-20261002c";
 const SHELL = ["./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html", "./assets/css/style.css?v=20261002fe", "./assets/js/config.js?v=20261002fe", "./assets/js/icons.js?v=20261002fe", "./assets/js/store.js?v=20261002fe", "./assets/js/main.js?v=20261002fe", "./assets/js/auth.js?v=20261002fe", "./assets/js/app.js?v=20261002fe", "./assets/js/admin.js?v=20261002fe", "./assets/img/logo.svg", "./assets/img/icons/icon-192.png", "./assets/img/icons/icon-512.png", "./manifest.webmanifest"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)));
