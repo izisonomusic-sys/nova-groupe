@@ -581,7 +581,12 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
       req.user.user_metadata?.full_name ||
       'Client NOVA'
     ).trim().slice(0, 120);
-    const customerEmail = String(req.user.email || '').trim();
+    const customerEmail = String(
+      req.user.email ||
+      process.env.PAYDUNYA_STORE_EMAIL ||
+      process.env.PAYDUNYA_CUSTOMER_EMAIL_FALLBACK ||
+      'contact@nova-immo-energie.tg'
+    ).trim();
     const invoicePayload = {
       invoice: {
         total_amount: amount,
@@ -655,10 +660,33 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
 
     if (!softpayResult.response.ok || softpayResult.data?.success !== true) {
       const detail = softpayResult.data?.message || softpayResult.data?.response_text || `Réponse HTTP ${softpayResult.response.status}`;
+      const checkoutUrl = /^https:\/\//i.test(String(invoiceResult.data?.response_text || '').trim())
+        ? String(invoiceResult.data.response_text).trim()
+        : '';
       await supabase.from('payment_transactions').update({
-        status: 'failed',
-        provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data }
+        status: checkoutUrl ? 'pending' : 'failed',
+        provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data, softpay_fallback: checkoutUrl ? 'checkout-invoice' : 'none' }
       }).eq('id', pending.id);
+      console.warn('[PAYDUNYA][SOFTPAY] provider rejected SoftPay request', {
+        reference,
+        mode: softpayMode,
+        httpStatus: softpayResult.response.status,
+        detail,
+        fallbackCheckout: !!checkoutUrl
+      });
+      if (checkoutUrl) {
+        return res.status(201).json({
+          ok: true,
+          fallback: true,
+          reference,
+          amount,
+          operator,
+          phone: `+228 ${localPhone}`,
+          status: 'fallback',
+          checkout_url: checkoutUrl,
+          message: `PayDunya a refusé SoftPay pour cette demande : ${detail}. Ouverture du paiement PayDunya classique…`
+        });
+      }
       return res.status(502).json({ error: 'PayDunya a refusé la demande SoftPay.', detail });
     }
 
