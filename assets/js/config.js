@@ -10,6 +10,17 @@ window.NOVA = {
   currency: "FCFA",
   // API NOVA centralisée sur Render. Les appels restent valides même si le front est servi depuis un autre domaine.
   apiBase: "https://nova-groupe-dpnx.onrender.com",
+  // Dernier instantané connu des projets publiés. Le serveur/Supabase reste prioritaire.
+  publishedProjectsFallback: [
+    { id:"4da3c9f7-c2f8-4bac-b709-4cad2fa2b8a0", slug:"energie-solaire", title:"ENERGIE SOLAIRE", badge:"", description:"", category:"solar", image_url:"assets/img/projet-solaire.jpg", minimum_amount:3000, duration_days:15, daily_return_amount:500, return_terms:"Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"60716a74-e045-44ac-8ab8-d037f5a44d51", slug:"immeuble", title:"IMMEUBLE", badge:"", description:"", category:"real_estate", image_url:"assets/img/projet-immobilier.jpg", minimum_amount:3000, duration_days:15, daily_return_amount:500, return_terms:"Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"64faea0d-e685-4951-9a2e-138f5c10d579", slug:"airline", title:"Airline", badge:"", description:"", category:"wind", image_url:"assets/img/projet-vent.jpg", minimum_amount:6000, duration_days:15, daily_return_amount:1000, return_terms:"Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"114cfdf6-c05f-4458-894d-481a64e8d6db", slug:"agriculture", title:"Agriculture", badge:"", description:"", category:"agriculture", image_url:"assets/img/projet-agri.jpg", minimum_amount:6000, duration_days:15, daily_return_amount:1000, return_terms:"Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"ddd96372-08d8-4f71-9fb1-69e901cf6b53", slug:"agriculture-modene", title:"Agriculture Modène", badge:"", description:"", category:"agriculture", image_url:"assets/img/projet-agri.jpg", minimum_amount:9000, duration_days:15, daily_return_amount:1500, return_terms:"Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"3c06b216-4d97-462a-8f03-494622ec704e", slug:"energie-modernes-renouvelable", title:"Énergie modernes renouvelable", badge:"", description:"", category:"solar", image_url:"assets/img/projet-solaire.jpg", minimum_amount:12000, duration_days:15, daily_return_amount:2000, return_terms:"Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"16502ad6-d348-4231-a5db-e63c85e50940", slug:"energie-renouvelable-moderne", title:"Énergie renouvelable moderne", badge:"", description:"", category:"other", image_url:"assets/img/projet-solaire.jpg", minimum_amount:20000, duration_days:5, daily_return_amount:7000, return_terms:"SPECIAL: Rendement estimatif affiché à titre indicatif.", status:"published" },
+    { id:"d0a84361-7a0b-48ec-9098-804e76fbc290", slug:"immeuble-moderne", title:"Immeuble moderne", badge:"", description:"", category:"other", image_url:"assets/img/projet-immobilier.jpg", minimum_amount:30000, duration_days:5, daily_return_amount:10000, return_terms:"SPECIAL: Rendement estimatif affiché à titre indicatif.", status:"published" }
+  ],
 
   /* ---------- Contacts / assistance ---------- */
   // Lien officiel de la communauté WhatsApp NOVA Group.
