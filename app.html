@@ -427,7 +427,22 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/icons.js"></script>
 <script src="assets/js/store.js"></script>
-<script src="assets/js/app.js"></script>
+<script id="nova-boot-fallback">
+(function(){
+  var views=["home","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
+  function bootRoute(){
+    var v=(location.hash||"#/home").replace(/^#\//,"");
+    if(views.indexOf(v)<0)v="home";
+    document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="view-"+v);});
+    document.querySelectorAll(".bn-item").forEach(function(x){x.classList.toggle("active",(x.getAttribute("data-nav")||"")===v);});
+    var hero=document.getElementById("appHero");
+    if(hero)hero.style.display=v==="home"?"block":"none";
+  }
+  window.addEventListener("hashchange",bootRoute);
+  bootRoute();
+})();
+</script>
+<script src="assets/js/app.js?v=20261002c"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
