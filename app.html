@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261002b" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261002c" />
 </head>
 <body>
 
@@ -53,6 +53,11 @@
         <div class="bal-card revenus"><span>Revenus</span><b id="balRevenus">0 FCFA</b></div>
         <div class="bal-card recharge"><span>Recharge</span><b id="balRecharge">0 FCFA</b></div>
         <div class="bal-card bonus"><span><svg class="ic ic-sm"><use href="#i-gift"/></svg> Bonus</span><b id="balBonus">0 FCFA</b></div>
+      </div>
+
+      <div class="member-shortcuts">
+        <div><span>ID membre</span><b id="homeMemberId">—</b></div>
+        <div class="member-ref"><span>Lien de parrainage</span><strong id="homeReferralLink">Lien indisponible</strong><button type="button" class="btn btn-outline btn-sm" id="copyHomeReferral">Copier</button></div>
       </div>
 
       <div class="actions">
@@ -237,6 +242,7 @@
 
       <div class="team-invite">
         <h3>Partagez votre lien de parrainage</h3>
+        <div class="ref-meta"><span>ID parrainage</span><b id="teamRefCode">—</b></div>
         <div class="ref-link" id="teamRefLink"></div>
         <button class="btn btn-light" id="copyTeamLink">
           <svg class="ic ic-sm"><use href="#i-copy"/></svg> Copier le lien
@@ -289,6 +295,11 @@
           <span class="badge pill-verified" style="background:var(--brand-soft);color:var(--brand-dk);border-color:#bfe9e2">
             <svg class="ic ic-sm"><use href="#i-shield"/></svg> Compte vérifié
           </span>
+        </div>
+        <div class="member-details">
+          <div><span>ID membre</span><b id="accMemberId">—</b></div>
+          <div><span>Lien de parrainage</span><strong id="accReferralLink">Lien indisponible</strong></div>
+          <button type="button" class="btn btn-outline btn-sm" id="copyAccountReferral">Copier le lien</button>
         </div>
         <div class="mini-balances">
           <div class="mini-b"><span>Solde</span><b id="accSolde">0 FCFA</b></div>
@@ -423,10 +434,10 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/js/config.js?v=20261002f"></script>
-<script src="assets/js/auth.js?v=20261002f"></script>
-<script src="assets/js/icons.js?v=20261002f"></script>
-<script src="assets/js/store.js?v=20261002f"></script>
+<script src="assets/js/config.js?v=20261002c"></script>
+<script src="assets/js/auth.js?v=20261002c"></script>
+<script src="assets/js/icons.js?v=20261002c"></script>
+<script src="assets/js/store.js?v=20261002c"></script>
 <script id="nova-boot-fallback">
 (function(){
   var views=["home","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
@@ -624,7 +635,7 @@
   },3000);
 })();
 </script>
-<script src="assets/js/app.js?v=20261002f"></script>
+<script src="assets/js/app.js?v=20261002c"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
