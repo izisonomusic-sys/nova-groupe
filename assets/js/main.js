@@ -25,17 +25,39 @@
   }
   document.querySelectorAll("[data-app]").forEach(function(a){a.href=session?"app.html"+a.dataset.app:"login.html";});
   var list=[];
+  var publishedFallback=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback:[];
   try{
-    var serverResponse=await fetch("/api/public/projects",{headers:{"Accept":"application/json"}});
-    if(!serverResponse.ok)throw new Error("Serveur projets HTTP "+serverResponse.status);
-    var serverData=await serverResponse.json();
-    list=Array.isArray(serverData.projects)?serverData.projects:[];
+    var bases=[];
+    [C.apiBase,location.origin].forEach(function(base){
+      base=String(base||"").replace(/\/$/,"");
+      if(base&&!bases.includes(base))bases.push(base);
+    });
+    var loaded=false;
+    for(var bi=0;bi<bases.length&&!loaded;bi++){
+      try{
+        var serverResponse=await fetch(bases[bi]+"/api/public/projects",{headers:{"Accept":"application/json"}});
+        if(!serverResponse.ok){
+          if(serverResponse.status===404)continue;
+          throw new Error("Serveur projets HTTP "+serverResponse.status);
+        }
+        var serverData=await serverResponse.json();
+        if(Array.isArray(serverData.projects)){list=serverData.projects;loaded=true;}
+      }catch(serverError){console.warn("NOVA server project feed:",serverError.message);}
+    }
+    if(!loaded&&A){
+      try{
+        var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
+        if(!r.error&&Array.isArray(r.data)){list=r.data;loaded=true;}
+        else if(r.error)console.warn("NOVA Supabase project feed:",r.error.message);
+      }catch(fallbackError){console.warn("NOVA Supabase project feed:",fallbackError.message);}
+    }
+    if(!loaded&&publishedFallback.length){
+      list=publishedFallback.slice();
+      console.warn("NOVA project feed: using last-known published project snapshot.");
+    }
   }catch(e){
-    console.warn("NOVA server project feed:",e.message);
-    try{
-      var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
-      if(r.error)throw r.error;list=r.data||[];
-    }catch(fallbackError){console.error("NOVA public projects:",fallbackError.message);}
+    console.error("NOVA public projects:",e.message);
+    if(publishedFallback.length)list=publishedFallback.slice();
   }
   function render(tab){
     var filtered=list.filter(p=>{var special=String(p.return_terms||"").startsWith("SPECIAL:");return tab==="speciaux"?special:!special;});
