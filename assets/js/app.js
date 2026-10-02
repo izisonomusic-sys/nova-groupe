@@ -18,7 +18,9 @@
     var configured=(C.apiBase||"").trim().replace(/\/$/,"");
     var localOrigin=String(location.origin||"").replace(/\/$/,"");
     var bases=[];
-    [configured,localOrigin].forEach(function(base){if(base&&!bases.includes(base))bases.push(base);});
+    // Prefer the host currently serving the application. This avoids cross-origin/API-base
+    // mismatches when the same Render service is opened through another hostname.
+    [localOrigin,configured].forEach(function(base){if(base&&!bases.includes(base))bases.push(base);});
     if(!bases.length)bases.push("");
     var lastError=null;
     async function send(base,accessToken){
@@ -124,8 +126,8 @@
     // Prefer the authenticated server snapshot so member data is not blocked by browser-side RLS/client queries.
     try {
       var snapshot=await api('/api/member/dashboard',{method:'GET'});
-      profile=snapshot.profile||{};
-      wallet=snapshot.wallet||{balance:0,bonus_balance:0,bonus_locked:0};
+      profile=snapshot.profile||profile||{};
+      wallet=snapshot.wallet||wallet||{balance:0,bonus_balance:0,bonus_locked:0};
       projects=Array.isArray(snapshot.projects)&&snapshot.projects.length ? snapshot.projects : (Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
       investments=Array.isArray(snapshot.investments)?snapshot.investments:[];
       ledger=Array.isArray(snapshot.ledger)?snapshot.ledger:[];
@@ -165,9 +167,20 @@
       ledgerOk:!!(ledgerResult&&!ledgerResult.error),source:'browser'
     };
   }
+  function referralLink(){
+    var code=String(profile.member_code||"").trim();
+    if(!code)return "";
+    return new URL("register.html?ref="+encodeURIComponent(code),location.href).href;
+  }
   function renderHeader(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
-    setText("greetName","Bonjour, "+name.split(/\s+/)[0]);setText("greetId","ID : "+(profile.member_code||"—"));setText("headerAvatar",S.initials(name));
+    var code=String(profile.member_code||"").trim();
+    var link=referralLink();
+    setText("greetName","Bonjour, "+name.split(/\s+/)[0]);
+    setText("greetId","ID : "+(code||"—"));
+    setText("headerAvatar",S.initials(name));
+    setText("homeMemberId",code||"—");
+    setText("homeReferralLink",link||"Lien indisponible");
   }
   function planCard(p){
     var daily=Number(p.daily_return_amount)||0,days=Number(p.duration_days)||0,amount=Number(p.minimum_amount)||0;
@@ -228,8 +241,10 @@
     }).join(""):'<p class="empty">Aucune transaction pour le moment.</p>';
   }
   async function renderTeam(){
-    var code=profile.member_code||"";
-    setText("teamRefLink",location.origin+location.pathname.replace("app.html","register.html")+"?ref="+encodeURIComponent(code));
+    var code=String(profile.member_code||"").trim();
+    var link=referralLink();
+    setText("teamRefCode",code||"—");
+    setText("teamRefLink",link||"Lien indisponible");
     setText("teamSize","…");setText("teamL1","…");setText("teamInvest","…");setText("teamComm","…");
     try{
       var team=await api("/api/referrals/me");
@@ -241,8 +256,11 @@
   function renderAccount(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
     setText("profileName",name);setText("profileId","ID : "+(profile.member_code||"—"));setText("profileAvatar",S.initials(name));
-    setText("accSolde",money(wallet.balance));setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+    setText("accSolde",money(wallet.balance));
+    setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("accRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+    setText("accMemberId",String(profile.member_code||"—"));
+    setText("accReferralLink",referralLink()||"Lien indisponible");
   }
   function renderNews(){
     var n=el("newsList");if(n)n.innerHTML=(C.news||[]).map(x=>'<article class="news-card"><img src="'+esc(x.img)+'" alt="" loading="lazy"><div class="news-body"><div class="meta"><span class="badge">'+esc(x.tag)+'</span><span>'+esc(x.date)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p></div></article>').join("");
@@ -433,7 +451,14 @@
     try{await api("/api/bonus/claim",{method:"POST",body:JSON.stringify({})});await loadAll();renderPresence();renderHome();S.toast("Bonus de 50 FCFA crédité.");}
     catch(e){S.toast(e.message||"Bonus indisponible.");}finally{b.disabled=false;}
   });
-  listen("copyTeamLink","click",function(){var n=el("teamRefLink");if(n&&navigator.clipboard)navigator.clipboard.writeText(n.textContent).then(()=>S.toast("Lien copié"),()=>S.toast("Copiez le lien manuellement"));});
+  function copyReferralLink(id){
+    var n=el(id),value=n&&n.textContent?String(n.textContent).trim():referralLink();
+    if(!value||value==="Lien indisponible"){S.toast("Lien de parrainage indisponible.");return;}
+    if(navigator.clipboard)navigator.clipboard.writeText(value).then(()=>S.toast("Lien copié"),()=>S.toast("Copiez le lien manuellement"));
+  }
+  listen("copyTeamLink","click",function(){copyReferralLink("teamRefLink");});
+  listen("copyAccountReferral","click",function(){copyReferralLink("accReferralLink");});
+  listen("copyHomeReferral","click",function(){copyReferralLink("homeReferralLink");});
   listen("btnLogout","click",async function(){await auth.auth.signOut();location.href="login.html";});
   listen("btnPassword","click",()=>{var m=el("passModal");if(m)m.classList.add("open");});
   listen("npCancel","click",()=>closeModal("passModal"));
