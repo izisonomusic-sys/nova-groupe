@@ -123,48 +123,65 @@
     params.delete("token");params.delete("invoice_token");var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;history.replaceState(null,"",clean);
   }
   async function loadAll(){
-    // Prefer the authenticated server snapshot so member data is not blocked by browser-side RLS/client queries.
-    try {
-      var snapshot=await api('/api/member/dashboard',{method:'GET'});
-      profile=snapshot.profile||profile||{};
-      wallet=snapshot.wallet||wallet||{balance:0,bonus_balance:0,bonus_locked:0};
-      projects=Array.isArray(snapshot.projects)&&snapshot.projects.length ? snapshot.projects : (Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
-      investments=Array.isArray(snapshot.investments)?snapshot.investments:[];
-      ledger=Array.isArray(snapshot.ledger)?snapshot.ledger:[];
-      return {profileOk:true,walletOk:true,projectsOk:projects.length>0,investmentsOk:true,ledgerOk:true,source:'server'};
-    } catch(serverError){
-      console.warn('NOVA dashboard server snapshot unavailable:',serverError.message);
-    }
-
-    // Browser Supabase queries remain as a safe fallback.
+    // Browser Supabase is the source of truth for member identity/wallet because RLS
+    // explicitly permits each authenticated user to read their own rows.
+    // The Render snapshot remains a fallback for deployments where a browser query fails.
     var tasks=[
       auth.from('profiles').select('id,member_code,display_name,phone,country_code,role').eq('id',user.id).maybeSingle(),
-      auth.from('wallet_balances').select('balance,bonus_balance,bonus_locked').eq('user_id',user.id).maybeSingle(),
+      auth.from('wallet_balances').select('balance,bonus_balance,bonus_locked,updated_at').eq('user_id',user.id).maybeSingle(),
       auth.from('projects').select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status').eq('status','published').order('minimum_amount'),
       auth.from('investments').select('id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)').eq('user_id',user.id).order('created_at',{ascending:false}),
       auth.from('wallet_ledger').select('id,entry_type,amount,status,reference,description,created_at,posted_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
     ];
     var results=await Promise.allSettled(tasks);
     var labels=['profiles','wallet','projects','investments','ledger'];
+    var health={profile:false,wallet:false,projects:false,investments:false,ledger:false};
+
     results.forEach(function(result,i){
-      if(result.status==='rejected')console.error('NOVA load '+labels[i]+':',result.reason);
-      else if(result.value&&result.value.error)console.error('NOVA load '+labels[i]+':',result.value.error);
+      if(result.status==='fulfilled' && result.value && !result.value.error){
+        health[labels[i]]=true;
+      }else{
+        var detail=result.status==='rejected'?result.reason:result.value&&result.value.error;
+        console.warn('NOVA browser load '+labels[i]+':',detail&&detail.message||detail||'unknown error');
+      }
     });
-    var profileResult=results[0].status==='fulfilled'?results[0].value:null;
-    var walletResult=results[1].status==='fulfilled'?results[1].value:null;
-    var projectResult=results[2].status==='fulfilled'?results[2].value:null;
-    var investmentResult=results[3].status==='fulfilled'?results[3].value:null;
-    var ledgerResult=results[4].status==='fulfilled'?results[4].value:null;
-    if(profileResult&&!profileResult.error)profile=profileResult.data||{};
-    if(walletResult&&!walletResult.error)wallet=walletResult.data||{balance:0,bonus_balance:0,bonus_locked:0};
-    if(projectResult&&!projectResult.error)projects=Array.isArray(projectResult.data)&&projectResult.data.length ? projectResult.data : (Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
-    else projects=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[];
-    if(investmentResult&&!investmentResult.error)investments=investmentResult.data||[];
-    if(ledgerResult&&!ledgerResult.error)ledger=ledgerResult.data||[];
+
+    if(health.profile)profile=results[0].value.data||profile||{};
+    if(health.wallet){
+      var walletRow=results[1].value.data;
+      if(walletRow)wallet=walletRow;
+    }
+    if(health.projects){
+      var rows=results[2].value.data||[];
+      projects=rows.length?rows:(Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
+    }else{
+      projects=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():projects;
+    }
+    if(health.investments)investments=results[3].value.data||[];
+    if(health.ledger)ledger=results[4].value.data||[];
+
+    // Only ask the Render snapshot for missing pieces. Never replace a successful
+    // browser wallet/profile value with a zero/default response.
+    if(!health.profile||!health.wallet||!health.investments||!health.ledger||!health.projects){
+      try{
+        var snapshot=await api('/api/member/dashboard',{method:'GET'});
+        if(!health.profile && snapshot.profile)profile=snapshot.profile;
+        if(!health.wallet && snapshot.wallet)wallet=snapshot.wallet;
+        if(!health.projects && Array.isArray(snapshot.projects)&&snapshot.projects.length)projects=snapshot.projects;
+        if(!health.investments && Array.isArray(snapshot.investments))investments=snapshot.investments;
+        if(!health.ledger && Array.isArray(snapshot.ledger))ledger=snapshot.ledger;
+      }catch(serverError){
+        console.warn('NOVA dashboard server snapshot unavailable:',serverError.message);
+      }
+    }
+
     return {
-      profileOk:!!(profileResult&&!profileResult.error),walletOk:!!(walletResult&&!walletResult.error),
-      projectsOk:!!(projectResult&&!projectResult.error),investmentsOk:!!(investmentResult&&!investmentResult.error),
-      ledgerOk:!!(ledgerResult&&!ledgerResult.error),source:'browser'
+      profileOk:!!profile.id,
+      walletOk:!!wallet,
+      projectsOk:Array.isArray(projects)&&projects.length>0,
+      investmentsOk:true,
+      ledgerOk:true,
+      source:'browser-first'
     };
   }
   function referralLink(){
@@ -255,7 +272,10 @@
   }
   function renderAccount(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
-    setText("profileName",name);setText("profileId","ID : "+(profile.member_code||"—"));setText("profileAvatar",S.initials(name));
+    var code=String(profile.member_code||"").trim(), link=referralLink();
+    setText("profileName",name);setText("profileId","ID : "+(code||"—"));setText("profileAvatar",S.initials(name));
+    setText("accMemberId",code||"—");
+    setText("accReferralLink",link||"Lien indisponible");
     setText("accSolde",money(wallet.balance));
     setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("accRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
@@ -444,12 +464,28 @@
     finally{b.disabled=false;}
   });
   listen("btnWithdraw","click",async function(){
-    var amount=Number(el("wdAmount").value),phone=(el("wdDial").value||"")+(el("wdPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
-    var payload={amount:amount,country_code:el("wdCountry").value,operator:el("wdOperator").value,phone:phone,account_name:el("wdName").value.trim()};
-    if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");return;}
+    var amount=Number(el("wdAmount").value),country=el("wdCountry").value,operator=el("wdOperator").value;
+    var phone=(el("wdDial").value||"")+(el("wdPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
+    var name=el("wdName").value.trim();
+    var statusNode=el("withdrawStatus");
+    var payload={amount:amount,country_code:country,operator:operator,phone:phone,account_name:name};
+    if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");if(statusNode)statusNode.textContent="Montant minimum : 1 500 FCFA.";return;}
+    if(!operator){S.toast("Choisissez un opérateur.");if(statusNode)statusNode.textContent="Choisissez un opérateur avant de confirmer.";return;}
+    if(!/^\\+228\\d{8}$/.test(phone)){S.toast("Entrez un numéro Togo valide à 8 chiffres.");if(statusNode)statusNode.textContent="Numéro de retrait invalide.";return;}
+    if(name.length<3){S.toast("Saisissez le nom complet du titulaire.");if(statusNode)statusNode.textContent="Nom du titulaire requis.";return;}
     var b=el("btnWithdraw");b.disabled=true;
-    try{await api("/api/withdrawals",{method:"POST",body:JSON.stringify(payload)});S.toast("Demande de retrait envoyée pour validation.");el("wdAmount").value="";await loadAll();setText("wdAvail",money(wallet.balance));}
-    catch(e){S.toast(e.message||"Retrait impossible.");}finally{b.disabled=false;}
+    if(statusNode)statusNode.textContent="Enregistrement de la demande…";
+    try{
+      var result=await api("/api/withdrawals",{method:"POST",body:JSON.stringify(payload)});
+      S.toast(result.message||"Demande de retrait enregistrée.");
+      if(statusNode)statusNode.textContent="Demande enregistrée. Statut : en attente de validation.";
+      el("wdAmount").value="";
+      try{await loadAll();}catch(loadError){console.warn("Withdrawal wallet refresh:",loadError.message);}
+      setText("wdAvail",money(wallet.balance));
+    }catch(e){
+      S.toast(e.message||"Retrait impossible.");
+      if(statusNode)statusNode.textContent=e.message||"Retrait impossible.";
+    }finally{b.disabled=false;}
   });
   listen("btnPresence","click",async function(){
     var b=el("btnPresence");b.disabled=true;
