@@ -24,8 +24,10 @@
     }catch(e){console.warn("NOVA landing balances:",e.message);}
   }
   document.querySelectorAll("[data-app]").forEach(function(a){a.href=session?"app.html"+a.dataset.app:"login.html";});
-  var list=[];
   var publishedFallback=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback:[];
+  // Start with the last-known published snapshot so the page never appears empty
+  // while the server/Supabase feed is being resolved.
+  var list=publishedFallback.slice();
   try{
     var bases=[];
     [C.apiBase,location.origin].forEach(function(base){
@@ -41,13 +43,19 @@
           throw new Error("Serveur projets HTTP "+serverResponse.status);
         }
         var serverData=await serverResponse.json();
-        if(Array.isArray(serverData.projects)){list=serverData.projects;loaded=true;}
+        if(Array.isArray(serverData.projects) && serverData.projects.length){
+          list=serverData.projects;
+          loaded=true;
+        }
       }catch(serverError){console.warn("NOVA server project feed:",serverError.message);}
     }
     if(!loaded&&A){
       try{
         var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
-        if(!r.error&&Array.isArray(r.data)){list=r.data;loaded=true;}
+        if(!r.error&&Array.isArray(r.data)&&r.data.length){
+          list=r.data;
+          loaded=true;
+        }
         else if(r.error)console.warn("NOVA Supabase project feed:",r.error.message);
       }catch(fallbackError){console.warn("NOVA Supabase project feed:",fallbackError.message);}
     }
