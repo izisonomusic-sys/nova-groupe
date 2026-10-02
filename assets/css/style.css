@@ -766,8 +766,7 @@ footer { background: var(--dark1); color: #aab1d6; margin-top: 80px; }
     min-width: 0;
   }
 
-  #view-home .balances {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  #view-home .balances {\n    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     margin-top: 0;
   }
@@ -1021,5 +1020,12 @@ html, body {
 
 /* Portefeuille bonus — ajout ciblé, sans modifier les autres cartes. */
 @media (min-width: 641px) {
+  #view-home .balances { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Bonus wallet: keep the fourth card visible and its gift icon aligned on every viewport. */
+.bal-card.bonus > span { display:flex; align-items:center; justify-content:center; gap:4px; }
+.bal-card.bonus > span .ic { flex:0 0 auto; }
+@media (max-width: 640px) {
   #view-home .balances { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
