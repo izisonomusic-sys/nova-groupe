@@ -91,8 +91,13 @@
       auth.from("investments").select("id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)").eq("user_id",user.id).order("created_at",{ascending:false}),
       auth.from("wallet_ledger").select("id,entry_type,amount,status,reference,description,created_at,posted_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100)
     ]);
-    results.forEach(function(r){if(r.error)throw r.error;});
-    profile=results[0].data||{};wallet=results[1].data||{balance:0};projects=results[2].data||[];investments=results[3].data||[];ledger=results[4].data||[];
+    var labels=["profiles","wallet","projects","investments","ledger"];
+    results.forEach(function(r,i){if(r.error){console.error("NOVA load "+labels[i]+":",r.error);throw r.error;}});
+    profile=results[0].data||{};
+    wallet=results[1].data||{balance:0,bonus_balance:0,bonus_locked:0};
+    projects=results[2].data||[];
+    investments=results[3].data||[];
+    ledger=results[4].data||[];
   }
   function renderHeader(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
