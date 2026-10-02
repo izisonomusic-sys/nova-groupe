@@ -19,7 +19,8 @@
       if(!l.error){
         var rows=l.data||[];
         setText("homeRevenus",S.fcn(rows.filter(x=>x.entry_type==="investment_income").reduce((s,x)=>s+Number(x.amount||0),0)));
-        setText("homeRecharge",S.fcn(rows.filter(x=>x.entry_type==="deposit").reduce((s,x)=>s+Number(x.amount||0),0)));\n        setText("homeBonus",S.fcn((w.data&&w.data.bonus_balance)||0));
+        setText("homeRecharge",S.fcn(rows.filter(x=>x.entry_type==="deposit").reduce((s,x)=>s+Number(x.amount||0),0)));
+        setText("homeBonus",S.fcn((w.data&&w.data.bonus_balance)||0));
       }
     }catch(e){console.warn("NOVA landing balances:",e.message);}
   }
