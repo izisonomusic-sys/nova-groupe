@@ -11,6 +11,17 @@
   function money(v){return S.fcn(Number(v)||0);}
   function imagePath(v){return v||"assets/img/projet-solaire.jpg";}
   function listen(id,event,handler){var n=el(id);if(n&&typeof n.addEventListener==="function")n.addEventListener(event,handler);}
+  var VIEWS=["home","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
+  function route(){
+    var v=(location.hash||"#/home").replace(/^#\//,"");if(!VIEWS.includes(v))v="home";
+    document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="view-"+v);});
+    document.querySelectorAll(".bn-item").forEach(function(x){x.classList.toggle("active",(x.dataset.nav||"")===v);});
+    var hero=el("appHero");if(hero)hero.style.display=v==="home"?"block":"none";
+    if(user){try{render(v);}catch(err){console.error("NOVA render:",err);}}
+  }
+  try{route();}catch(err){console.error("NOVA boot route:",err);}
+  window.addEventListener("hashchange",function(){try{route();}catch(err){console.error("NOVA route:",err);}});
+
 
   document.addEventListener("click",function(e){
     var a=e.target.closest('a[href^="#/"]');if(a){var v=a.dataset.nav||a.getAttribute("href").slice(2);if(VIEWS.includes(v)){e.preventDefault();location.hash="#/"+v;}}
