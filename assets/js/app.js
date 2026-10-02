@@ -379,8 +379,8 @@
   setExternalContact('assistGroup',C.telegramGroup,'Groupe Telegram en attente');
   if(el("welcomeLater"))el("welcomeLater").addEventListener("click",()=>closeModal("welcomeModal"));
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
-  // Afficher immédiatement la vue demandée. Le chargement Supabase est asynchrone et ne doit jamais laisser l'interface vide.
-  route();
+  try { route(); } catch (err) { console.error("NOVA initial route:", err); }
+  window.addEventListener("hashchange", function(){ try { route(); } catch (err) { console.error("NOVA route:", err); } });
   try{
     await loadAll();
     await reconcileInvestmentIncome();
@@ -401,5 +401,4 @@
     route();
     S.toast("Certaines données sont encore en chargement. Réessayez dans quelques instants.");
   }
-  window.addEventListener("hashchange",route);
 })();
