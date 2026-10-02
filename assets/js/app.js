@@ -16,8 +16,10 @@
   async function api(path,opts){
     opts=opts||{};
     async function send(accessToken){
+      var apiBase=(C.apiBase||location.origin).replace(/\/$/,"");
+      var target=/^https?:\/\//i.test(String(path))?String(path):apiBase+String(path);
       var headers=Object.assign({"Content-Type":"application/json","Accept":"application/json","Authorization":"Bearer "+accessToken},opts.headers||{});
-      return fetch(path,Object.assign({},opts,{headers:headers}));
+      return fetch(target,Object.assign({},opts,{headers:headers}));
     }
     var r=await send(session.access_token);
     if(r.status===401){
@@ -38,7 +40,7 @@
     }
     return data;
   }
-  window.NovaApi={request:api};
+  window.NovaApi={request:api,base:(C.apiBase||location.origin)};
   async function reconcileInvestmentIncome(){
     try{
       var result=await api("/api/investments/reconcile",{method:"POST",body:JSON.stringify({})});
@@ -103,11 +105,7 @@
     var tasks=[
       auth.from("profiles").select("id,member_code,display_name,phone,country_code,role").eq("id",user.id).maybeSingle(),
       auth.from("wallet_balances").select("balance,bonus_balance,bonus_locked").eq("user_id",user.id).maybeSingle(),
-      fetch("/api/public/projects",{headers:{"Accept":"application/json"}}).then(async function(response){
-        var body={};try{body=await response.json();}catch(_){}
-        if(!response.ok)throw new Error(body.detail||body.error||("Projects API HTTP "+response.status));
-        return {data:Array.isArray(body.projects)?body.projects:[],error:null};
-      }),
+      auth.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount"),
       auth.from("investments").select("id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)").eq("user_id",user.id).order("created_at",{ascending:false}),
       auth.from("wallet_ledger").select("id,entry_type,amount,status,reference,description,created_at,posted_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100)
     ];
