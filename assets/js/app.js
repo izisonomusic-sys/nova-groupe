@@ -15,32 +15,51 @@
   function listen(id,event,handler){var n=el(id);if(n&&typeof n.addEventListener==="function")n.addEventListener(event,handler);}
   async function api(path,opts){
     opts=opts||{};
-    async function send(accessToken){
-      var apiBase=(C.apiBase||location.origin).replace(/\/$/,"");
-      var target=/^https?:\/\//i.test(String(path))?String(path):apiBase+String(path);
+    var configured=(C.apiBase||"").trim().replace(/\/$/,"");
+    var localOrigin=String(location.origin||"").replace(/\/$/,"");
+    var bases=[];
+    [configured,localOrigin].forEach(function(base){if(base&&!bases.includes(base))bases.push(base);});
+    if(!bases.length)bases.push("");
+    var lastError=null;
+    async function send(base,accessToken){
+      var target=/^https?:\/\//i.test(String(path))
+        ?String(path)
+        :((base||"")+String(path));
       var headers=Object.assign({"Content-Type":"application/json","Accept":"application/json","Authorization":"Bearer "+accessToken},opts.headers||{});
       return fetch(target,Object.assign({},opts,{headers:headers}));
     }
-    var r=await send(session.access_token);
-    if(r.status===401){
-      var refreshed=await auth.auth.refreshSession();
-      var nextSession=refreshed.data&&refreshed.data.session;
-      if(nextSession&&nextSession.access_token){
-        session=nextSession;
-        r=await send(session.access_token);
+    for(var i=0;i<bases.length;i++){
+      try{
+        var r=await send(bases[i],session.access_token);
+        if(r.status===401){
+          var refreshed=await auth.auth.refreshSession();
+          var nextSession=refreshed.data&&refreshed.data.session;
+          if(nextSession&&nextSession.access_token){
+            session=nextSession;
+            r=await send(bases[i],session.access_token);
+          }
+        }
+        if(r.status===404&&i<bases.length-1)continue;
+        var data={};
+        try{data=await r.json();}catch(_){data={};}
+        if(!r.ok){
+          var message=data.error||((r.status===404)?"API introuvable sur le serveur NOVA (404).":("Erreur API HTTP "+r.status+"."));
+          if(data.detail)message += " — "+data.detail;
+          if(data.provider_code)message += " (code PayDunya: "+data.provider_code+")";
+          throw new Error(message);
+        }
+        return data;
+      }catch(err){
+        lastError=err;
+        if(i<bases.length-1)continue;
+        throw err;
       }
     }
-    var data={};
-    try{data=await r.json();}catch(_){data={};}
-    if(!r.ok){
-      var message=data.error||((r.status===404)?"API introuvable sur le serveur NOVA (404).":("Erreur API HTTP "+r.status+"."));
-      if(data.detail)message += " — "+data.detail;
-      if(data.provider_code)message += " (code PayDunya: "+data.provider_code+")";
-      throw new Error(message);
-    }
-    return data;
+    throw lastError||new Error("API NOVA indisponible.");
   }
   window.NovaApi={request:api,base:(C.apiBase||location.origin)};
+  // Compatibilité avec les anciens handlers qui peuvent encore appeler la fonction API globalement.
+  window.api=api;
   async function reconcileInvestmentIncome(){
     try{
       var result=await api("/api/investments/reconcile",{method:"POST",body:JSON.stringify({})});
