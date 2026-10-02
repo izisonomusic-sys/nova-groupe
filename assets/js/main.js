@@ -26,9 +26,17 @@
   document.querySelectorAll("[data-app]").forEach(function(a){a.href=session?"app.html"+a.dataset.app:"login.html";});
   var list=[];
   try{
-    var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
-    if(r.error)throw r.error;list=r.data||[];
-  }catch(e){console.error("NOVA public projects:",e.message);}
+    var serverResponse=await fetch("/api/public/projects",{headers:{"Accept":"application/json"}});
+    if(!serverResponse.ok)throw new Error("Serveur projets HTTP "+serverResponse.status);
+    var serverData=await serverResponse.json();
+    list=Array.isArray(serverData.projects)?serverData.projects:[];
+  }catch(e){
+    console.warn("NOVA server project feed:",e.message);
+    try{
+      var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
+      if(r.error)throw r.error;list=r.data||[];
+    }catch(fallbackError){console.error("NOVA public projects:",fallbackError.message);}
+  }
   function render(tab){
     var filtered=list.filter(p=>{var special=String(p.return_terms||"").startsWith("SPECIAL:");return tab==="speciaux"?special:!special;});
     var n=document.getElementById("homePlanList");if(n)n.innerHTML=filtered.length?filtered.map(card).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par NOVA.</div>';
