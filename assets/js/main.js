@@ -73,4 +73,26 @@
   }
   document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");render(t.dataset.tab);});});
   render("plans");
+})()  var list=[];
+  try{
+    var feed=await fetch((C.apiBase||location.origin).replace(/\/$/,"")+"/api/public/projects",{headers:{"Accept":"application/json"}});
+    if(!feed.ok)throw new Error("HTTP "+feed.status);
+    var json=await feed.json();
+    list=Array.isArray(json.projects)?json.projects:[];
+  }catch(e){
+    console.warn("NOVA public project API:",e.message);
+    if(Array.isArray(C.publishedProjectsFallback))list=C.publishedProjectsFallback.slice();
+    if(!list.length){
+      try{
+        var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
+        if(!r.error)list=r.data||[];
+      }catch(inner){console.error("NOVA public projects:",inner.message);}
+    }
+  }
+  function render(tab){
+    var filtered=list.filter(p=>{var special=String(p.return_terms||"").startsWith("SPECIAL:");return tab==="speciaux"?special:!special;});
+    var n=document.getElementById("homePlanList");if(n)n.innerHTML=filtered.length?filtered.map(card).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par NOVA.</div>';
+  }
+  document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");render(t.dataset.tab);});});
+  render("plans");
 })();
