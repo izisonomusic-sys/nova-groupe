@@ -121,28 +121,38 @@
     params.delete("token");params.delete("invoice_token");var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;history.replaceState(null,"",clean);
   }
   async function loadAll(){
+    // Prefer the authenticated server snapshot so member data is not blocked by browser-side RLS/client queries.
+    try {
+      var snapshot=await api('/api/member/dashboard',{method:'GET'});
+      profile=snapshot.profile||{};
+      wallet=snapshot.wallet||{balance:0,bonus_balance:0,bonus_locked:0};
+      projects=Array.isArray(snapshot.projects)&&snapshot.projects.length ? snapshot.projects : (Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
+      investments=Array.isArray(snapshot.investments)?snapshot.investments:[];
+      ledger=Array.isArray(snapshot.ledger)?snapshot.ledger:[];
+      return {profileOk:true,walletOk:true,projectsOk:projects.length>0,investmentsOk:true,ledgerOk:true,source:'server'};
+    } catch(serverError){
+      console.warn('NOVA dashboard server snapshot unavailable:',serverError.message);
+    }
+
+    // Browser Supabase queries remain as a safe fallback.
     var tasks=[
-      auth.from("profiles").select("id,member_code,display_name,phone,country_code,role").eq("id",user.id).maybeSingle(),
-      auth.from("wallet_balances").select("balance,bonus_balance,bonus_locked").eq("user_id",user.id).maybeSingle(),
-      auth.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount"),
-      auth.from("investments").select("id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)").eq("user_id",user.id).order("created_at",{ascending:false}),
-      auth.from("wallet_ledger").select("id,entry_type,amount,status,reference,description,created_at,posted_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100)
+      auth.from('profiles').select('id,member_code,display_name,phone,country_code,role').eq('id',user.id).maybeSingle(),
+      auth.from('wallet_balances').select('balance,bonus_balance,bonus_locked').eq('user_id',user.id).maybeSingle(),
+      auth.from('projects').select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status').eq('status','published').order('minimum_amount'),
+      auth.from('investments').select('id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)').eq('user_id',user.id).order('created_at',{ascending:false}),
+      auth.from('wallet_ledger').select('id,entry_type,amount,status,reference,description,created_at,posted_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
     ];
     var results=await Promise.allSettled(tasks);
-    var labels=["profiles","wallet","projects","investments","ledger"];
+    var labels=['profiles','wallet','projects','investments','ledger'];
     results.forEach(function(result,i){
-      if(result.status==="rejected"){
-        console.error("NOVA load "+labels[i]+":",result.reason);
-        return;
-      }
-      var r=result.value;
-      if(r&&r.error)console.error("NOVA load "+labels[i]+":",r.error);
+      if(result.status==='rejected')console.error('NOVA load '+labels[i]+':',result.reason);
+      else if(result.value&&result.value.error)console.error('NOVA load '+labels[i]+':',result.value.error);
     });
-    var profileResult=results[0].status==="fulfilled"?results[0].value:null;
-    var walletResult=results[1].status==="fulfilled"?results[1].value:null;
-    var projectResult=results[2].status==="fulfilled"?results[2].value:null;
-    var investmentResult=results[3].status==="fulfilled"?results[3].value:null;
-    var ledgerResult=results[4].status==="fulfilled"?results[4].value:null;
+    var profileResult=results[0].status==='fulfilled'?results[0].value:null;
+    var walletResult=results[1].status==='fulfilled'?results[1].value:null;
+    var projectResult=results[2].status==='fulfilled'?results[2].value:null;
+    var investmentResult=results[3].status==='fulfilled'?results[3].value:null;
+    var ledgerResult=results[4].status==='fulfilled'?results[4].value:null;
     if(profileResult&&!profileResult.error)profile=profileResult.data||{};
     if(walletResult&&!walletResult.error)wallet=walletResult.data||{balance:0,bonus_balance:0,bonus_locked:0};
     if(projectResult&&!projectResult.error)projects=Array.isArray(projectResult.data)&&projectResult.data.length ? projectResult.data : (Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
@@ -150,11 +160,9 @@
     if(investmentResult&&!investmentResult.error)investments=investmentResult.data||[];
     if(ledgerResult&&!ledgerResult.error)ledger=ledgerResult.data||[];
     return {
-      profileOk:!!(profileResult&&!profileResult.error),
-      walletOk:!!(walletResult&&!walletResult.error),
-      projectsOk:!!(projectResult&&!projectResult.error),
-      investmentsOk:!!(investmentResult&&!investmentResult.error),
-      ledgerOk:!!(ledgerResult&&!ledgerResult.error)
+      profileOk:!!(profileResult&&!profileResult.error),walletOk:!!(walletResult&&!walletResult.error),
+      projectsOk:!!(projectResult&&!projectResult.error),investmentsOk:!!(investmentResult&&!investmentResult.error),
+      ledgerOk:!!(ledgerResult&&!ledgerResult.error),source:'browser'
     };
   }
   function renderHeader(){
