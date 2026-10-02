@@ -1030,3 +1030,50 @@ html, body {
 @media (max-width: 640px) {
   #view-home .balances { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Member identity / referral summary */
+.member-shortcuts,
+.member-details {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid var(--line, #e7ebf2);
+  border-radius: 12px;
+  background: #fff;
+}
+.member-shortcuts > div,
+.member-details > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0;
+}
+.member-shortcuts span,
+.member-details span {
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+}
+.member-shortcuts b,
+.member-details b {
+  font-weight: 800;
+}
+.member-ref strong,
+.member-details strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.ref-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--brand-soft, #eefaf7);
+}
+.ref-meta span {
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+}
