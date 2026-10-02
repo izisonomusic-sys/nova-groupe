@@ -541,6 +541,10 @@
     }
     throw last||new Error("API NOVA indisponible.");
   }
+  // Expose the same guarded request function globally so legacy handlers cannot hit
+  // a ReferenceError even while the main dashboard script is still initializing.
+  if(!window.NovaApi)window.NovaApi={request:request,base:String(C.apiBase||location.origin)};
+  if(typeof window.api!=="function")window.api=request;
   async function renderProjects(){
     var node=document.getElementById("planListHome");
     if(!node)return;
