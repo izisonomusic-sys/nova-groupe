@@ -145,7 +145,8 @@
     var ledgerResult=results[4].status==="fulfilled"?results[4].value:null;
     if(profileResult&&!profileResult.error)profile=profileResult.data||{};
     if(walletResult&&!walletResult.error)wallet=walletResult.data||{balance:0,bonus_balance:0,bonus_locked:0};
-    if(projectResult&&!projectResult.error)projects=projectResult.data||[];
+    if(projectResult&&!projectResult.error)projects=Array.isArray(projectResult.data)&&projectResult.data.length ? projectResult.data : (Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[]);
+    else projects=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[];
     if(investmentResult&&!investmentResult.error)investments=investmentResult.data||[];
     if(ledgerResult&&!ledgerResult.error)ledger=ledgerResult.data||[];
     return {
@@ -166,7 +167,8 @@
   }
   function renderPlans(tab){
     currentTab=tab||"plans";
-    var list=projects.filter(function(p){var special=String(p.return_terms||"").startsWith("SPECIAL:");return currentTab==="speciaux" ? special : !special;});
+    var source=projects.length?projects:(Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback:[]);
+    var list=source.filter(function(p){var special=String(p.return_terms||"").startsWith("SPECIAL:");return currentTab==="speciaux" ? special : !special;});
     var n=el("planListHome");
     if(n)n.innerHTML=list.length?list.map(planCard).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par NOVA.</div>';
   }
