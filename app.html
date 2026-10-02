@@ -442,6 +442,188 @@
   bootRoute();
 })();
 </script>
+<script id="nova-runtime-guard">
+(function(){
+  "use strict";
+  window.NovaDashboardReady = false;
+  var C = window.NOVA || {};
+  var client = window.NovaAuth || null;
+  var softpayReference = "";
+
+  function esc(v){
+    return String(v==null?"":v).replace(/[&<>"']/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function money(v){
+    return Math.round(Number(v)||0).toLocaleString("fr-FR")+" "+(C.currency||"FCFA");
+  }
+  function toast(msg){
+    var n=document.getElementById("toast");
+    if(!n){alert(String(msg||""));return;}
+    n.textContent=String(msg||"");
+    n.classList.add("show");
+    clearTimeout(window.__novaGuardToast);
+    window.__novaGuardToast=setTimeout(function(){n.classList.remove("show");},3500);
+  }
+  function fillWalletSelectors(){
+    var country=document.getElementById("rcCountry");
+    var dial=document.getElementById("rcDial");
+    var operator=document.getElementById("rcOperator");
+    if(!country||!dial||!operator||!Array.isArray(C.countries))return;
+    if(!country.options.length){
+      country.innerHTML=C.countries.map(function(x){return '<option value="'+esc(x.code)+'">'+esc(x.label)+' ('+esc(x.code)+')</option>';}).join("");
+    }
+    if(!dial.options.length){
+      dial.innerHTML=C.countries.map(function(x){return '<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>';}).join("");
+    }
+    if(!country.value)country.value="+228";
+    dial.value=country.value;
+    var found=C.countries.find(function(x){return x.code===country.value;});
+    operator.innerHTML=(found?found.ops:[]).map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join("");
+    var cards=document.getElementById("softpayOperators");
+    var isTogo=country.value==="+228";
+    if(cards)cards.style.display=isTogo?"grid":"none";
+    if(operator)operator.style.display=isTogo?"none":"block";
+    var tm=document.getElementById("spOpTmoney"),mv=document.getElementById("spOpMoov");
+    if(tm)tm.classList.toggle("active",true);
+    if(mv)mv.classList.toggle("active",false);
+    country.onchange=function(){
+      dial.value=country.value;
+      var item=C.countries.find(function(x){return x.code===country.value;});
+      operator.innerHTML=(item?item.ops:[]).map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join("");
+      var t=country.value==="+228";
+      if(cards)cards.style.display=t?"grid":"none";
+      if(operator)operator.style.display=t?"none":"block";
+    };
+  }
+  async function getSession(){
+    client=window.NovaAuth||client;
+    if(!client||!client.auth)return null;
+    try{
+      var r=await client.auth.getSession();
+      return r.data&&r.data.session?r.data.session:null;
+    }catch(_){return null;}
+  }
+  async function request(path,opts){
+    opts=opts||{};
+    if(window.NovaApi&&typeof window.NovaApi.request==="function")return window.NovaApi.request(path,opts);
+    var session=await getSession();
+    if(!session)throw new Error("Session NOVA introuvable. Reconnectez-vous.");
+    var configured=String(C.apiBase||"").replace(/\/$/,"");
+    var bases=[];
+    [location.origin,configured].forEach(function(x){x=String(x||"").replace(/\/$/,"");if(x&&!bases.includes(x))bases.push(x);});
+    var last=null;
+    for(var i=0;i<bases.length;i++){
+      try{
+        var target=/^https?:\/\//i.test(String(path))?String(path):bases[i]+String(path);
+        var headers=Object.assign({"Content-Type":"application/json","Accept":"application/json","Authorization":"Bearer "+session.access_token},opts.headers||{});
+        var res=await fetch(target,Object.assign({},opts,{headers:headers}));
+        if(res.status===404&&i<bases.length-1)continue;
+        var data={};try{data=await res.json();}catch(_){}
+        if(!res.ok){
+          throw new Error(data.error||("API NOVA HTTP "+res.status));
+        }
+        return data;
+      }catch(err){last=err;if(i===bases.length-1)throw err;}
+    }
+    throw last||new Error("API NOVA indisponible.");
+  }
+  async function renderProjects(){
+    var node=document.getElementById("planListHome");
+    if(!node)return;
+    var list=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback.slice():[];
+    try{
+      var configured=String(C.apiBase||"").replace(/\/$/,"");
+      var bases=[];[location.origin,configured].forEach(function(x){if(x&&!bases.includes(x))bases.push(x);});
+      for(var i=0;i<bases.length;i++){
+        var r=await fetch(bases[i]+"/api/public/projects",{headers:{"Accept":"application/json"}});
+        if(!r.ok)continue;
+        var data=await r.json();
+        if(Array.isArray(data.projects)&&data.projects.length){list=data.projects;break;}
+      }
+    }catch(_){}
+    function card(p){
+      var d=Number(p.daily_return_amount)||0, days=Number(p.duration_days)||0, amount=Number(p.minimum_amount)||0;
+      return '<article class="plan"><div class="ph"><img src="'+esc(p.image_url||"assets/img/projet-solaire.jpg")+'" alt="'+esc(p.title||"Projet NOVA")+'" loading="lazy"><span class="badge">'+esc(p.badge||p.category||"Projet")+'</span></div><div class="pb"><h3>'+esc(p.title||"Projet NOVA")+'</h3><p class="muted">'+esc(p.description||"")+'</p><div class="stats"><div><span>Prix</span><b>'+money(amount)+'</b></div><div><span>Gain/jour estimé</span><b class="est">'+money(d)+'</b></div><div><span>Durée</span><b>'+days+' jours</b></div><div><span>Gain total estimé</span><b class="est">'+money(d*days)+'</b></div></div><button class="btn btn-primary btn-block" type="button" data-invest="'+esc(p.id)+'">Investir maintenant</button></div></article>';
+    }
+    function render(tab){
+      var filtered=list.filter(function(p){
+        var special=String(p.return_terms||"").indexOf("SPECIAL:")===0;
+        return tab==="speciaux"?special:!special;
+      });
+      node.innerHTML=filtered.length?filtered.map(card).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication.</div>';
+    }
+    document.querySelectorAll("#view-home .tab").forEach(function(t){
+      if(!t.dataset.novaGuardBound){
+        t.dataset.novaGuardBound="1";
+        t.addEventListener("click",function(){document.querySelectorAll("#view-home .tab").forEach(function(x){x.classList.remove("active");});t.classList.add("active");render(t.dataset.tab||"plans");});
+      }
+    });
+    render((document.querySelector("#view-home .tab.active")||{}).dataset?.tab||"plans");
+  }
+  function setSoftPayModal(data){
+    softpayReference=String(data.reference||"");
+    var map={softpayAmount:money(data.amount),softpayOperator:data.operator==="Moov Togo"?"Moov Money":"Yas (Togocom)",softpayPhone:data.phone||"—",softpayStatus:data.status==="completed"?"Confirmé":"En attente",softpayMessage:data.message||"La demande a été envoyée. Validez-la sur votre téléphone."};
+    Object.keys(map).forEach(function(id){var n=document.getElementById(id);if(n)n.textContent=map[id];});
+    var m=document.getElementById("softpayModal");if(m){m.classList.add("open");m.setAttribute("aria-hidden","false");}
+  }
+  async function verifySoftPay(){
+    if(!softpayReference)return;
+    try{
+      var data=await request("/api/payments/paydunya/sync",{method:"POST",body:JSON.stringify({reference:softpayReference})});
+      var row=Array.isArray(data.results)?data.results[0]:null;
+      var status=String(row&&row.status||"pending").toLowerCase();
+      var s=document.getElementById("softpayStatus"),msg=document.getElementById("softpayMessage");
+      if(s)s.textContent=status==="completed"?"Confirmé":(status==="failed"?"Échec":"En attente");
+      if(msg)msg.textContent=status==="completed"?"Paiement confirmé. Votre portefeuille a été crédité.":"La confirmation PayDunya est encore en attente.";
+      if(status==="completed"){localStorage.removeItem("nova:lastPendingPaymentReference");location.reload();}
+    }catch(err){toast(err.message||"Vérification PayDunya impossible.");}
+  }
+  async function recharge(){
+    if(window.NovaDashboardReady)return;
+    var btn=document.getElementById("btnRecharge"), amountNode=document.getElementById("rcAmount");
+    var country=document.getElementById("rcCountry"), dial=document.getElementById("rcDial"), operator=document.getElementById("rcOperator"), phoneNode=document.getElementById("rcPhone");
+    if(!amountNode||!country||!dial||!operator||!phoneNode)return;
+    var amount=Number(amountNode.value);
+    var op=country.value==="+228"?(document.getElementById("spOpMoov")&&document.getElementById("spOpMoov").classList.contains("active")?"Moov Togo":"Togocom"):operator.value;
+    var phone=(dial.value||"")+(phoneNode.value||"").replace(/\D/g,"").replace(/^0+/,"");
+    if(!Number.isSafeInteger(amount)||amount<3000){toast("Montant minimum : 3 000 FCFA");return;}
+    if(country.value==="+228"&&!/^\+228\d{8}$/.test(phone)){toast("Entrez un numéro Togo valide à 8 chiffres.");return;}
+    if(btn)btn.disabled=true;
+    try{
+      var result=await request("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country.value,operator:op,phone:phone})});
+      localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
+      setSoftPayModal(result);
+      if(result.status==="completed"){localStorage.removeItem("nova:lastPendingPaymentReference");}
+    }catch(err){toast(err.message||"Paiement impossible pour le moment.");}
+    finally{if(btn)btn.disabled=false;}
+  }
+  function closeSoftPay(){
+    var m=document.getElementById("softpayModal");if(m)m.classList.remove("open");
+  }
+  function bind(){
+    fillWalletSelectors();
+    var tm=document.getElementById("spOpTmoney"),mv=document.getElementById("spOpMoov");
+    if(tm&&!tm.dataset.novaGuardBound){tm.dataset.novaGuardBound="1";tm.onclick=function(){tm.classList.add("active");if(mv)mv.classList.remove("active");};}
+    if(mv&&!mv.dataset.novaGuardBound){mv.dataset.novaGuardBound="1";mv.onclick=function(){mv.classList.add("active");if(tm)tm.classList.remove("active");};}
+    var rb=document.getElementById("btnRecharge");
+    if(rb&&!rb.dataset.novaGuardBound){rb.dataset.novaGuardBound="1";rb.addEventListener("click",recharge);}
+    var ver=document.getElementById("softpayVerify");
+    if(ver&&!ver.dataset.novaGuardBound){ver.dataset.novaGuardBound="1";ver.addEventListener("click",verifySoftPay);}
+    var close=document.getElementById("softpayClose");
+    if(close&&!close.dataset.novaGuardBound){close.dataset.novaGuardBound="1";close.addEventListener("click",closeSoftPay);}
+    renderProjects();
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
+  window.setTimeout(function(){
+    if(!window.NovaDashboardReady){
+      console.warn("NOVA runtime guard activated: app.js did not report ready.");
+      bind();
+    }
+  },3000);
+})();
+</script>
 <script src="assets/js/app.js?v=20261002e"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
