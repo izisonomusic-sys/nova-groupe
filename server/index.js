@@ -1458,6 +1458,38 @@ app.delete('/api/admin/projects/:id', requireUser, requireAdmin, async (req, res
   }
 });
 
+// Authenticated dashboard snapshot. This keeps member data loading independent from browser-side RLS/client queries.
+app.get('/api/member/dashboard', requireUser, async (req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'Supabase n’est pas configuré sur le serveur.' });
+    const [profileResult, walletResult, projectsResult, investmentsResult, ledgerResult] = await Promise.all([
+      supabase.from('profiles').select('id,member_code,display_name,phone,country_code,role').eq('id', req.user.id).maybeSingle(),
+      supabase.from('wallet_balances').select('balance,bonus_balance,bonus_locked,updated_at').eq('user_id', req.user.id).maybeSingle(),
+      supabase.from('projects').select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status').eq('status','published').order('minimum_amount', { ascending: true }),
+      supabase.from('investments').select('id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)').eq('user_id', req.user.id).order('created_at', { ascending: false }),
+      supabase.from('wallet_ledger').select('id,entry_type,amount,status,reference,description,created_at,posted_at').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(100)
+    ]);
+    const failures = [
+      ['profiles', profileResult.error], ['wallet', walletResult.error], ['projects', projectsResult.error],
+      ['investments', investmentsResult.error], ['ledger', ledgerResult.error]
+    ].filter(([, err]) => err);
+    if (failures.length) {
+      console.error('[DASHBOARD] snapshot query failure', failures.map(([name, err]) => ({ name, message: err.message })));
+      return res.status(500).json({ error: 'Impossible de charger les données du tableau de bord.', detail: failures.map(([name, err]) => name+': '+err.message).join(' | ') });
+    }
+    return res.json({
+      profile: profileResult.data || null,
+      wallet: walletResult.data || { balance: 0, bonus_balance: 0, bonus_locked: 0 },
+      projects: projectsResult.data || [],
+      investments: investmentsResult.data || [],
+      ledger: ledgerResult.data || []
+    });
+  } catch (err) {
+    console.error('[DASHBOARD] snapshot error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger le tableau de bord.', detail: err.message });
+  }
+});
+
 // Public project feed used by both the landing page and authenticated dashboard.
 // It runs server-side so project visibility does not depend on browser RLS/client state.
 app.get('/api/public/projects', async (_req, res) => {
