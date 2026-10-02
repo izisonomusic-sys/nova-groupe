@@ -1447,6 +1447,24 @@ app.delete('/api/admin/projects/:id', requireUser, requireAdmin, async (req, res
   }
 });
 
+// Public project feed used by both the landing page and authenticated dashboard.
+// It runs server-side so project visibility does not depend on browser RLS/client state.
+app.get('/api/public/projects', async (_req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'Supabase n’est pas configuré sur le serveur.' });
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status')
+      .eq('status', 'published')
+      .order('minimum_amount', { ascending: true });
+    if (error) throw error;
+    return res.json({ projects: data || [] });
+  } catch (err) {
+    console.error('[PROJECTS] public feed error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger les projets.', detail: err.message });
+  }
+});
+
 // Investment and bonus endpoints: authenticated identity is taken only from the verified token.
 app.post('/api/investments', requireUser, async (req, res) => {
   try {
