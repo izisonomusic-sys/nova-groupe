@@ -427,6 +427,11 @@
     try{
       var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
+      if(result.fallback && result.checkout_url){
+        S.toast("SoftPay PayDunya a été refusé pour cette demande. Ouverture du paiement PayDunya classique…");
+        location.assign(result.checkout_url);
+        return;
+      }
       showSoftPayModal(result);
       if(result.status==="completed"){
         localStorage.removeItem("nova:lastPendingPaymentReference");
