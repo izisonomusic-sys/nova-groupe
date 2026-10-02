@@ -6,7 +6,7 @@
   var sr=await auth.auth.getSession(), session=sr.data&&sr.data.session;
   if(sr.error||!session){location.replace("login.html");return;}
   var user=session.user, profile={}, wallet={balance:0,bonus_balance:0,bonus_locked:0}, projects=[], investments=[], ledger=[];
-  var currentTab="plans", selectedProject=null;
+  var currentTab="plans", selectedProject=null, handlersReady=false;
   function el(id){return document.getElementById(id);}
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -431,6 +431,7 @@
   listen("npCancel","click",()=>closeModal("passModal"));
   listen("npSave","click",async function(){var p=el("npNew").value;if(!p||p.length<8){S.toast("Le mot de passe doit contenir au moins 8 caractères.");return;}var r=await auth.auth.updateUser({password:p});if(r.error)S.toast(r.error.message);else{S.toast("Mot de passe modifié.");closeModal("passModal");}});
   document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
+    handlersReady=true;
   } catch (handlerErr) { console.error("NOVA handler setup:", handlerErr); }
   function setExternalContact(id,url,emptyLabel){
     var n=el(id);if(!n)return;
@@ -465,4 +466,5 @@
     route();
     S.toast("Certaines données sont encore en chargement. Réessayez dans quelques instants.");
   }
+  window.NovaDashboardReady=handlersReady;
 })();
