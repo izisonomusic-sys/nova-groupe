@@ -8,6 +8,8 @@ window.NOVA = {
   fullName: "NOVA Immobilier & Énergies",
   tagline: "Immobilier & Énergies renouvelables",
   currency: "FCFA",
+  // API NOVA centralisée sur Render. Les appels restent valides même si le front est servi depuis un autre domaine.
+  apiBase: "https://nova-groupe-dpnx.onrender.com",
 
   /* ---------- Contacts / assistance ---------- */
   // Lien officiel de la communauté WhatsApp NOVA Group.
