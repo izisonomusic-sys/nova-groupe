@@ -67,7 +67,7 @@
       var result=await api("/api/investments/reconcile",{method:"POST",body:JSON.stringify({})});
       if(result && result.status==="credited"){
         await loadAll();
-        render(location.hash.replace(/^#\\//,"")||"home");
+        render(location.hash.replace(/^#\//,"")||"home");
         S.toast("Gains quotidiens de l’investissement vérifiés et crédités.");
       }
       return result;
@@ -222,13 +222,25 @@
     renderPlans(currentTab);fillWalletForm("rc");
   }
   function fillWalletForm(prefix){
-    var c=el(prefix+"Country"),o=el(prefix+"Operator"),d=el(prefix+"Dial");if(!c||!o||!d)return;
-    if(!c.options.length){c.innerHTML=C.countries.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.label)+' ('+esc(x.code)+')</option>').join("");d.innerHTML=C.countries.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join("");c.value="+228";c.addEventListener("change",function(){d.value=c.value;fillOperators(prefix);});}
+    var c=el(prefix+"Country"),o=el(prefix+"Operator"),d=el(prefix+"Dial");
+    if(!c||!o||!d||!Array.isArray(C.countries))return;
+    if(!c.options.length){
+      c.innerHTML=C.countries.map(function(x){return '<option value="'+esc(x.code)+'">'+esc(x.label)+' ('+esc(x.code)+')</option>';}).join("");
+    }
+    if(!d.options.length){
+      d.innerHTML=C.countries.map(function(x){return '<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>';}).join("");
+    }
+    if(!C.countries.some(function(x){return x.code===c.value;}))c.value="+228";
+    d.value=c.value;
+    c.onchange=function(){d.value=c.value;fillOperators(prefix);};
     fillOperators(prefix);
   }
   function fillOperators(prefix){
-    var c=el(prefix+"Country"),o=el(prefix+"Operator");if(!c||!o)return;
-    var country=C.countries.find(x=>x.code===c.value);o.innerHTML=(country?country.ops:[]).map(x=>'<option>'+esc(x)+'</option>').join("");
+    var c=el(prefix+"Country"),o=el(prefix+"Operator");if(!c||!o||!Array.isArray(C.countries))return;
+    var country=C.countries.find(function(x){return x.code===c.value;});
+    var ops=country&&Array.isArray(country.ops)?country.ops:[];
+    o.innerHTML=ops.map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join("");
+    if(ops.length)o.value=ops[0];
   }
   function renderPresence(){
     setText("presenceDate",new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}));
@@ -305,10 +317,27 @@
 
   try {
   document.addEventListener("click",function(e){
-    var a=e.target.closest('a[href^="#/"]');if(a){var v=a.dataset.nav||a.getAttribute("href").slice(2);if(VIEWS.includes(v)){e.preventDefault();location.hash="#/"+v;}}
-    var btn=e.target.closest("[data-invest]");if(btn){selectedProject=projects.find(p=>p.id===btn.dataset.invest);if(!selectedProject)return;
-      el("investModalText").textContent="Projet "+selectedProject.title+" — "+money(selectedProject.minimum_amount)+" pour "+selectedProject.duration_days+" jours. Solde disponible : "+money(wallet.balance);
-      el("investModal").classList.add("open");}
+    var a=e.target.closest('a[href^="#/"]');
+    if(a){
+      var v=a.dataset.nav||a.getAttribute("href").slice(2);
+      if(VIEWS.includes(v)){e.preventDefault();location.hash="#/"+v;}
+    }
+    var btn=e.target.closest("[data-invest]");
+    if(btn){
+      var projectId=btn.dataset.invest;
+      selectedProject=projects.find(function(p){return String(p.id)===String(projectId);});
+      if(!selectedProject && Array.isArray(C.publishedProjectsFallback)){
+        selectedProject=C.publishedProjectsFallback.find(function(p){return String(p.id)===String(projectId);});
+      }
+      if(!selectedProject){
+        S.toast("Projet indisponible. Actualisez les projets puis réessayez.");
+        return;
+      }
+      var modalText=el("investModalText");
+      var modal=el("investModal");
+      if(modalText)modalText.textContent="Projet "+selectedProject.title+" — "+money(selectedProject.minimum_amount)+" pour "+selectedProject.duration_days+" jours. Solde disponible : "+money(wallet.balance);
+      if(modal)modal.classList.add("open");
+    }
   });
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");renderPlans(t.dataset.tab);}));
   function closeModal(id){var n=el(id);if(n)n.classList.remove("open");}
@@ -474,7 +503,7 @@
     var payload={amount:amount,country_code:country,operator:operator,phone:phone,account_name:name};
     if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");if(statusNode)statusNode.textContent="Montant minimum : 1 500 FCFA.";return;}
     if(!operator){S.toast("Choisissez un opérateur.");if(statusNode)statusNode.textContent="Choisissez un opérateur avant de confirmer.";return;}
-    if(!/^\\+228\\d{8}$/.test(phone)){S.toast("Entrez un numéro Togo valide à 8 chiffres.");if(statusNode)statusNode.textContent="Numéro de retrait invalide.";return;}
+    if(!/^\+228\d{8}$/.test(phone)){S.toast("Entrez un numéro Togo valide à 8 chiffres.");if(statusNode)statusNode.textContent="Numéro de retrait invalide.";return;}
     if(name.length<3){S.toast("Saisissez le nom complet du titulaire.");if(statusNode)statusNode.textContent="Nom du titulaire requis.";return;}
     var b=el("btnWithdraw");b.disabled=true;
     if(statusNode)statusNode.textContent="Enregistrement de la demande…";
