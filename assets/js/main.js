@@ -25,48 +25,32 @@
   }
   document.querySelectorAll("[data-app]").forEach(function(a){a.href=session?"app.html"+a.dataset.app:"login.html";});
   var publishedFallback=Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback:[];
-  // Start with the last-known published snapshot so the page never appears empty
-  // while the server/Supabase feed is being resolved.
+  // Public projects are readable anonymously by policy, so use Supabase first.
+  // Render remains a fallback; the static snapshot is the last resort.
   var list=publishedFallback.slice();
   try{
-    var bases=[];
-    [C.apiBase,location.origin].forEach(function(base){
-      base=String(base||"").replace(/\/$/,"");
-      if(base&&!bases.includes(base))bases.push(base);
-    });
     var loaded=false;
-    for(var bi=0;bi<bases.length&&!loaded;bi++){
-      try{
-        var serverResponse=await fetch(bases[bi]+"/api/public/projects",{headers:{"Accept":"application/json"}});
-        if(!serverResponse.ok){
-          if(serverResponse.status===404)continue;
-          throw new Error("Serveur projets HTTP "+serverResponse.status);
-        }
-        var serverData=await serverResponse.json();
-        if(Array.isArray(serverData.projects) && serverData.projects.length){
-          list=serverData.projects;
-          loaded=true;
-        }
-      }catch(serverError){console.warn("NOVA server project feed:",serverError.message);}
-    }
-    if(!loaded&&A){
+    if(A){
       try{
         var r=await A.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount");
-        if(!r.error&&Array.isArray(r.data)&&r.data.length){
-          list=r.data;
-          loaded=true;
-        }
+        if(!r.error&&Array.isArray(r.data)&&r.data.length){list=r.data;loaded=true;}
         else if(r.error)console.warn("NOVA Supabase project feed:",r.error.message);
-      }catch(fallbackError){console.warn("NOVA Supabase project feed:",fallbackError.message);}
+      }catch(err){console.warn("NOVA Supabase project feed:",err.message);}
     }
-    if(!loaded&&publishedFallback.length){
-      list=publishedFallback.slice();
-      console.warn("NOVA project feed: using last-known published project snapshot.");
+    if(!loaded){
+      var bases=[];
+      [C.apiBase,location.origin].forEach(function(base){base=String(base||"").replace(/\\/$/,"");if(base&&!bases.includes(base))bases.push(base);});
+      for(var bi=0;bi<bases.length&&!loaded;bi++){
+        try{
+          var serverResponse=await fetch(bases[bi]+"/api/public/projects",{headers:{"Accept":"application/json"}});
+          if(!serverResponse.ok)continue;
+          var serverData=await serverResponse.json();
+          if(Array.isArray(serverData.projects)&&serverData.projects.length){list=serverData.projects;loaded=true;}
+        }catch(err){console.warn("NOVA server project feed:",err.message);}
+      }
     }
-  }catch(e){
-    console.error("NOVA public projects:",e.message);
-    if(publishedFallback.length)list=publishedFallback.slice();
-  }
+    if(!loaded&&publishedFallback.length)list=publishedFallback.slice();
+  }catch(e){console.error("NOVA public projects:",e.message);}
   function render(tab){
     var filtered=list.filter(p=>{var special=String(p.return_terms||"").startsWith("SPECIAL:");return tab==="speciaux"?special:!special;});
     var n=document.getElementById("homePlanList");if(n)n.innerHTML=filtered.length?filtered.map(card).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par NOVA.</div>';
