@@ -1009,6 +1009,52 @@ app.post('/api/payments/paydunya/sync', requireUser, async (req, res) => {
   }
 });
 
+// Background reconciliation for pending PayDunya payments. This closes the gap when an IPN/callback is delayed.
+async function reconcilePendingPayDunyaPayments() {
+  if (!supabase || !paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) return { checked: 0, completed: 0, failed: 0, pending: 0 };
+  try {
+    const { data: rows, error } = await supabase.from('payment_transactions')
+      .select('id,reference,amount,status,provider_token,created_at')
+      .eq('provider','paydunya')
+      .eq('status','pending')
+      .not('provider_token','is',null)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: true })
+      .limit(25);
+    if (error) throw error;
+    let completed=0, failed=0, pending=0;
+    for (const tx of rows || []) {
+      try {
+        const token=String(tx.provider_token||'').trim();
+        const response=await fetch(paydunyaBase + '/checkout-invoice/confirm/' + encodeURIComponent(token), { method:'GET', headers:paydunyaHeaders() });
+        const confirmed=await response.json();
+        if(!response.ok || confirmed.response_code!=='00' || !verifyPayDunyaHash(confirmed)) { pending++; continue; }
+        const status=String(confirmed.invoice?.status||'pending').toLowerCase();
+        if(status==='completed'){
+          const amount=Number(confirmed.invoice?.total_amount);
+          if(!Number.isSafeInteger(amount) || amount!==Number(tx.amount)) throw new Error('Payment amount mismatch');
+          const {error: creditError}=await supabase.rpc('nova_confirm_paydunya_payment',{p_payment_id:tx.id,p_provider_token:token,p_paid_amount:amount,p_provider_payload:confirmed});
+          if(creditError) throw creditError;
+          completed++;
+        } else if(['failed','cancelled','pending'].includes(status)){
+          const {error:stateError}=await supabase.rpc('nova_reconcile_paydunya_state',{p_payment_id:tx.id,p_provider_token:token,p_provider_status:status,p_provider_payload:confirmed});
+          if(stateError) throw stateError;
+          if(status==='pending')pending++; else failed++;
+        } else pending++;
+      } catch(err) {
+        console.error('[PAYDUNYA][RECONCILE] transaction error', { reference: tx.reference, message: err.message });
+        pending++;
+      }
+    }
+    const checked=(rows||[]).length;
+    console.log('[PAYDUNYA][RECONCILE] pending payment sweep completed', { checked, completed, failed, pending });
+    return { checked, completed, failed, pending };
+  } catch(err) {
+    console.error('[PAYDUNYA][RECONCILE] sweep error:', err.message);
+    return { checked: 0, completed: 0, failed: 0, pending: 0, error: err.message };
+  }
+}
+
 // Notification PayDunya: vérifier le hash puis confirmer le statut auprès de l'API PayDunya.
 app.post(['/api/payments/paydunya/callback', '/payments/webhooks/paydunya'], async (req, res) => {
   console.log('[PAYDUNYA] webhook received', { contentType: req.headers['content-type'], bodyKeys: Object.keys(req.body || {}) });
@@ -1547,6 +1593,13 @@ app.get('/app.html/:view', (req, res, next) => {
   if (!allowedViews.has(req.params.view)) return next();
   return res.redirect(302, `/app.html#/${req.params.view}`);
 });
+
+setTimeout(() => {
+  reconcilePendingPayDunyaPayments().catch(err => console.error('[PAYDUNYA][RECONCILE] initial sweep error:', err.message));
+}, 20000);
+setInterval(() => {
+  reconcilePendingPayDunyaPayments().catch(err => console.error('[PAYDUNYA][RECONCILE] scheduled sweep error:', err.message));
+}, 5 * 60 * 1000);
 
 setTimeout(() => {
   reconcileAllInvestmentIncome().catch(err => console.error('[INVESTMENT] initial reconciliation error:', err.message));
