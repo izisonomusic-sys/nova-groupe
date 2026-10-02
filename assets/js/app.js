@@ -3,7 +3,9 @@
   "use strict";
   var C=window.NOVA, S=window.NovaStore, auth=window.NovaAuth;
   if(!auth){location.replace("login.html");return;}
-  var session=null, user=null, profile={}, wallet={balance:0,bonus_balance:0,bonus_locked:0}, projects=[], investments=[], ledger=[];
+  var sr=await auth.auth.getSession(), session=sr.data&&sr.data.session;
+  if(sr.error||!session){location.replace("login.html");return;}
+  var user=session.user, profile={}, wallet={balance:0,bonus_balance:0,bonus_locked:0}, projects=[], investments=[], ledger=[];
   var currentTab="plans", selectedProject=null;
   function el(id){return document.getElementById(id);}
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
@@ -11,18 +13,190 @@
   function money(v){return S.fcn(Number(v)||0);}
   function imagePath(v){return v||"assets/img/projet-solaire.jpg";}
   function listen(id,event,handler){var n=el(id);if(n&&typeof n.addEventListener==="function")n.addEventListener(event,handler);}
+  async function api(path,opts){
+    opts=opts||{};opts.headers=Object.assign({"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},opts.headers||{});
+    var r=await fetch(path,opts), data={};try{data=await r.json();}catch(_){}
+    if(!r.ok){
+      var message=data.error||"Erreur de communication avec le serveur.";
+      if(data.detail)message += " — "+data.detail;
+      if(data.provider_code)message += " (code PayDunya: "+data.provider_code+")";
+      throw new Error(message);
+    }
+    return data;
+  }
+  async function reconcileInvestmentIncome(){
+    try{
+      var result=await api("/api/investments/reconcile",{method:"POST",body:JSON.stringify({})});
+      if(result && result.status==="credited"){
+        await loadAll();
+        render(location.hash.replace(/^#\\//,"")||"home");
+        S.toast("Gains quotidiens de l’investissement vérifiés et crédités.");
+      }
+      return result;
+    }catch(err){
+      console.warn("Investment income reconciliation:",err.message);
+      return null;
+    }
+  }
+  async function reconcileReferralBonus(){
+    try{
+      var result=await api("/api/referrals/reconcile",{method:"POST",body:JSON.stringify({})});
+      if(result && result.status==="credited"){
+        await loadAll();
+        S.toast("Bonus de parrainage vérifié et crédité automatiquement.");
+      }
+      return result;
+    }catch(err){
+      console.warn("Referral bonus reconciliation:",err.message);
+      return null;
+    }
+  }
+  async function syncPendingPayment(reference) {
+    try {
+      var body = reference ? { reference: reference } : {};
+      return await api("/api/payments/paydunya/sync", {
+        method: "POST",
+        body: JSON.stringify(body)
+      });
+    } catch (err) {
+      console.warn("PayDunya sync:", err.message);
+      return null;
+    }
+  }
+  async function confirmPaymentReturn(){
+    var params=new URLSearchParams(location.search);var token=params.get("token")||params.get("invoice_token");
+    if(!token){
+      var pendingReference=localStorage.getItem("nova:lastPendingPaymentReference");
+      if(pendingReference) await syncPendingPayment(pendingReference);
+      return;
+    }
+    try{
+      var result=await api("/api/payments/paydunya/confirm-return",{method:"POST",body:JSON.stringify({token:token})});
+      if(result.status==="completed"){
+        localStorage.removeItem("nova:lastPendingPaymentReference");
+        await loadAll();
+        S.toast("Paiement confirmé : votre portefeuille a été crédité.");
+      } else {
+        await syncPendingPayment(localStorage.getItem("nova:lastPendingPaymentReference")||"");
+        await loadAll();
+        S.toast("Paiement en cours de confirmation. Actualisez votre portefeuille dans quelques instants.");
+      }
+    }catch(err){console.warn("PayDunya return confirmation:",err.message);S.toast(err.message||"La confirmation du paiement est encore en cours.");}
+    params.delete("token");params.delete("invoice_token");var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;history.replaceState(null,"",clean);
+  }
+  async function loadAll(){
+    var results=await Promise.all([
+      auth.from("profiles").select("id,member_code,display_name,phone,country_code,role").eq("id",user.id).maybeSingle(),
+      auth.from("wallet_balances").select("balance,bonus_balance,bonus_locked").eq("user_id",user.id).maybeSingle(),
+      auth.from("projects").select("id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status").eq("status","published").order("minimum_amount"),
+      auth.from("investments").select("id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)").eq("user_id",user.id).order("created_at",{ascending:false}),
+      auth.from("wallet_ledger").select("id,entry_type,amount,status,reference,description,created_at,posted_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100)
+    ]);
+    var labels=["profiles","wallet","projects","investments","ledger"];
+    results.forEach(function(r,i){if(r.error){console.error("NOVA load "+labels[i]+":",r.error);throw r.error;}});
+    profile=results[0].data||{};
+    wallet=results[1].data||{balance:0,bonus_balance:0,bonus_locked:0};
+    projects=results[2].data||[];
+    investments=results[3].data||[];
+    ledger=results[4].data||[];
+  }
+  function renderHeader(){
+    var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
+    setText("greetName","Bonjour, "+name.split(/\s+/)[0]);setText("greetId","ID : "+(profile.member_code||"—"));setText("headerAvatar",S.initials(name));
+  }
+  function planCard(p){
+    var daily=Number(p.daily_return_amount)||0,days=Number(p.duration_days)||0,amount=Number(p.minimum_amount)||0;
+    return '<article class="plan"><div class="ph"><img src="'+esc(imagePath(p.image_url))+'" alt="'+esc(p.title)+'" loading="lazy"><span class="badge">'+esc(p.badge||p.category||"Projet")+'</span></div><div class="pb"><h3>'+esc(p.title)+'</h3><p class="muted">'+esc(p.description||"")+'</p><div class="stats"><div><span>Prix</span><b>'+money(amount)+'</b></div><div><span>Gain/jour estimé</span><b class="est">'+money(daily)+'</b></div><div><span>Durée</span><b>'+days+' jours</b></div><div><span>Gain total estimé</span><b class="est">'+money(daily*days)+'</b></div></div><button class="btn btn-primary btn-block" data-invest="'+esc(p.id)+'">Investir maintenant</button></div></article>';
+  }
+  function renderPlans(tab){
+    currentTab=tab||"plans";
+    var list=projects.filter(function(p){var special=String(p.return_terms||"").startsWith("SPECIAL:");return currentTab==="speciaux" ? special : !special;});
+    var n=el("planListHome");
+    if(n)n.innerHTML=list.length?list.map(planCard).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par NOVA.</div>';
+  }
+  function renderHome(){
+    renderHeader();var bal=Number(wallet.balance)||0;
+    setText("balSolde",money(bal));
+    setText("balRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+    setText("balRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+    setText("balBonus",money(Number(wallet.bonus_balance)||0));
+    renderPlans(currentTab);fillWalletForm("rc");
+  }
+  function fillWalletForm(prefix){
+    var c=el(prefix+"Country"),o=el(prefix+"Operator"),d=el(prefix+"Dial");if(!c||!o||!d)return;
+    if(!c.options.length){c.innerHTML=C.countries.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.label)+' ('+esc(x.code)+')</option>').join("");d.innerHTML=C.countries.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join("");c.value="+228";c.addEventListener("change",function(){d.value=c.value;fillOperators(prefix);});}
+    fillOperators(prefix);
+  }
+  function fillOperators(prefix){
+    var c=el(prefix+"Country"),o=el(prefix+"Operator");if(!c||!o)return;
+    var country=C.countries.find(x=>x.code===c.value);o.innerHTML=(country?country.ops:[]).map(x=>'<option>'+esc(x)+'</option>').join("");
+  }
+  function renderPresence(){
+    setText("presenceDate",new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}));
+    var claims=ledger.filter(x=>x.entry_type==="daily_bonus"&&x.status==="posted");
+    setText("streakCount",String(claims.length));setText("presenceLast",claims.length?S.dateFr(claims[0].created_at):"—");
+    var b=el("btnPresence");
+    if(b){
+      var last=claims.length?new Date(claims[0].created_at).getTime():0;
+      var remain=Math.max(0,86400000-(Date.now()-last));
+      b.disabled=!!last&&remain>0;
+      b.textContent=b.disabled?"Bonus déjà réclamé — revenez après 24 h":"Réclamer mon bonus de 50 FCFA";
+    }
+  }
+  function renderInvestments(){
+    var total=0,active=0,earned=0;
+    investments.forEach(function(i){total+=Number(i.principal_amount)||0;if(i.status==="active")active++;});
+    ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").forEach(x=>earned+=Number(x.amount)||0);
+    setText("invTotal",money(total));setText("invActive",String(active));setText("invEarned",money(earned));
+    var n=el("invList");if(!n)return;
+    n.innerHTML=investments.length?investments.map(function(i){
+      var p=i.projects||{},start=i.started_at?S.dateFr(i.started_at):S.dateFr(i.created_at);
+      return '<div class="hist-item"><span class="h-ic h-in">↗</span><div class="h-info"><b>'+esc(p.title||"Investissement")+'</b><span>'+esc(start)+' · '+esc(i.status)+'</span></div><span class="h-amt">'+money(i.principal_amount)+'</span></div>';
+    }).join(""):'<p class="empty">Aucun investissement pour le moment.<br><a href="#/home">Voir les projets →</a></p>';
+  }
+  function renderHistory(){
+    var n=el("histList");if(!n)return;
+    n.innerHTML=ledger.length?ledger.map(function(x){
+      var a=Number(x.amount)||0, cls=a>=0?"plus":"minus",sign=a>0?"+":"";
+      return '<div class="hist-item"><span class="h-ic '+(a>=0?"h-in":"h-out")+'">↔</span><div class="h-info"><b>'+esc(x.description||x.entry_type)+'</b><span>'+esc(S.dateFr(x.created_at))+' · '+esc(x.status)+'</span></div><span class="h-amt '+cls+'">'+sign+money(a)+'</span></div>';
+    }).join(""):'<p class="empty">Aucune transaction pour le moment.</p>';
+  }
+  async function renderTeam(){
+    var code=profile.member_code||"";
+    setText("teamRefLink",location.origin+location.pathname.replace("app.html","register.html")+"?ref="+encodeURIComponent(code));
+    setText("teamSize","…");setText("teamL1","…");setText("teamInvest","…");setText("teamComm","…");
+    try{
+      var team=await api("/api/referrals/me");
+      setText("teamSize",String(team.team_size||0));setText("teamL1",String(team.team_size||0));
+      setText("teamInvest",money(team.investment_total||0));setText("teamComm",money(team.commission_total||0));
+      var n=el("teamList");if(n)n.innerHTML=(team.referrals||[]).length?team.referrals.map(function(r){return '<div class="hist-item"><span class="h-ic h-in">↗</span><div class="h-info"><b>'+esc(r.display_name||"Membre NOVA")+'</b><span>'+esc(S.dateFr(r.created_at))+' · '+esc(r.status||"inscrit")+'</span></div><span class="h-amt">'+money(r.bonus_amount||0)+'</span></div>';}).join(""):'<p class="empty">Aucun filleul pour le moment.</p>';
+    }catch(err){console.warn("Referral dashboard:",err.message);setText("teamSize","0");setText("teamL1","0");setText("teamInvest",money(0));setText("teamComm",money(0));}
+  }
+  function renderAccount(){
+    var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
+    setText("profileName",name);setText("profileId","ID : "+(profile.member_code||"—"));setText("profileAvatar",S.initials(name));
+    setText("accSolde",money(wallet.balance));setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+    setText("accRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+  }
+  function renderNews(){
+    var n=el("newsList");if(n)n.innerHTML=(C.news||[]).map(x=>'<article class="news-card"><img src="'+esc(x.img)+'" alt="" loading="lazy"><div class="news-body"><div class="meta"><span class="badge">'+esc(x.tag)+'</span><span>'+esc(x.date)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p></div></article>').join("");
+  }
+  function render(view){
+    if(view==="home")renderHome();if(view==="presence")renderPresence();if(view==="investissements")renderInvestments();
+    if(view==="historique")renderHistory();if(view==="compte")renderAccount();if(view==="equipe")renderTeam();if(view==="publications")renderNews();
+    if(view==="retrait"){setText("wdAvail",money(wallet.balance));fillWalletForm("wd");}
+  }
   var VIEWS=["home","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
   function route(){
     var v=(location.hash||"#/home").replace(/^#\//,"");if(!VIEWS.includes(v))v="home";
-    document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="view-"+v);});
-    document.querySelectorAll(".bn-item").forEach(function(x){x.classList.toggle("active",(x.dataset.nav||"")===v);});
-    var hero=el("appHero");if(hero)hero.style.display=v==="home"?"block":"none";
-    if(user){try{render(v);}catch(err){console.error("NOVA render:",err);}}
+    document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+v));
+    document.querySelectorAll(".bn-item").forEach(x=>x.classList.toggle("active",x.dataset.nav===v));
+    var hero=el("appHero");if(hero)hero.style.display=v==="home"?"block":"none";render(v);
   }
-  try{route();}catch(err){console.error("NOVA boot route:",err);}
-  window.addEventListener("hashchange",function(){try{route();}catch(err){console.error("NOVA route:",err);}});
+  try { route(); } catch(err) { console.error("NOVA initial route:",err); }
+  window.addEventListener("hashchange",function(){ try { route(); } catch(err) { console.error("NOVA route:",err); } });
 
-
+  try {
   document.addEventListener("click",function(e){
     var a=e.target.closest('a[href^="#/"]');if(a){var v=a.dataset.nav||a.getAttribute("href").slice(2);if(VIEWS.includes(v)){e.preventDefault();location.hash="#/"+v;}}
     var btn=e.target.closest("[data-invest]");if(btn){selectedProject=projects.find(p=>p.id===btn.dataset.invest);if(!selectedProject)return;
@@ -31,8 +205,8 @@
   });
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");renderPlans(t.dataset.tab);}));
   function closeModal(id){var n=el(id);if(n)n.classList.remove("open");}
-  listen("investCancel","click",()=>closeModal("investModal"));
-  listen("investConfirm","click",async function(){
+  el("investCancel").addEventListener("click",()=>closeModal("investModal"));
+  el("investConfirm").addEventListener("click",async function(){
     if(!selectedProject)return;var b=el("investConfirm");b.disabled=true;
     try{await api("/api/investments",{method:"POST",body:JSON.stringify({project_id:selectedProject.id})});closeModal("investModal");await loadAll();render(location.hash.replace(/^#\//,"")||"home");S.toast("Investissement confirmé : le solde a été débité.");}
     catch(e){S.toast(e.message||"Investissement impossible.");}finally{b.disabled=false;}
@@ -136,17 +310,17 @@
     softpayPollTimer=setTimeout(poll,4000);
   }
 
-  listen("softpayVerify","click",function(){verifySoftPayPayment(true);});
-  listen("softpayClose","click",closeSoftPayModal);
-  listen("softpayRetry","click",function(){closeSoftPayModal();var b=el("btnRecharge");if(b)b.click();});
-  listen("softpayModal","click",function(e){if(e.target===el("softpayModal"))closeSoftPayModal();});
+  el("softpayVerify").addEventListener("click",function(){verifySoftPayPayment(true);});
+  el("softpayClose").addEventListener("click",closeSoftPayModal);
+  el("softpayRetry").addEventListener("click",function(){closeSoftPayModal();el("btnRecharge").click();});
+  el("softpayModal").addEventListener("click",function(e){if(e.target===el("softpayModal"))closeSoftPayModal();});
 
-  listen("spOpTmoney","click",function(){setSoftPayOperator("Togocom");});
-  listen("spOpMoov","click",function(){setSoftPayOperator("Moov Togo");});
-  listen("rcCountry","change",refreshSoftPayOperatorUi);
+  el("spOpTmoney").addEventListener("click",function(){setSoftPayOperator("Togocom");});
+  el("spOpMoov").addEventListener("click",function(){setSoftPayOperator("Moov Togo");});
+  el("rcCountry").addEventListener("change",refreshSoftPayOperatorUi);
   refreshSoftPayOperatorUi();
 
-  listen("btnRecharge","click",async function(){
+  el("btnRecharge").addEventListener("click",async function(){
     var amount=Number(el("rcAmount").value);
     if(!Number.isSafeInteger(amount)||amount<3000){S.toast("Montant minimum : 3 000 FCFA");return;}
     var country=el("rcCountry").value;
@@ -180,7 +354,7 @@
     }catch(e){S.toast(e.message||"Paiement SoftPay impossible. Aucun solde n'a été crédité.");}
     finally{b.disabled=false;}
   });
-  listen("btnWithdraw","click",async function(){
+  el("btnWithdraw").addEventListener("click",async function(){
     var amount=Number(el("wdAmount").value),phone=(el("wdDial").value||"")+(el("wdPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
     var payload={amount:amount,country_code:el("wdCountry").value,operator:el("wdOperator").value,phone:phone,account_name:el("wdName").value.trim()};
     if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");return;}
@@ -188,17 +362,18 @@
     try{await api("/api/withdrawals",{method:"POST",body:JSON.stringify(payload)});S.toast("Demande de retrait envoyée pour validation.");el("wdAmount").value="";await loadAll();setText("wdAvail",money(wallet.balance));}
     catch(e){S.toast(e.message||"Retrait impossible.");}finally{b.disabled=false;}
   });
-  listen("btnPresence","click",async function(){
+  el("btnPresence").addEventListener("click",async function(){
     var b=el("btnPresence");b.disabled=true;
     try{await api("/api/bonus/claim",{method:"POST",body:JSON.stringify({})});await loadAll();renderPresence();renderHome();S.toast("Bonus de 50 FCFA crédité.");}
     catch(e){S.toast(e.message||"Bonus indisponible.");}finally{b.disabled=false;}
   });
-  listen("copyTeamLink","click",function(){var n=el("teamRefLink");if(n&&navigator.clipboard)navigator.clipboard.writeText(n.textContent).then(()=>S.toast("Lien copié"),()=>S.toast("Copiez le lien manuellement"));});
-  listen("btnLogout","click",async function(){await auth.auth.signOut();location.href="login.html";});
-  listen("btnPassword","click",()=>{var m=el("passModal");if(m)m.classList.add("open");});
-  listen("npCancel","click",()=>closeModal("passModal"));
-  listen("npSave","click",async function(){var p=el("npNew").value;if(!p||p.length<8){S.toast("Le mot de passe doit contenir au moins 8 caractères.");return;}var r=await auth.auth.updateUser({password:p});if(r.error)S.toast(r.error.message);else{S.toast("Mot de passe modifié.");closeModal("passModal");}});
+  el("copyTeamLink").addEventListener("click",function(){var n=el("teamRefLink");if(n&&navigator.clipboard)navigator.clipboard.writeText(n.textContent).then(()=>S.toast("Lien copié"),()=>S.toast("Copiez le lien manuellement"));});
+  el("btnLogout").addEventListener("click",async function(){await auth.auth.signOut();location.href="login.html";});
+  el("btnPassword").addEventListener("click",()=>el("passModal").classList.add("open"));
+  el("npCancel").addEventListener("click",()=>closeModal("passModal"));
+  el("npSave").addEventListener("click",async function(){var p=el("npNew").value;if(!p||p.length<8){S.toast("Le mot de passe doit contenir au moins 8 caractères.");return;}var r=await auth.auth.updateUser({password:p});if(r.error)S.toast(r.error.message);else{S.toast("Mot de passe modifié.");closeModal("passModal");}});
   document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
+  } catch (handlerErr) { console.error("NOVA handler setup:", handlerErr); }
   function setExternalContact(id,url,emptyLabel){
     var n=el(id);if(!n)return;
     if(url){n.href=url;n.removeAttribute('aria-disabled');n.classList.remove('is-disabled');}else{n.href='#';n.setAttribute('aria-disabled','true');n.classList.add('is-disabled');var sub=n.querySelector('span:last-child');if(sub&&emptyLabel)sub.textContent=emptyLabel;}
@@ -210,6 +385,8 @@
   setExternalContact('assistGroup',C.telegramGroup,'Groupe Telegram en attente');
   if(el("welcomeLater"))el("welcomeLater").addEventListener("click",()=>closeModal("welcomeModal"));
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
+  // Afficher immédiatement la vue demandée. Le chargement Supabase est asynchrone et ne doit jamais laisser l'interface vide.
+  route();
   try{
     await loadAll();
     await reconcileInvestmentIncome();
