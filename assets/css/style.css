@@ -766,7 +766,8 @@ footer { background: var(--dark1); color: #aab1d6; margin-top: 80px; }
     min-width: 0;
   }
 
-  #view-home .balances {\n    grid-template-columns: repeat(4, minmax(0, 1fr));
+  #view-home .balances {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     margin-top: 0;
   }
