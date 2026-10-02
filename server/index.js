@@ -1508,27 +1508,37 @@ app.delete('/api/admin/projects/:id', requireUser, requireAdmin, async (req, res
 app.get('/api/member/dashboard', requireUser, async (req, res) => {
   try {
     if (!supabase) return res.status(503).json({ error: 'Supabase n’est pas configuré sur le serveur.' });
-    const [profileResult, walletResult, projectsResult, investmentsResult, ledgerResult] = await Promise.all([
-      supabase.from('profiles').select('id,member_code,display_name,phone,country_code,role').eq('id', req.user.id).maybeSingle(),
-      supabase.from('wallet_balances').select('balance,bonus_balance,bonus_locked,updated_at').eq('user_id', req.user.id).maybeSingle(),
-      supabase.from('projects').select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status').eq('status','published').order('minimum_amount', { ascending: true }),
-      supabase.from('investments').select('id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)').eq('user_id', req.user.id).order('created_at', { ascending: false }),
-      supabase.from('wallet_ledger').select('id,entry_type,amount,status,reference,description,created_at,posted_at').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(100)
-    ]);
-    const failures = [
-      ['profiles', profileResult.error], ['wallet', walletResult.error], ['projects', projectsResult.error],
-      ['investments', investmentsResult.error], ['ledger', ledgerResult.error]
-    ].filter(([, err]) => err);
-    if (failures.length) {
-      console.error('[DASHBOARD] snapshot query failure', failures.map(([name, err]) => ({ name, message: err.message })));
-      return res.status(500).json({ error: 'Impossible de charger les données du tableau de bord.', detail: failures.map(([name, err]) => name+': '+err.message).join(' | ') });
-    }
+
+    // Each dashboard source is isolated: one secondary query must not hide the
+    // member ID, wallet balance or published projects.
+    const jobs = [
+      ['profiles', supabase.from('profiles').select('id,member_code,display_name,phone,country_code,role').eq('id', req.user.id).maybeSingle()],
+      ['wallet', supabase.from('wallet_balances').select('balance,bonus_balance,bonus_locked,updated_at').eq('user_id', req.user.id).maybeSingle()],
+      ['projects', supabase.from('projects').select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status').eq('status','published').order('minimum_amount', { ascending: true })],
+      ['investments', supabase.from('investments').select('id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)').eq('user_id', req.user.id).order('created_at', { ascending: false })],
+      ['ledger', supabase.from('wallet_ledger').select('id,entry_type,amount,status,reference,description,created_at,posted_at').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(100)]
+    ];
+    const results = await Promise.all(jobs.map(async ([name, promise]) => {
+      try {
+        const result = await promise;
+        if (result.error) {
+          console.error('[DASHBOARD] query failure', { name, message: result.error.message });
+          return { name, data: null, error: result.error.message };
+        }
+        return { name, data: result.data, error: null };
+      } catch (err) {
+        console.error('[DASHBOARD] query exception', { name, message: err.message });
+        return { name, data: null, error: err.message };
+      }
+    }));
+    const byName = Object.fromEntries(results.map(row => [row.name, row]));
     return res.json({
-      profile: profileResult.data || null,
-      wallet: walletResult.data || { balance: 0, bonus_balance: 0, bonus_locked: 0 },
-      projects: projectsResult.data || [],
-      investments: investmentsResult.data || [],
-      ledger: ledgerResult.data || []
+      profile: byName.profiles?.data || null,
+      wallet: byName.wallet?.data || { balance: 0, bonus_balance: 0, bonus_locked: 0 },
+      projects: Array.isArray(byName.projects?.data) ? byName.projects.data : [],
+      investments: Array.isArray(byName.investments?.data) ? byName.investments.data : [],
+      ledger: Array.isArray(byName.ledger?.data) ? byName.ledger.data : [],
+      partial: results.filter(row => row.error).map(row => row.name)
     });
   } catch (err) {
     console.error('[DASHBOARD] snapshot error:', err.message);
