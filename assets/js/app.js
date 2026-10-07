@@ -490,6 +490,8 @@
     var country=el("rcCountry").value;
     var operator=el("rcOperator").value;
      var phone=normalizeWalletPhone(country,el("rcPhone").value);
+     if(!operator){S.toast("Choisissez un opérateur.");return;}
+     if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
      if(!/^\+228$/.test(country)){ // Use the selected country/operator on the PayDunya checkout invoice.
       var bLegacy=el("btnRecharge");bLegacy.disabled=true;
       try{
