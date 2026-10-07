@@ -44,14 +44,12 @@ window.NOVA = {
   /* ---------- Pays & opérateurs mobile money ---------- */
   countries: [
     { code: "+228", label: "Togo",          ops: ["Togocom", "Moov Togo"] },
-    { code: "+226", label: "Burkina Faso",  ops: ["Orange Burkina", "Faso Cash", "Telecel Faso"] },
-    { code: "+229", label: "Bénin",         ops: ["MOOV Bénin", "Orange Bénin"] },
-    { code: "+225", label: "Côte d'Ivoire", ops: ["Orange CI", "MTN CI", "Moov CI"] },
-    { code: "+233", label: "Ghana",         ops: ["MTN Ghana", "Telecel Ghana"] },
-    { code: "+221", label: "Sénégal",       ops: ["Orange SN", "Free SN", "Expresso"] },
-    { code: "+237", label: "Cameroun",      ops: ["Orange CM", "MTN CM"] },
-    { code: "+223", label: "Mali",          ops: ["Orange ML", "Moov ML"] },
-    { code: "+222", label: "Mauritanie",    ops: ["Chinguitel", "Expresso MR"] }
+    { code: "+226", label: "Burkina Faso",  ops: ["Orange Burkina", "Moov Burkina"] },
+    { code: "+229", label: "Bénin",         ops: ["MOOV Bénin", "MTN Bénin", "Celtiis Cash"] },
+    { code: "+225", label: "Côte d'Ivoire", ops: ["Orange CI", "MTN CI", "Moov CI", "Wave CI", "Djamo CI"] },
+    { code: "+221", label: "Sénégal",       ops: ["Orange SN", "Free SN", "Expresso", "Wave SN", "Djamo SN"] },
+    { code: "+237", label: "Cameroun",      ops: ["MTN CM"] },
+    { code: "+223", label: "Mali",          ops: ["Orange ML", "Moov ML"] }
   ],
 
   /* ---------- Projets : aucun projet de démonstration. Les projets réels seront publiés par l’administration. ---------- */
