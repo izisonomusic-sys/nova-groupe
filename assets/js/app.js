@@ -12,6 +12,34 @@
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
   function money(v){return S.fcn(Number(v)||0);}
   function imagePath(v){return v||"assets/img/projet-solaire.jpg";}
+  // Normalize the selected country prefix without stripping significant local zeroes.
+  function normalizeWalletPhone(countryCode, raw){
+    var cc=String(countryCode||"").replace(/\D/g,"");
+    var digits=String(raw||"").replace(/\D/g,"");
+    if(cc && digits.indexOf(cc)===0 && digits.length>cc.length)digits=digits.slice(cc.length);
+    return cc?("+"+cc+digits):digits;
+  }
+  var WALLET_PHONE_RULES={
+    "+228":{default:8},
+    "+226":{default:8},
+    "+229":{"MTN Bénin":8,"MOOV Bénin":10,"Celtiis Cash":10},
+    "+225":{default:10},
+    "+221":{default:9},
+    "+237":{default:9},
+    "+223":{default:8}
+  };
+  function validWalletPhone(countryCode,operator,phone){
+    var rules=WALLET_PHONE_RULES[String(countryCode||"")];
+    if(!rules)return false;
+    var local=String(phone||"").replace(/\D/g,"");
+    var expected=rules[operator]||rules.default;
+    return !!expected && local.length===expected;
+  }
+  function walletPhoneError(countryCode,operator){
+    var rules=WALLET_PHONE_RULES[String(countryCode||"")];
+    var expected=rules&&(rules[operator]||rules.default);
+    return expected ? "Entrez un numéro valide à "+expected+" chiffres pour "+operator+"." : "Numéro invalide pour le pays/opérateur sélectionné.";
+  }
   function listen(id,event,handler){var n=el(id);if(n&&typeof n.addEventListener==="function")n.addEventListener(event,handler);}
   async function api(path,opts){
     opts=opts||{};
@@ -461,11 +489,11 @@
     if(!Number.isSafeInteger(amount)||amount<3000){S.toast("Montant minimum : 3 000 FCFA");return;}
     var country=el("rcCountry").value;
     var operator=el("rcOperator").value;
-    var phone=(el("rcDial").value||"")+(el("rcPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
-    if(!/^\+228$/.test(country)){ // Preserve the existing PayDunya redirect flow for non-Togo countries.
+     var phone=normalizeWalletPhone(country,el("rcPhone").value);
+     if(!/^\+228$/.test(country)){ // Use the selected country/operator on the PayDunya checkout invoice.
       var bLegacy=el("btnRecharge");bLegacy.disabled=true;
       try{
-        var legacy=await api("/api/payments/paydunya/create",{method:"POST",body:JSON.stringify({amount:amount})});
+         var legacy=await api("/api/payments/paydunya/create",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone})});
         if(!legacy.checkout_url||!/^https:\/\//i.test(legacy.checkout_url))throw new Error("Lien de paiement invalide.");
         localStorage.setItem("nova:lastPendingPaymentReference",legacy.reference||"");
         location.assign(legacy.checkout_url);
@@ -474,7 +502,7 @@
       return;
     }
     if(!["Togocom","Moov Togo"].includes(operator))operator="Togocom";
-    if(!/^\+228\d{8}$/.test(phone)){S.toast("Entrez un numéro Togo valide à 8 chiffres.");return;}
+     if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
     var b=el("btnRecharge");b.disabled=true;
     try{
       var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone})});
@@ -497,13 +525,13 @@
   });
   listen("btnWithdraw","click",async function(){
     var amount=Number(el("wdAmount").value),country=el("wdCountry").value,operator=el("wdOperator").value;
-    var phone=(el("wdDial").value||"")+(el("wdPhone").value||"").replace(/\D/g,"").replace(/^0+/,"");
+     var phone=normalizeWalletPhone(country,el("wdPhone").value);
     var name=el("wdName").value.trim();
     var statusNode=el("withdrawStatus");
     var payload={amount:amount,country_code:country,operator:operator,phone:phone,account_name:name};
     if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");if(statusNode)statusNode.textContent="Montant minimum : 1 500 FCFA.";return;}
     if(!operator){S.toast("Choisissez un opérateur.");if(statusNode)statusNode.textContent="Choisissez un opérateur avant de confirmer.";return;}
-    if(!/^\+228\d{8}$/.test(phone)){S.toast("Entrez un numéro Togo valide à 8 chiffres.");if(statusNode)statusNode.textContent="Numéro de retrait invalide.";return;}
+     if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
     if(name.length<3){S.toast("Saisissez le nom complet du titulaire.");if(statusNode)statusNode.textContent="Nom du titulaire requis.";return;}
     var b=el("btnWithdraw");b.disabled=true;
     if(statusNode)statusNode.textContent="Enregistrement de la demande…";
