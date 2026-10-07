@@ -33,24 +33,70 @@ const paydunyaDisbursementCallbackUrl =
   process.env.PAYDUNYA_DISBURSEMENT_CALLBACK_URL ||
   'https://nova-groupe-dpnx.onrender.com/payments/webhooks/paydunya/disbursement';
 
+// PayDunya modes documented for international withdrawals.
 const PAYDUNYA_WITHDRAW_MODES = new Map([
   ['+228|togocom', 't-money-togo'],
   ['+228|moov togo', 'moov-togo'],
-  ['+229|moov bénin', 'moov-benin'],
   ['+226|orange burkina', 'orange-money-burkina'],
   ['+226|moov burkina', 'moov-burkina-faso'],
+  ['+229|moov bénin', 'moov-benin'],
+  ['+229|mtn bénin', 'mtn-benin'],
+  ['+229|celtiis cash', 'celtiis-cash'],
   ['+225|orange ci', 'orange-money-ci'],
   ['+225|mtn ci', 'mtn-ci'],
   ['+225|moov ci', 'moov-ci'],
+  ['+225|wave ci', 'wave-ci'],
+  ['+225|djamo ci', 'djamo-ci'],
   ['+221|orange sn', 'orange-money-senegal'],
   ['+221|free sn', 'free-money-senegal'],
   ['+221|expresso', 'expresso-senegal'],
-  ['+237|orange cm', 'orange-cameroon'],
+  ['+221|wave sn', 'wave-senegal'],
+  ['+221|djamo sn', 'djamo-sn'],
   ['+237|mtn cm', 'mtn-cameroun'],
   ['+223|orange ml', 'orange-money-mali'],
-  ['+223|moov ml', 'moov-mali'],
-  ['+222|chinguitel', 'chinguitel-mauritania'],
 ]);
+
+const PAYDUNYA_PAYMENT_CHANNELS = new Map([
+  ['+228|togocom', 't-money-togo'],
+  ['+228|moov togo', 'moov-togo'],
+  ['+226|orange burkina', 'orange-money-burkina'],
+  ['+226|moov burkina', 'moov-burkina-faso'],
+  ['+229|moov bénin', 'moov-benin'],
+  ['+229|mtn bénin', 'mtn-benin'],
+  ['+229|celtiis cash', 'celtiis-cash'],
+  ['+225|orange ci', 'orange-money-ci'],
+  ['+225|mtn ci', 'mtn-ci'],
+  ['+225|moov ci', 'moov-ci'],
+  ['+225|wave ci', 'wave-ci'],
+  ['+225|djamo ci', 'djamo-ci'],
+  ['+221|orange sn', 'orange-money-senegal'],
+  ['+221|free sn', 'free-money-senegal'],
+  ['+221|expresso', 'expresso-sn'],
+  ['+221|wave sn', 'wave-senegal'],
+  ['+221|djamo sn', 'djamo-sn'],
+  ['+237|mtn cm', 'mtn-cameroun'],
+  ['+223|orange ml', 'orange-money-mali'],
+  ['+223|moov ml', 'moov-ml'],
+]);
+
+const PAYDUNYA_PHONE_RULES = new Map([
+  ['+228|togocom', 8], ['+228|moov togo', 8],
+  ['+226|orange burkina', 8], ['+226|moov burkina', 8],
+  ['+229|mtn bénin', 8], ['+229|moov bénin', 10], ['+229|celtiis cash', 10],
+  ['+225|orange ci', 10], ['+225|mtn ci', 10], ['+225|moov ci', 10], ['+225|wave ci', 10], ['+225|djamo ci', 10],
+  ['+221|orange sn', 9], ['+221|free sn', 9], ['+221|expresso', 9], ['+221|wave sn', 9], ['+221|djamo sn', 9],
+  ['+237|mtn cm', 9],
+  ['+223|orange ml', 8], ['+223|moov ml', 8],
+]);
+
+function paydunyaPaymentChannel(countryCode, operator) {
+  return PAYDUNYA_PAYMENT_CHANNELS.get(`${String(countryCode || '').trim()}|${normalizeOperator(operator)}`) || '';
+}
+
+function validPayDunyaLocalPhone(countryCode, operator, localPhone) {
+  const expected = PAYDUNYA_PHONE_RULES.get(`${String(countryCode || '').trim()}|${normalizeOperator(operator)}`);
+  return !!expected && /^\d+$/.test(String(localPhone || '')) && String(localPhone).length === expected;
+}
 
 function normalizeOperator(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -61,7 +107,8 @@ function paydunyaWithdrawMode(countryCode, operator) {
 function localPhoneForPayDunya(phone, countryCode) {
   const digits = String(phone || '').replace(/\D/g, '');
   const cc = String(countryCode || '').replace(/\D/g, '');
-  return cc && digits.startsWith(cc) ? digits.slice(cc.length) : digits.replace(/^0+/, '');
+  // Preserve significant leading zeroes used by some markets.
+  return cc && digits.startsWith(cc) ? digits.slice(cc.length) : digits;
 }
 async function paydunyaDisbursementRequest(endpoint, payload) {
   const controller = new AbortController();
@@ -416,10 +463,20 @@ app.get('/api/health', (_req, res) => {
 app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
+    const requestedCountry = String(req.body.country_code || '').trim();
+    const requestedOperator = String(req.body.operator || '').trim();
+    const requestedPhone = String(req.body.phone || '').replace(/[^0-9+]/g, '');
+    const requestedChannel = requestedCountry && requestedOperator
+      ? paydunyaPaymentChannel(requestedCountry, requestedOperator)
+      : '';
+
     if (!Number.isSafeInteger(amount) || amount < 3000 || amount > 5000000) {
       return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 3 000 et 5 000 000 FCFA.' });
     }
     if (missing.length) return res.status(503).json({ error: 'Configuration serveur incomplète.', missing });
+    if ((requestedCountry || requestedOperator || requestedPhone) && (!requestedCountry || !requestedOperator || !requestedPhone || !requestedChannel)) {
+      return res.status(400).json({ error: 'Pays ou opérateur de paiement non disponible via PayDunya.' });
+    }
 
     const reference = `NOVA-${crypto.randomUUID()}`;
     const { data: pending, error: dbError } = await supabase.from('payment_transactions').insert({
@@ -433,7 +490,12 @@ app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
       .maybeSingle();
     if (profileResult.error) throw profileResult.error;
     const customerName = profileResult.data?.display_name || req.user.user_metadata?.full_name || '';
-    const customerPhone = String(profileResult.data?.phone || req.user.phone || '').replace(/[^0-9+]/g, '');
+    const customerPhone = requestedPhone
+      ? localPhoneForPayDunya(requestedPhone, requestedCountry)
+      : String(profileResult.data?.phone || req.user.phone || '').replace(/[^0-9+]/g, '');
+    if (requestedChannel && !validPayDunyaLocalPhone(requestedCountry, requestedOperator, customerPhone)) {
+      return res.status(400).json({ error: 'Numéro de paiement invalide pour cet opérateur.' });
+    }
     // Pour un test local de création de facture LIVE, ces URLs restent optionnelles.
     // Dès qu'une URL est fournie, elle doit être valide ; en production, utilisez HTTPS public.
     const callbackUrl = process.env.PAYDUNYA_CALLBACK_URL ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
@@ -453,10 +515,17 @@ app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
           name: customerName,
           email: req.user.email || undefined,
           phone: customerPhone || undefined
-        }
+        },
+        ...(requestedChannel ? { channels: [requestedChannel] } : {})
       },
       store: { name: process.env.PAYDUNYA_STORE_NAME || 'NOVA' },
-      custom_data: { reference, user_id: req.user.id, payment_id: pending.id },
+      custom_data: {
+        reference,
+        user_id: req.user.id,
+        payment_id: pending.id,
+        ...(requestedCountry ? { country_code: requestedCountry } : {}),
+        ...(requestedOperator ? { operator: requestedOperator } : {})
+      },
       ...(Object.keys(actions).length ? { actions } : {})
     };
 
@@ -793,6 +862,9 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
         accountName.length < 3 || accountName.length > 120) {
       return res.status(400).json({ error: 'Informations du bénéficiaire invalides.' });
     }
+    if (!validPayDunyaLocalPhone(countryCode, operator, accountAlias)) {
+      return res.status(400).json({ error: 'Numéro de retrait invalide pour le pays/opérateur sélectionné.' });
+    }
     if (!withdrawMode) {
       return res.status(400).json({
         error: 'Ce moyen de retrait n’est pas encore disponible automatiquement via PayDunya.',
@@ -842,6 +914,9 @@ async function startApprovedPayDunyaWithdrawal(withdrawalId) {
   const accountAlias = localPhoneForPayDunya(wr.phone, countryCode);
   const withdrawMode = paydunyaWithdrawMode(countryCode, operator);
   if (!withdrawMode) throw new Error('Ce moyen de retrait n’est pas disponible via PayDunya.');
+  if (!validPayDunyaLocalPhone(countryCode, operator, accountAlias)) {
+    throw new Error('Numéro de retrait invalide pour le pays/opérateur sélectionné.');
+  }
   if (!paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) throw new Error('Configuration PayDunya de déboursement incomplète.');
 
   const callbackUrl = publicHttpsUrl(paydunyaDisbursementCallbackUrl);
