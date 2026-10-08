@@ -14,15 +14,27 @@ create or replace function private.nova_credit_bonus(p_user_id uuid,p_amount big
 returns void language plpgsql security definer set search_path=''
 as $$
 begin
-  if p_user_id is null or p_amount<=0 then raise exception 'Invalid bonus credit'; end if;
+  if p_user_id is null or p_amount<=0 or nullif(trim(p_reference),'') is null then
+    raise exception 'Invalid bonus credit';
+  end if;
+
+  -- The ledger reference is the idempotency key. Check it BEFORE touching the balance.
+  if exists (
+    select 1 from public.wallet_ledger
+    where reference=p_reference and status='posted'
+  ) then
+    return;
+  end if;
+
   insert into public.wallet_balances(user_id,balance,bonus_balance,bonus_locked)
-  values(p_user_id,0,p_amount,0)
+  values(p_user_id,0,0,0)
   on conflict(user_id) do update
     set bonus_balance=public.wallet_balances.bonus_balance+excluded.bonus_balance,updated_at=now();
+
   insert into public.wallet_ledger(user_id,entry_type,amount,status,reference,description,related_user_id,posted_at)
   values(p_user_id,p_entry_type,p_amount,'posted',p_reference,p_description,p_related_user_id,now())
   on conflict(reference) do nothing;
-end $$;
+end $;
 
 create or replace function private.nova_transfer_referral_bonus(p_user_id uuid,p_referral_id uuid,p_amount bigint,p_role text,p_related_user_id uuid)
 returns boolean language plpgsql security definer set search_path=''
