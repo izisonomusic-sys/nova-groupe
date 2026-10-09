@@ -417,10 +417,25 @@
   function showSoftPayModal(data){
     softpayReference=String(data.reference||"");
     setText("softpayAmount",money(data.amount));
-    setText("softpayOperator",data.operator==="Moov Togo"?"Moov Money":"Yas (Togocom)");
+    setText("softpayOperator",data.operator||"");
     setText("softpayPhone",data.phone||"—");
     setText("softpayStatus",data.status==="completed"?"Confirmé":"En attente");
-    setText("softpayMessage",data.message||"La demande a été envoyée. Validez le paiement directement sur votre téléphone.");
+    setText("softpayMessage",data.message||"La demande a été envoyée. Suivez les instructions de votre opérateur pour finaliser le paiement.");
+    var paymentLink=el("softpayPaymentLink");
+    if(paymentLink)paymentLink.remove();
+    if(data.payment_url){
+      var messageNode=el("softpayMessage");
+      if(messageNode&&messageNode.parentNode){
+        paymentLink=document.createElement("a");
+        paymentLink.id="softpayPaymentLink";
+        paymentLink.href=data.payment_url;
+        paymentLink.target="_blank";
+        paymentLink.rel="noopener noreferrer";
+        paymentLink.textContent="Continuer chez l'opérateur";
+        paymentLink.className="btn btn-primary";
+        messageNode.insertAdjacentElement("afterend",paymentLink);
+      }
+    }
     var modal=el("softpayModal");if(modal){modal.classList.add("open");modal.setAttribute("aria-hidden","false");}
     var retry=el("softpayRetry");if(retry)retry.style.display="none";
   }
@@ -499,28 +514,16 @@
      var phone=normalizeWalletPhone(country,el("rcPhone").value);
      if(!operator){S.toast("Choisissez un opérateur.");return;}
      if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
-     if(!/^\+228$/.test(country)){ // Use the selected country/operator on the PayDunya checkout invoice.
-      var bLegacy=el("btnRecharge");bLegacy.disabled=true;
-      try{
-         var legacy=await api("/api/payments/paydunya/create",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone})});
-        if(!legacy.checkout_url||!/^https:\/\//i.test(legacy.checkout_url))throw new Error("Lien de paiement invalide.");
-        localStorage.setItem("nova:lastPendingPaymentReference",legacy.reference||"");
-        location.assign(legacy.checkout_url);
-      }catch(e){S.toast(e.message||"Paiement impossible. Aucun solde n'a été crédité.");}
-      finally{bLegacy.disabled=false;}
-      return;
-    }
-    if(!["Togocom","Moov Togo"].includes(operator))operator="Togocom";
      if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
+    var softpayOtp="";
+    if((country==="+225" && operator==="Orange CI") || (country==="+226" && operator==="Orange Burkina")){
+      softpayOtp=window.prompt("Saisissez le code de paiement/OTP fourni par "+operator+" avant de continuer :")||"";
+      if(!softpayOtp.trim()){S.toast("Le code de validation est requis pour cet opérateur.");return;}
+    }
     var b=el("btnRecharge");b.disabled=true;
     try{
-      var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone})});
+      var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
-      if(result.fallback && result.checkout_url){
-        S.toast("SoftPay PayDunya a été refusé pour cette demande. Ouverture du paiement PayDunya classique…");
-        location.assign(result.checkout_url);
-        return;
-      }
       showSoftPayModal(result);
       if(result.status==="completed"){
         localStorage.removeItem("nova:lastPendingPaymentReference");
