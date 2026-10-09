@@ -15,8 +15,11 @@
   // Normalize the selected country prefix without stripping significant local zeroes.
   function normalizeWalletPhone(countryCode, raw){
     var cc=String(countryCode||"").replace(/\D/g,"");
-    var digits=String(raw||"").replace(/\D/g,"");
-    if(cc && digits.indexOf(cc)===0 && digits.length>cc.length)digits=digits.slice(cc.length);
+    var input=String(raw||"").trim();
+    var hasInternationalPrefix=/^(?:\+|00)/.test(input);
+    var digits=input.replace(/\D/g,"");
+    if(hasInternationalPrefix && digits.indexOf("00")===0)digits=digits.slice(2);
+    if(hasInternationalPrefix && cc && digits.indexOf(cc)===0)digits=digits.slice(cc.length);
     return cc?("+"+cc+digits):digits;
   }
   var WALLET_PHONE_RULES={
@@ -31,9 +34,13 @@
   function validWalletPhone(countryCode,operator,phone){
     var rules=WALLET_PHONE_RULES[String(countryCode||"")];
     if(!rules)return false;
-    var local=String(phone||"").replace(/\D/g,"");
+    var cc=String(countryCode||"").replace(/\D/g,"");
+    var value=String(phone||"").trim();
+    var digits=value.replace(/\D/g,"");
+    // normalizeWalletPhone returns +<country code><local number>; validate only the local part.
+    if(value.charAt(0)==="+" && cc && digits.indexOf(cc)===0)digits=digits.slice(cc.length);
     var expected=rules[operator]||rules.default;
-    return !!expected && local.length===expected;
+    return !!expected && /^\d+$/.test(digits) && digits.length===expected;
   }
   function walletPhoneError(countryCode,operator){
     var rules=WALLET_PHONE_RULES[String(countryCode||"")];
