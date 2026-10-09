@@ -571,12 +571,44 @@ app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
 // PayDunya SoftPay Togo : le client reste sur NOVA et valide la demande sur son téléphone.
 // Le crédit du wallet reste exclusivement déclenché par la confirmation PayDunya/IPN.
 const PAYDUNYA_SOFTPAY_MODES = new Map([
-  ['+228|togocom', 't-money-togo'],
-  ['+228|moov togo', 'moov-togo']
+  ['+228|togocom', 't-money-togo'], ['+228|moov togo', 'moov-togo'],
+  ['+226|orange burkina', 'orange-money-burkina'], ['+226|moov burkina', 'moov-burkina'],
+  ['+229|moov bénin', 'moov-benin'], ['+229|mtn bénin', 'mtn-benin'], ['+229|celtiis cash', 'celtiis-cash'],
+  ['+225|orange ci', 'orange-money-ci'], ['+225|mtn ci', 'mtn-ci'], ['+225|moov ci', 'moov-ci'],
+  ['+225|wave ci', 'wave-ci'], ['+225|djamo ci', 'djamo'],
+  ['+221|orange sn', 'new-orange-money-senegal'], ['+221|free sn', 'free-money-senegal'],
+  ['+221|expresso', 'expresso-senegal'], ['+221|wave sn', 'wave-senegal'], ['+221|djamo sn', 'djamo'],
+  ['+237|mtn cm', 'mtn-cameroun'], ['+223|orange ml', 'orange-money-mali'], ['+223|moov ml', 'moov-mali']
 ]);
 
 function paydunyaSoftPayMode(countryCode, operator) {
   return PAYDUNYA_SOFTPAY_MODES.get(`${String(countryCode || '').trim()}|${normalizeOperator(operator)}`) || '';
+}
+
+function buildPayDunyaSoftPayPayload(mode, countryCode, customerName, customerEmail, localPhone, token, otp) {
+  const base = { payment_token: token };
+  switch (mode) {
+    case 't-money-togo': return { ...base, name_t_money: customerName, ...(customerEmail ? { email_t_money: customerEmail } : {}), phone_t_money: localPhone };
+    case 'moov-togo': return { ...base, moov_togo_customer_fullname: customerName, ...(customerEmail ? { moov_togo_email: customerEmail } : {}), moov_togo_customer_address: 'Lomé, Togo', moov_togo_phone_number: localPhone };
+    case 'orange-money-ci': return { ...base, orange_money_ci_customer_fullname: customerName, ...(customerEmail ? { orange_money_ci_email: customerEmail } : {}), orange_money_ci_phone_number: localPhone, orange_money_ci_otp: otp };
+    case 'mtn-ci': return { ...base, mtn_ci_customer_fullname: customerName, ...(customerEmail ? { mtn_ci_email: customerEmail } : {}), mtn_ci_phone_number: localPhone, mtn_ci_wallet_provider: 'MTNCI' };
+    case 'moov-ci': return { ...base, moov_ci_customer_fullname: customerName, ...(customerEmail ? { moov_ci_email: customerEmail } : {}), moov_ci_phone_number: localPhone };
+    case 'wave-ci': return { wave_ci_fullName: customerName, ...(customerEmail ? { wave_ci_email: customerEmail } : {}), wave_ci_phone: localPhone, wave_ci_payment_token: token };
+    case 'djamo': return { djamo_fullName: customerName, ...(customerEmail ? { djamo_email: customerEmail } : {}), djamo_phone: localPhone, code_country: countryCode === '+225' ? 'ci' : 'sn', djamo_payment_token: token };
+    case 'orange-money-burkina': return { ...base, name_bf: customerName, ...(customerEmail ? { email_bf: customerEmail } : {}), phone_bf: localPhone, otp_code: otp };
+    case 'moov-burkina': return { moov_burkina_faso_fullName: customerName, ...(customerEmail ? { moov_burkina_faso_email: customerEmail } : {}), moov_burkina_faso_phone_number: localPhone, moov_burkina_faso_payment_token: token };
+    case 'moov-benin': return { ...base, moov_benin_customer_fullname: customerName, ...(customerEmail ? { moov_benin_email: customerEmail } : {}), moov_benin_phone_number: localPhone };
+    case 'mtn-benin': return { ...base, mtn_benin_customer_fullname: customerName, ...(customerEmail ? { mtn_benin_email: customerEmail } : {}), mtn_benin_phone_number: localPhone, mtn_benin_wallet_provider: 'MTNBENIN' };
+    case 'celtiis-cash': return { ...base, celtiis_cash_customer_fullname: customerName, ...(customerEmail ? { celtiis_cash_customer_email: customerEmail } : {}), celtiis_cash_phone_number: localPhone };
+    case 'new-orange-money-senegal': return { customer_name: customerName, ...(customerEmail ? { customer_email: customerEmail } : {}), phone_number: localPhone, invoice_token: token };
+    case 'free-money-senegal': return { customer_name: customerName, ...(customerEmail ? { customer_email: customerEmail } : {}), phone_number: localPhone, payment_token: token };
+    case 'expresso-senegal': return { expresso_sn_fullName: customerName, ...(customerEmail ? { expresso_sn_email: customerEmail } : {}), expresso_sn_phone: localPhone, payment_token: token };
+    case 'wave-senegal': return { wave_senegal_fullName: customerName, ...(customerEmail ? { wave_senegal_email: customerEmail } : {}), wave_senegal_phone: localPhone, wave_senegal_payment_token: token };
+    case 'mtn-cameroun': return { ...base, mtn_cameroun_customer_fullname: customerName, ...(customerEmail ? { mtn_cameroun_email: customerEmail } : {}), mtn_cameroun_phone_number: localPhone, mtn_cameroun_wallet_provider: 'MTNCAMEROUN' };
+    case 'orange-money-mali': return { ...base, orange_money_mali_customer_fullname: customerName, ...(customerEmail ? { orange_money_mali_email: customerEmail } : {}), orange_money_mali_phone_number: localPhone, orange_money_mali_customer_address: 'Bamako' };
+    case 'moov-mali': return { ...base, moov_ml_customer_fullname: customerName, ...(customerEmail ? { moov_ml_email: customerEmail } : {}), moov_ml_phone_number: localPhone, moov_ml_customer_address: 'Bamako' };
+    default: throw new Error('Mode SoftPay non pris en charge.');
+  }
 }
 
 async function paydunyaJsonRequest(url, method, payload) {
@@ -610,11 +642,13 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
     if (!Number.isSafeInteger(amount) || amount < 3000 || amount > 5000000) {
       return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 3 000 et 5 000 000 FCFA.' });
     }
-    if (countryCode !== '+228' || !softpayMode) {
-      return res.status(400).json({ error: 'PayDunya SoftPay est actuellement configuré pour T-Money et Moov Togo.' });
+    if (!softpayMode) return res.status(400).json({ error: 'Ce pays/opérateur ne dispose pas d’un mode PayDunya SoftPay configuré.' });
+    if (!validPayDunyaLocalPhone(countryCode, operator, localPhone)) {
+      return res.status(400).json({ error: 'Le numéro ne correspond pas au format attendu pour ce pays et cet opérateur.' });
     }
-    if (!/^\d{8}$/.test(localPhone)) {
-      return res.status(400).json({ error: 'Entrez un numéro Togo valide à 8 chiffres.' });
+    const otp = String(req.body.otp || '').trim();
+    if ((softpayMode === 'orange-money-ci' || softpayMode === 'orange-money-burkina') && !/^\d{4,8}$/.test(otp)) {
+      return res.status(400).json({ error: 'Le code de paiement/OTP fourni par cet opérateur est requis (4 à 8 chiffres).' });
     }
     if (missing.length) {
       return res.status(503).json({ error: 'Configuration serveur PayDunya incomplète.', missing });
@@ -701,21 +735,7 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
       provider_payload: invoiceResult.data
     }).eq('id', pending.id);
 
-    const softpayPayload =
-      softpayMode === 't-money-togo'
-        ? {
-            name_t_money: customerName,
-            ...(customerEmail ? { email_t_money: customerEmail } : {}),
-            phone_t_money: localPhone,
-            payment_token: token
-          }
-        : {
-            moov_togo_customer_fullname: customerName,
-            ...(customerEmail ? { moov_togo_email: customerEmail } : {}),
-            moov_togo_customer_address: 'Lomé, Togo',
-            moov_togo_phone_number: localPhone,
-            payment_token: token
-          };
+    const softpayPayload = buildPayDunyaSoftPayPayload(softpayMode, countryCode, customerName, customerEmail, localPhone, token, otp);
 
     const softpayResult = await paydunyaJsonRequest(
       `${paydunyaBase}/softpay/${softpayMode}`,
@@ -729,34 +749,12 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
 
     if (!softpayResult.response.ok || softpayResult.data?.success !== true) {
       const detail = softpayResult.data?.message || softpayResult.data?.response_text || `Réponse HTTP ${softpayResult.response.status}`;
-      const checkoutUrl = /^https:\/\//i.test(String(invoiceResult.data?.response_text || '').trim())
-        ? String(invoiceResult.data.response_text).trim()
-        : '';
       await supabase.from('payment_transactions').update({
-        status: checkoutUrl ? 'pending' : 'failed',
-        provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data, softpay_fallback: checkoutUrl ? 'checkout-invoice' : 'none' }
+        status: 'failed',
+        provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data, softpay_fallback: 'disabled' }
       }).eq('id', pending.id);
-      console.warn('[PAYDUNYA][SOFTPAY] provider rejected SoftPay request', {
-        reference,
-        mode: softpayMode,
-        httpStatus: softpayResult.response.status,
-        detail,
-        fallbackCheckout: !!checkoutUrl
-      });
-      if (checkoutUrl) {
-        return res.status(201).json({
-          ok: true,
-          fallback: true,
-          reference,
-          amount,
-          operator,
-          phone: `+228 ${localPhone}`,
-          status: 'fallback',
-          checkout_url: checkoutUrl,
-          message: `PayDunya a refusé SoftPay pour cette demande : ${detail}. Ouverture du paiement PayDunya classique…`
-        });
-      }
-      return res.status(502).json({ error: 'PayDunya a refusé la demande SoftPay.', detail });
+      console.warn('[PAYDUNYA][SOFTPAY] provider rejected SoftPay request', { reference, mode: softpayMode, httpStatus: softpayResult.response.status, detail });
+      return res.status(502).json({ error: 'PayDunya a refusé cette demande SoftPay. Aucune redirection classique n’a été lancée.', detail, reference });
     }
 
     // Le SoftPay peut répondre "en cours". On demande alors l'état réel de la facture.
@@ -806,11 +804,12 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
       reference,
       amount,
       operator,
-      phone: `+228 ${localPhone}`,
+      phone: `${countryCode} ${localPhone}`,
       status: finalStatus,
+      ...(typeof softpayResult.data.url === 'string' && /^https:\/\//i.test(softpayResult.data.url) ? { payment_url: softpayResult.data.url } : {}),
       message: finalStatus === 'completed'
         ? 'Paiement confirmé. Votre portefeuille NOVA a été crédité.'
-        : (softpayResult.data.message || 'La demande a été envoyée. Validez le paiement directement sur votre téléphone.')
+        : (softpayResult.data.message || 'La demande a été envoyée. Suivez les instructions de votre opérateur pour finaliser le paiement.')
     });
   } catch (err) {
     console.error('[PAYDUNYA][SOFTPAY] create error:', err.message);
