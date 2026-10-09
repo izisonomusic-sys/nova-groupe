@@ -1459,11 +1459,14 @@ app.get('/api/referrals/me', requireUser, async (req, res) => {
     }
     const names = new Map(profiles.map(p => [p.id, p.display_name]));
     const investmentTotal = investments.filter(i => ['active','completed'].includes(i.status)).reduce((sum, i) => sum + Number(i.principal_amount || 0), 0);
-    const { data: bonusRows, error: bonusError } = await supabase.from('wallet_ledger').select('amount').eq('user_id', req.user.id).eq('entry_type', 'referral_bonus').eq('status', 'posted');
+    const { data: bonusRows, error: bonusError } = await supabase.from('wallet_ledger').select('amount,reference').eq('user_id', req.user.id).eq('entry_type', 'referral_bonus').eq('status', 'posted');
     if (bonusError) throw bonusError;
+    // A filleul also receives a welcome bonus; it is not a commission earned by the parrain.
+    // Count only the parrain-side ledger references (legacy REF-* and current REF-BONUS-*).
+    const earnedCommissions = (bonusRows || []).filter(row => String(row.reference || '').endsWith('-PARRAIN'));
     return res.json({
       team_size: rows.length,      investment_total: investmentTotal,
-      commission_total: (bonusRows || []).reduce((sum, row) => sum + Number(row.amount || 0), 0),
+      commission_total: earnedCommissions.reduce((sum, row) => sum + Number(row.amount || 0), 0),
       referrals: rows.map(r => ({ ...r, display_name: names.get(r.referred_user_id) || 'Membre NOVA' }))
     });
   } catch (err) {
