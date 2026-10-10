@@ -876,8 +876,29 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
       p_operator: operator, p_phone: phone, p_account_name: accountName
     });
     if (withdrawalError) {
-      if (/Insufficient balance/i.test(withdrawalError.message)) return res.status(409).json({ error: 'Solde insuffisant.' });
-      if (/Invalid withdrawal amount|Missing withdrawal details/i.test(withdrawalError.message)) return res.status(400).json({ error: 'Demande de retrait invalide.' });
+      const dbMessage = String(withdrawalError.message || '');
+      if (/Insufficient balance|solde insuffisant/i.test(dbMessage)) {
+        return res.status(409).json({ error: 'Solde réel insuffisant. Les bonus et commissions bloqués ne sont pas inclus dans le solde retirable.' });
+      }
+      if (/Invalid withdrawal amount|Missing withdrawal details|unsupported country|unsupported operator/i.test(dbMessage)) {
+        return res.status(400).json({ error: 'Demande de retrait invalide. Vérifiez le montant, le pays et le moyen de paiement.' });
+      }
+      if (/must invest|invest in at least one project|Vous devez investir/i.test(dbMessage)) {
+        return res.status(409).json({ error: 'Vous devez investir dans au moins un projet avant de demander un retrait.' });
+      }
+      if (/Sunday|dimanche/i.test(dbMessage)) {
+        return res.status(409).json({ error: 'Les demandes de retrait ne sont pas disponibles le dimanche.' });
+      }
+      if (/bonus.*Monday|bonus.*Wednesday|bonus.*Friday|retraits du bonus|bonus.*lundi|bonus.*mercredi|bonus.*vendredi/i.test(dbMessage)) {
+        return res.status(409).json({ error: 'Le retrait de bonus est soumis à des jours spécifiques. Le solde réel reste soumis aux règles normales de retrait.' });
+      }
+      if (/bonus.*entire|entire.*bonus|bonus.*complet|intégralité.*bonus/i.test(dbMessage)) {
+        return res.status(409).json({ error: 'Le montant demandé ne respecte pas les règles de retrait du bonus. Les bonus bloqués ne sont pas considérés comme du solde réel.' });
+      }
+      console.error('[WITHDRAWAL] Supabase rejected request', {
+        code: withdrawalError.code || null,
+        message: dbMessage
+      });
       throw withdrawalError;
     }
 
