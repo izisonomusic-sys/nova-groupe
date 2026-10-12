@@ -272,10 +272,12 @@
   }
   function fillOperators(prefix){
     var c=el(prefix+"Country"),o=el(prefix+"Operator");if(!c||!o||!Array.isArray(C.countries))return;
+    var previous=String(o.value||"");
     var country=C.countries.find(function(x){return x.code===c.value;});
     var ops=country&&Array.isArray(country.ops)?country.ops:[];
     o.innerHTML=ops.map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join("");
-    if(ops.length)o.value=ops[0];
+    if(ops.indexOf(previous)!==-1)o.value=previous;
+    else if(ops.length)o.value=ops[0];
   }
   function renderPresence(){
     setText("presenceDate",new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}));
