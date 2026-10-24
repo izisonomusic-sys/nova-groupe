@@ -4,9 +4,9 @@
    Modifiez ce fichier pour adapter le site à votre activité.
    ========================================================= */
 window.NOVA = {
-  brand: "NOVA",
-  fullName: "NOVA Immobilier & Énergies",
-  tagline: "Immobilier & Énergies renouvelables",
+  brand: "TTE Energy",
+  fullName: "TTE Energy — Pétrole & énergie éolienne",
+  tagline: "Pétrole & énergie éolienne",
   currency: "FCFA",
   // API NOVA centralisée sur Render. Les appels restent valides même si le front est servi depuis un autre domaine.
   apiBase: "https://nova-groupe-dpnx.onrender.com",
