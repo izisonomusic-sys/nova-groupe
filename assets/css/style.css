@@ -9,15 +9,15 @@
   --ink: #1f2437;
   --muted: #6b7280;
   --line: #e7eaf3;
-  --brand: #2158d0;
-  --brand-dk: #16409f;
-  --brand-soft: #e9f0fd;
-  --brand-grad: linear-gradient(135deg, #3f7cf0, #1a49b8);
-  --gold: #f0c36c;
+  --brand: #0A3D62;
+  --brand-dk: #072C47;
+  --brand-soft: #EAF3F8;
+  --brand-grad: linear-gradient(135deg, #0A3D62, #072C47);
+  --gold: #F97316;
   --dark1: #191430;
   --dark2: #2c2252;
   --dark3: #3b2f6b;
-  --header-grad: linear-gradient(120deg, #191430 0%, #2c2252 55%, #3b2f6b 100%);
+  --header-grad: linear-gradient(120deg, #082A43 0%, #0A3D62 58%, #145B7A 100%);
   --amber: #f0a63c;
   --green: #22a06b;
   --red: #d64545;
@@ -1077,3 +1077,6 @@ html, body {
   color: var(--muted, #6b7280);
   font-size: 12px;
 }
+
+/* TTE Energy: bienvenue mobile inspiré du formulaire de référence. */
+.welcome-bonus{margin:8px 0 14px;color:#6f6255;font-size:clamp(1rem,3.8vw,1.2rem);text-align:center}.welcome-bonus strong{color:#C65B16;font-weight:800}.auth-side{background:linear-gradient(135deg,#082A43,#0A3D62 62%,#145B7A)}
