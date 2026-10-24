@@ -1,8 +1,8 @@
 {
-  "name": "nova-site",
+  "name": "tte-energy-site",
   "version": "1.0.0",
   "private": true,
-  "description": "NOVA Immobilier & Énergies — site web et API de paiement",
+  "description": "TTE Energy — plateforme énergie et API de paiement",
   "main": "server/index.js",
   "scripts": {"start": "node server/index.js", "dev": "node --watch server/index.js"},
   "engines": {"node": ">=20"},
