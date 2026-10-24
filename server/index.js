@@ -347,45 +347,20 @@ async function reconcileInvestmentIncomeForUser(userId) {
         const postedAt = new Date(startedAt.getTime() + day * 86400000);
         if (postedAt.getTime() > now || postedAt.getTime() > configuredEnd.getTime()) continue;
 
-        const { data: wallet, error: walletReadError } = await supabase
-          .from('wallet_balances')
-          .select('balance')
-          .eq('user_id', userId)
-          .maybeSingle();
-        if (walletReadError) throw walletReadError;
-        if (!wallet) {
-          const { error: walletCreateError } = await supabase
-            .from('wallet_balances')
-            .insert({ user_id: userId, balance: 0 });
-          if (walletCreateError && !/duplicate|unique/i.test(walletCreateError.message || '')) throw walletCreateError;
+        const { data: creditResult, error: creditError } = await supabase.rpc('nova_credit_investment_income', {
+          p_user_id: userId,
+          p_investment_id: inv.id,
+          p_amount: daily,
+          p_reference: reference,
+          p_description: `Gain quotidien investissement — ${project?.title || 'Projet TTE Energy'} — jour ${day}`,
+          p_posted_at: postedAt.toISOString()
+        });
+        if (creditError) throw creditError;
+        if (!creditResult?.ok) throw new Error('Le crédit du gain quotidien n’a pas été confirmé.');
+        if (creditResult.credited) {
+          credited += 1;
+          amountCredited += daily;
         }
-
-        const { data: latestWallet, error: latestWalletError } = await supabase
-          .from('wallet_balances')
-          .select('balance')
-          .eq('user_id', userId)
-          .maybeSingle();
-        if (latestWalletError || !latestWallet) throw latestWalletError || new Error('Portefeuille introuvable.');
-
-        const { error: balanceError } = await supabase
-          .from('wallet_balances')
-          .update({ balance: Number(latestWallet.balance || 0) + daily, updated_at: new Date().toISOString() })
-          .eq('user_id', userId);
-        if (balanceError) throw balanceError;
-
-        const { error: ledgerInsertError } = await supabase
-          .from('wallet_ledger')
-          .insert({
-            user_id: userId,
-            entry_type: 'investment_income',
-            amount: daily,
-            status: 'posted',
-            reference,
-            description: `Gain quotidien investissement — ${project?.title || 'Projet NOVA'} — jour ${day}`,
-            related_investment_id: inv.id,
-            posted_at: postedAt.toISOString()
-          });
-        if (ledgerInsertError) throw ledgerInsertError;
 
         existing.add(reference);
         credited += 1;
