@@ -229,9 +229,7 @@
     var code=String(profile.member_code||"").trim();
     var link=referralLink();
     setText("greetName","Bonjour, "+name.split(/\s+/)[0]);
-    setText("greetId","ID : "+(code||"—"));
     setText("headerAvatar",S.initials(name));
-    setText("homeMemberId",code||"—");
     setText("homeReferralLink",link||"Lien indisponible");
   }
   function planCard(p){
@@ -331,6 +329,7 @@
     setText("accSolde",money(wallet.balance));
     setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("accRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
+    setText("accBonus",money(Number(wallet.bonus_balance)||0));
     setText("accMemberId",String(profile.member_code||"—"));
     setText("accReferralLink",referralLink()||"Lien indisponible");
   }
