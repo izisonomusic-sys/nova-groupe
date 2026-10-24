@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261002c" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261024b" />
 </head>
 <body>
 
@@ -39,7 +39,6 @@
       <img src="assets/img/logo.svg" alt="" />
       <div>
         <h2 id="greetName">Bonjour</h2>
-        <span class="idline" id="greetId">ID : —</span>
       </div>
     </div>
   </div>
@@ -53,8 +52,6 @@
         <div class="bal-card revenus"><span>Revenus</span><b id="balRevenus">0 FCFA</b></div>
         <div class="bal-card recharge"><span>Recharge</span><b id="balRecharge">0 FCFA</b></div>
       </div>
-
-      <div class="member-shortcuts"><div><span>ID membre</span><b id="homeMemberId">—</b></div></div>
 
       <div class="actions">
         <a class="action" href="#/recharger">
@@ -299,6 +296,7 @@
           <div class="mini-b"><span>Solde</span><b id="accSolde">0 FCFA</b></div>
           <div class="mini-b"><span>Recharge</span><b id="accRecharge">0 FCFA</b></div>
           <div class="mini-b"><span>Revenus</span><b id="accRevenus">0 FCFA</b></div>
+          <div class="mini-b bonus-mini"><span>Bonus disponible</span><b id="accBonus">0 FCFA</b></div>
         </div>
       </div>
 
@@ -448,7 +446,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261012b"></script>
+<script src="assets/js/app.js?v=20261024b"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
