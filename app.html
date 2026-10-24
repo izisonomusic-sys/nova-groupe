@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mon espace — NOVA</title>
-  <meta name="description" content="Espace membre NOVA : solde, projets, parrainage, assistance." />
+  <title>Mon espace — TTE Energy</title>
+  <meta name="description" content="Espace membre TTE Energy : énergie, portefeuille et parrainage." />
   <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icons/icon-192.png" />
   <link rel="apple-touch-icon" href="assets/img/icons/icon-192.png" />
-  <meta name="theme-color" content="#0b1434" />
+  <meta name="theme-color" content="#0A3D62" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -22,8 +22,8 @@
   <!-- ===================== EN-TÊTE ===================== -->
   <header class="app-header">
     <a href="#/home" class="logo">
-      <img src="assets/img/logo.svg" alt="Logo NOVA" />
-      <span>NOVA<small>IMMOBILIER &amp; ÉNERGIES</small></span>
+      <img src="assets/img/logo.svg" alt="Logo TTE Energy" />
+      <span>TTE ENERGY<small>PÉTROLE &amp; ÉOLIEN</small></span>
     </a>
     <div class="h-right">
       <span class="badge pill-verified status-pill">
@@ -52,13 +52,9 @@
         <div class="bal-card solde"><span>Solde</span><b id="balSolde">0 FCFA</b></div>
         <div class="bal-card revenus"><span>Revenus</span><b id="balRevenus">0 FCFA</b></div>
         <div class="bal-card recharge"><span>Recharge</span><b id="balRecharge">0 FCFA</b></div>
-        <div class="bal-card bonus"><span><svg class="ic ic-sm"><use href="#i-gift"/></svg> Bonus</span><b id="balBonus">0 FCFA</b></div>
       </div>
 
-      <div class="member-shortcuts">
-        <div><span>ID membre</span><b id="homeMemberId">—</b></div>
-        <div class="member-ref"><span>Lien de parrainage</span><strong id="homeReferralLink">Lien indisponible</strong><button type="button" class="btn btn-outline btn-sm" id="copyHomeReferral">Copier</button></div>
-      </div>
+      <div class="member-shortcuts"><div><span>ID membre</span><b id="homeMemberId">—</b></div></div>
 
       <div class="actions">
         <a class="action" href="#/recharger">
@@ -252,10 +248,9 @@
 
       <h2 class="view-title" style="font-size:15.5px">Aperçu de l'équipe</h2>
       <div class="team-stats">
-        <div class="ts-card"><b id="teamSize">0</b><span>Taille de l'équipe</span></div>
-        <div class="ts-card"><b id="teamInvest">0 FCFA</b><span>Total de l'investissement</span></div>
+        <div class="ts-card"><b id="teamSize">0</b><span>Nombre de filleuls</span></div>
         <div class="ts-card teal"><b id="teamComm">0 FCFA</b><span>Commissions</span></div>
-        <div class="ts-card"><b>Niveau 1</b><span>Niveau actif</span></div>
+        <div class="ts-card"><b id="teamActive">0</b><span>Filleuls actifs</span></div>
       </div>
       <div class="levels-row">
         <div>L1 (<span id="teamL1">0</span>)<small>Parrainés directs</small></div>
@@ -265,9 +260,9 @@
 
       <div class="ref-rules">
         <ul>
-          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span><b>Bonus de parrainage</b> — 250 FCFA pour le parrain et 250 FCFA pour le nouveau membre, après confirmation des conditions de dépôt.</span></li>
+          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span><b>Bonus de parrainage</b> — 400 FCFA pour le parrain et 400 FCFA pour le filleul, après confirmation du dépôt minimum de 3 000 FCFA.</span></li>
           <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span>Parrainage simple à un seul niveau, sans chaîne ni multi-niveaux.</span></li>
-          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span>Les bonus apparaissent dans le portefeuille Bonus et ne peuvent pas financer un investissement.</span></li>
+          <li><svg class="ic ic-sm"><use href="#i-check"/></svg> <span>La commission sera créditée au solde principal après confirmation du dépôt éligible.</span></li>
         </ul>
       </div>
       <h2 class="view-title" style="font-size:15.5px">Mes filleuls</h2>
@@ -299,8 +294,6 @@
         </div>
         <div class="member-details">
           <div><span>ID membre</span><b id="accMemberId">—</b></div>
-          <div><span>Lien de parrainage</span><strong id="accReferralLink">Lien indisponible</strong></div>
-          <button type="button" class="btn btn-outline btn-sm" id="copyAccountReferral">Copier le lien</button>
         </div>
         <div class="mini-balances">
           <div class="mini-b"><span>Solde</span><b id="accSolde">0 FCFA</b></div>
@@ -364,8 +357,8 @@
 <div class="modal-overlay" id="welcomeModal">
   <div class="modal">
     <div class="m-ic mi-teal"><svg class="ic ic-lg"><use href="#i-whatsapp"/></svg></div>
-    <h3>NOVA GROUP</h3>
-    <p>Bienvenue chez NOVA ! Rejoignez notre communauté WhatsApp pour rester informé de toutes les nouveautés.</p>
+    <h3>Bienvenue chez TTE Energy !</h3>
+    <p>Votre compte a été créé. Rejoignez notre communauté pour recevoir les actualités et les informations importantes, ou continuez plus tard.</p>
     <div class="m-actions">
       <a class="btn btn-primary btn-block" id="welcomeWa" href="#" target="_blank" rel="noopener">
         <svg class="ic ic-sm"><use href="#i-whatsapp"/></svg> Rejoindre la communauté

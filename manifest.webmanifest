@@ -1,12 +1,12 @@
 {
-  "name": "NOVA Immobilier & Énergies",
-  "short_name": "NOVA",
-  "description": "Espace NOVA Immobilier et Énergies renouvelables",
+  "name": "TTE Energy — Pétrole & énergie éolienne",
+  "short_name": "TTE Energy",
+  "description": "Espace TTE Energy — pétrole et énergie éolienne",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0b1434",
-  "theme_color": "#0b1434",
+  "background_color": "#0A3D62",
+  "theme_color": "#0A3D62",
   "orientation": "portrait-primary",
   "icons": [
     {
