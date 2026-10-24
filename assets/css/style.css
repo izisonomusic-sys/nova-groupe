@@ -1082,4 +1082,6 @@ html, body {
 .welcome-bonus{margin:8px 0 14px;color:#6f6255;font-size:clamp(1rem,3.8vw,1.2rem);text-align:center}.welcome-bonus strong{color:#C65B16;font-weight:800}.auth-side{background:linear-gradient(135deg,#082A43,#0A3D62 62%,#145B7A)}
 
 /* TTE Energy black & gold identity */
-.app-header .logo span{color:#090909;font-weight:850;letter-spacing:.03em}.app-header .logo small{color:#B8860B}.app-hero{background:linear-gradient(120deg,rgba(9,9,9,.92),rgba(10,61,98,.88)),url('assets/img/projet-petrole.jpg') center/cover no-repeat}.profile-card{background:linear-gradient(135deg,#090909,#17212b);color:#fff;border:1px solid #D4AF37}.profile-card .idline{color:#F9E27D}
+.app-header .logo span{color:#090909;font-weight:850;letter-spacing:.03em}.app-header .logo small{color:#B8860B}.app-hero{background:linear-gradient(120deg,rgba(9,9,9,.92),rgba(10,61,98,.88)),linear-gradient(120deg,rgba(9,9,9,.94),rgba(10,61,98,.90))}.profile-card{background:linear-gradient(135deg,#090909,#17212b);color:#fff;border:1px solid #D4AF37}.profile-card .idline{color:#F9E27D}
+
+/* TODO: replace the temporary TTE hero gradient with the cleaned petroleum image asset before production deploy. */
