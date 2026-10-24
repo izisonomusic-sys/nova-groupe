@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TTE Energy">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0A3D62"/>
-  <circle cx="32" cy="32" r="22" fill="none" stroke="#F97316" stroke-width="3"/>
-  <path d="M18 23h28M32 23v25M23 48h18" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M32 12l-5 8h10z" fill="#F97316"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="TTE Energy">
+  <defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1B8"/><stop offset=".32" stop-color="#D4AF37"/><stop offset=".68" stop-color="#B8860B"/><stop offset="1" stop-color="#F9E27D"/></linearGradient></defs>
+  <rect width="320" height="320" rx="54" fill="#090909"/>
+  <path d="M40 78H280M160 78V246M95 246H225" fill="none" stroke="url(#gold)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M82 124H238M110 124V246M210 124V246" fill="none" stroke="url(#gold)" stroke-width="13" stroke-linecap="round"/>
+  <path d="M60 48H260" stroke="#D4AF37" stroke-width="3" opacity=".8"/>
 </svg>
