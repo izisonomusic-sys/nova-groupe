@@ -118,7 +118,7 @@
     catch(e){S.toast(e.message||"Publication impossible.");}finally{b.disabled=false;}
   });
   function card(p){
-    var status=p.status==="published",category=p.category==="special"?"Plan spécial":p.category;
+    var status=p.status==="published",category=p.category==="special"?"Plan spécial":p.category==="petroleum"?"Pétrole":p.category==="fuel"?"Carburants":p.category==="solar"?"Solaire":p.category==="wind"?"Éolien":p.category==="agriculture"?"Agriculture":p.category;
     return '<div class="admin-row"><img class="ar-img" src="'+esc(p.image_url||"assets/img/projet-solaire.jpg")+'" alt=""><div class="ar-info"><span class="badge">'+esc(p.badge||category)+'</span><b>'+esc(p.title)+'</b><small>'+esc(p.description)+'</small></div><div class="ar-right"><div class="ar-stats"><div class="ar-stat"><span>Investissement</span><b>'+money(p.minimum_amount)+'</b></div><div class="ar-stat"><span>Gain/jour</span><b>'+money(p.daily_return_amount)+'</b></div><div class="ar-stat"><span>Durée</span><b>'+p.duration_days+' j</b></div></div><div class="ar-actions"><span class="badge '+(status?"badge-teal":"badge-amber")+'">'+(status?"Publié":"Masqué")+'</span><button class="btn btn-sm btn-outline" data-toggle="'+esc(p.id)+'">'+(status?"Masquer":"Publier")+'</button><button class="btn btn-sm btn-danger" data-del="'+esc(p.id)+'">Supprimer</button></div></div></div>';
   }
   async function loadProjects(){
