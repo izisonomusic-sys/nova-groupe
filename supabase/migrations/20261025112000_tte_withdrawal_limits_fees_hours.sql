@@ -77,7 +77,6 @@ begin
   if p_amount<=v_real_available then v_real:=p_amount;
   else
     if coalesce(w.bonus_locked,0)<=0 then raise exception 'Insufficient balance'; end if;
-    if local_dow not in (1,3,5) then raise exception 'Les retraits du bonus sont disponibles lundi, mercredi et vendredi'; end if;
     if p_amount-v_real_available<>w.bonus_locked then raise exception 'Pour retirer le bonus, la demande doit inclure la totalité du bonus disponible'; end if;
     v_bonus:=w.bonus_locked; v_real:=p_amount-v_bonus;
   end if;
