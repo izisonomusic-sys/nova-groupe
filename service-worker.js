@@ -1,11 +1,11 @@
-const CACHE_NAME = "tte-pwa-v18-20261026f";
+const CACHE_NAME = "tte-pwa-v19-20261027a";
 const SHELL = [
   "./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html",
   "./manifest.webmanifest",
-  "./assets/css/style.css?v=20261026f",
+  "./assets/css/style.css?v=20261027a",
   "./assets/js/config.js?v=20261026a", "./assets/js/icons.js?v=20261026a",
-  "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261026f",
-  "./assets/js/auth.js?v=20261026a", "./assets/js/app.js?v=20261026f",
+  "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261027a",
+  "./assets/js/auth.js?v=20261026a", "./assets/js/app.js?v=20261027a",
   "./assets/js/admin.js?v=20261026d",
   "./assets/img/logo.svg", "./assets/img/hero-tte.svg",
   "./assets/img/icons/tte-icon.svg"

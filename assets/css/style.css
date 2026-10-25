@@ -1349,3 +1349,76 @@ a { text-decoration-color:rgba(184,134,11,.45); }
 .account-menu-item b{font-size:27px;font-weight:400;line-height:1}
 #view-compte .profile-card,#view-compte>.view-title,#view-compte>.settings-list{display:none}
 @media(max-width:380px){.product-tile .ph{height:120px;min-height:120px}.product-tile .pb{padding:7px}.product-tile .product-metrics p{font-size:10px}.product-tile .product-buy{min-width:75px;padding:6px 8px}}
+
+
+/* TTE Energy — harmonisation globale noir & jaune/or. */
+:root {
+  color-scheme: dark;
+  --bg:#0B0B0C;
+  --card:#171717;
+  --ink:#F7F1D8;
+  --muted:#B7AF96;
+  --line:#42391C;
+  --brand:#F4D12D;
+  --brand-dk:#F4D12D;
+  --brand-soft:#29230C;
+  --brand-grad:linear-gradient(135deg,#FFE85B 0%,#F4D12D 58%,#C69A00 100%);
+  --gold:#F4D12D;
+  --dark1:#080808;
+  --dark2:#141414;
+  --dark3:#302607;
+  --header-grad:linear-gradient(120deg,#050505 0%,#17140D 60%,#302607 100%);
+  --amber:#F4D12D;
+  --shadow:0 8px 24px rgba(0,0,0,.32);
+  --shadow-sm:0 3px 10px rgba(0,0,0,.24);
+}
+html,body { background:#0B0B0C; color:#F7F1D8; }
+body { color-scheme:dark; }
+.section,.app-content,.auth-page,.auth-main,.dashboard,.page-content { background:#0B0B0C; color:#F7F1D8; }
+.section-title,.view-title,.form-card h3,.hist-item b,.setting-item b,.news-card h3 { color:#F7F1D8; }
+p,.muted,.hint,.app-note { color:var(--muted); }
+.form-card,.plan,.plan-card,.hist-item,.setting-item,.news-card,.modal-card,.settings-list,
+.withdrawal-account-card { background:#171717; color:#F7F1D8; border-color:#51451D; }
+.input,.select,input,select,textarea { background:#101010; color:#F7F1D8; border-color:#51451D; }
+.input::placeholder,input::placeholder,textarea::placeholder { color:#91886E; }
+.btn-primary,.product-tile .product-buy { background:var(--brand-grad); color:#080808; border-color:#C6A313; }
+.btn-primary:hover,.product-tile .product-buy:hover { background:#FFE85B; color:#080808; }
+.btn-outline,.btn-light { background:#171717; color:#F4D12D; border-color:#8E7415; }
+.bottom-nav { background:rgba(12,12,12,.98); border-top-color:rgba(244,209,45,.42); }
+.bottom-nav .bn-item { color:#B7AF96; }
+.bottom-nav .bn-item.active,.bottom-nav .bn-item[data-nav="vip"] { color:#F4D12D; }
+.tabs { background:#191919; border:1px solid #42391C; }
+.tab { color:#B7AF96; }
+.tab.active { background:#F4D12D; color:#080808; }
+.bal-card { background:#171717; border-color:#51451D; }
+.bal-card span,.bal-card b { color:#F7F1D8; }
+.action,.assist-item { background:#171717; border-color:#42391C; color:#F7F1D8; }
+.action .a-ic,.pay-method .pm-ic,.notification-item-icon { background:#29230C; color:#F4D12D; }
+.product-tile { background:#121212; border-color:#F4D12D; }
+.product-tile .product-tile-title,.product-tile .product-price { color:#F7F1D8; }
+.product-tile .ph { background:#121212; }
+.product-tile .product-description,.product-tile .product-metrics p { color:#B7AF96; }
+.product-tile .product-metrics strong { color:#F4D12D; }
+.product-tile .product-buy { border-radius:8px; }
+.account-primary-actions { background:#0B0B0C; border-top:1px solid #F4D12D; border-bottom:1px solid #F4D12D; }
+.account-action { background:#F4D12D; color:#080808; border:1px solid #F4D12D; }
+.account-menu { background:#141414; border:1px solid #6E5B15; border-radius:12px; padding:7px 9px; }
+.account-menu-item { color:#F7F1D8; border-bottom:1px solid rgba(244,209,45,.16); }
+.account-menu-item:last-child { border-bottom:0; }
+.account-menu-item .account-menu-icon,.account-menu-item b { color:#F4D12D; }
+.account-banner { border-bottom:3px solid #F4D12D; }
+.withdraw-fee-preview { background:#29230C; color:#F4D12D; }
+.withdrawal-account-intro { margin:0 0 14px; line-height:1.65; }
+.withdrawal-account-card .btn-outline { margin-top:10px; text-align:center; }
+.auth-side,.team-invite,.referral-band,.cta-band,.assist-hero,.presence-card { background:linear-gradient(120deg,#050505,#17140D 62%,#302607); border-color:rgba(244,209,45,.42); }
+.profile-card { background:linear-gradient(135deg,#050505,#211907); border-color:#F4D12D; }
+::selection { background:rgba(244,209,45,.38); color:#080808; }
+@media(max-width:520px) {
+  .account-menu-item { min-height:56px; }
+  .withdrawal-account-intro { font-size:13px; }
+}
+
+.auth-card,.auth-form,.login-card,.register-card,.auth-box,.project-card,.product-card,.feature-card,.faq-item,.contact-card,.modal-content,.modal-box,.footer,.site-footer,.site-header,.main-header,.navbar { background:#171717; color:#F7F1D8; border-color:#51451D; }
+.site-header,.main-header,.navbar,.footer,.site-footer { border-color:rgba(244,209,45,.35); }
+.auth-card h1,.auth-card h2,.auth-form h1,.auth-form h2,.project-card h3,.product-card h3,.feature-card h3,.faq-item h3 { color:#F4D12D; }
+.auth-card a,.auth-form a,.site-footer a,.footer a { color:#F4D12D; }

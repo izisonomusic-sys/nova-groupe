@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261026f" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261027a" />
 </head>
 <body>
 
@@ -158,6 +158,7 @@
     <!-- ============ VUE : RETRAIT ============ -->
     <section class="view" id="view-retrait">
       <h2 class="view-title"><svg class="ic" style="color:#5b4bc4"><use href="#i-arrow-up"/></svg> Demander un retrait</h2>
+      <p class="muted withdrawal-account-intro">Le numéro enregistré dans votre compte de retrait est prérempli ci-dessous. <a href="#/compte-retrait">Modifier mon compte de retrait</a>.</p>
 
       <div class="balances" style="grid-template-columns:1fr">
         <div class="bal-card solde" style="text-align:left;display:flex;justify-content:space-between;align-items:center">
@@ -195,6 +196,36 @@
         </button>
         <p id="withdrawStatus" class="hint muted" aria-live="polite" style="margin-top:10px"></p>
         <p class="hint muted" style="font-size:12px;margin-top:10px">Minimum : 2 000 FCFA. Frais de retrait : 15 % du montant demandé. Maximum : 4 retraits par jour et par compte, tous les jours de 07 h à 18 h (heure du Togo). Le montant net après frais vous sera versé.</p>
+      </div>
+    </section>
+
+    <!-- ============ VUE : COMPTE DE RETRAIT ENREGISTRÉ ============ -->
+    <section class="view" id="view-compte-retrait">
+      <h2 class="view-title"><svg class="ic"><use href="#i-wallet"/></svg> Mon compte de retrait</h2>
+      <p class="muted withdrawal-account-intro">Enregistrez le numéro et le nom du titulaire qui recevront vos retraits. Ces informations seront préremplies lors de vos prochaines demandes.</p>
+      <div class="form-card withdrawal-account-card">
+        <div class="field">
+          <label for="waCountry">Pays du compte</label>
+          <select class="select" id="waCountry"></select>
+        </div>
+        <div class="field">
+          <label for="waOperator">Opérateur / moyen de paiement</label>
+          <select class="select" id="waOperator"></select>
+        </div>
+        <div class="field">
+          <label for="waPhone">Numéro de réception</label>
+          <div class="phone-row">
+            <select class="select" id="waDial" aria-label="Indicatif du pays"></select>
+            <input class="input" id="waPhone" type="tel" inputmode="numeric" placeholder="90 00 00 00" autocomplete="tel" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="waName">Nom complet du titulaire</label>
+          <input class="input" id="waName" type="text" placeholder="Nom inscrit sur le compte mobile money" autocomplete="name" />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="btnSaveWithdrawalAccount" type="button">Enregistrer mon compte</button>
+        <p id="withdrawalAccountStatus" class="hint muted" aria-live="polite" style="margin-top:10px"></p>
+        <a class="btn btn-outline btn-block" href="#/retrait">Continuer vers la demande de retrait</a>
       </div>
     </section>
 
@@ -317,9 +348,9 @@
       <div class="account-menu">
         <a class="account-menu-item" href="#/presence"><span class="account-menu-icon">🎁</span><span>Bonus quotidien</span><b>›</b></a>
         <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">▤</span><span>Détails du compte</span><b>›</b></a>
-        <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">✎</span><span>Registres des paiements</span><b>›</b></a>
-        <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">✎</span><span>Registres des retraits</span><b>›</b></a>
-        <a class="account-menu-item" href="#/retrait"><span class="account-menu-icon">▰</span><span>Compte de retrait</span><b>›</b></a>
+        <a class="account-menu-item" href="#/recharger"><span class="account-menu-icon">↘</span><span>Registres des paiements</span><b>›</b></a>
+        <a class="account-menu-item" href="#/retrait"><span class="account-menu-icon">↗</span><span>Registres des retraits</span><b>›</b></a>
+        <a class="account-menu-item" href="#/compte-retrait"><span class="account-menu-icon">▰</span><span>Compte de retrait</span><b>›</b></a>
       </div>
       <div class="account-menu account-menu-secondary">
         <a class="account-menu-item" href="#/publications"><span class="account-menu-icon">ⓘ</span><span>À propos de nous</span><b>›</b></a>
@@ -446,7 +477,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261026f"></script>
+<script src="assets/js/app.js?v=20261027a"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>

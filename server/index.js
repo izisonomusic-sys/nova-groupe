@@ -803,6 +803,69 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
   }
 });
 
+// Compte de retrait du membre : les données sont écrites côté serveur uniquement.
+app.get('/api/member/withdrawal-account', requireUser, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('profiles')
+      .select('withdrawal_country_code,withdrawal_operator,withdrawal_phone,withdrawal_account_name')
+      .eq('id', req.user.id).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Profil membre introuvable.' });
+    const hasAccount = !!(data.withdrawal_country_code && data.withdrawal_operator && data.withdrawal_phone && data.withdrawal_account_name);
+    return res.json({ account: hasAccount ? {
+      country_code: data.withdrawal_country_code,
+      operator: data.withdrawal_operator,
+      phone: data.withdrawal_phone,
+      account_name: data.withdrawal_account_name
+    } : null });
+  } catch (err) {
+    console.error('[WITHDRAWAL ACCOUNT] read error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger le compte de retrait.' });
+  }
+});
+
+app.put('/api/member/withdrawal-account', requireUser, async (req, res) => {
+  try {
+    const countryCode = String(req.body.country_code || '').trim();
+    const operator = String(req.body.operator || '').trim();
+    const phone = String(req.body.phone || '').replace(/[^0-9+]/g, '');
+    const accountName = String(req.body.account_name || '').trim();
+    const localPhone = localPhoneForPayDunya(phone, countryCode);
+    if (!countryCode || countryCode.length > 8 || !operator || operator.length > 80 ||
+        accountName.length < 3 || accountName.length > 120 ||
+        !validPayDunyaLocalPhone(countryCode, operator, localPhone)) {
+      return res.status(400).json({ error: 'Vérifiez le pays, l’opérateur, le numéro et le nom du titulaire.' });
+    }
+    if (!paydunyaWithdrawMode(countryCode, operator)) {
+      return res.status(400).json({ error: 'Ce moyen de retrait n’est pas disponible automatiquement pour le moment.' });
+    }
+    const { data, error } = await supabase.from('profiles').update({
+      withdrawal_country_code: countryCode,
+      withdrawal_operator: operator,
+      withdrawal_phone: phone,
+      withdrawal_account_name: accountName,
+      updated_at: new Date().toISOString()
+    }).eq('id', req.user.id)
+      .select('withdrawal_country_code,withdrawal_operator,withdrawal_phone,withdrawal_account_name')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Profil membre introuvable.' });
+    return res.json({
+      ok: true,
+      message: 'Compte de retrait enregistré.',
+      account: {
+        country_code: data.withdrawal_country_code,
+        operator: data.withdrawal_operator,
+        phone: data.withdrawal_phone,
+        account_name: data.withdrawal_account_name
+      }
+    });
+  } catch (err) {
+    console.error('[WITHDRAWAL ACCOUNT] save error:', err.message);
+    return res.status(500).json({ error: 'Impossible d’enregistrer le compte de retrait.' });
+  }
+});
+
 // Règle NOVA : au plus 2 retraits non échoués sur une fenêtre glissante de 24 h par compte.
 async function checkWithdrawal24hLimit(userId) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
