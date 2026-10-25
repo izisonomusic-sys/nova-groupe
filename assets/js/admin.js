@@ -65,7 +65,7 @@
   function withdrawalCard(w){
     var status=w.status==="pending" && !w.admin_approved_at;
     var phone=w.phone||w.profile_phone||"";
-    return '<div class="admin-row" style="grid-template-columns:1fr auto"><div class="ar-info"><span class="badge badge-amber">En attente de validation</span><b>'+esc(w.display_name||"Membre NOVA")+'</b><small>Retrait de <strong>'+money(w.amount)+'</strong> — '+esc(w.operator||"")+' — '+esc(phone)+'</small><small>Compte : '+esc(w.account_name||"")+' · '+new Date(w.created_at).toLocaleString("fr-FR")+'</small></div><div class="ar-actions"><button class="btn btn-primary btn-sm" data-approve-withdrawal="'+esc(w.id)+'">Valider et payer</button><button class="btn btn-danger btn-sm" data-reject-withdrawal="'+esc(w.id)+'">Refuser</button></div></div>';
+    return '<div class="admin-row" style="grid-template-columns:1fr auto"><div class="ar-info"><span class="badge badge-amber">En attente de validation</span><b>'+esc(w.display_name||"Membre TTE Energy")+'</b><small>Demandé : <strong>'+money(w.amount)+'</strong> · Frais (15 %) : <strong>'+money(w.fee_amount||0)+'</strong> · Net à payer : <strong>'+money(w.payout_amount||w.amount)+'</strong></small><small>'+esc(w.operator||"")+' — '+esc(phone)+' · Compte : '+esc(w.account_name||"")+' · '+new Date(w.created_at).toLocaleString("fr-FR")+'</small></div><div class="ar-actions"><button class="btn btn-primary btn-sm" data-approve-withdrawal="'+esc(w.id)+'">Valider et payer</button><button class="btn btn-danger btn-sm" data-reject-withdrawal="'+esc(w.id)+'">Refuser</button></div></div>';
   }
   async function loadWithdrawals(){
     var data=await request("/api/admin/withdrawals"),list=data.withdrawals||[];
