@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261024b" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261025c" />
 </head>
 <body>
 
@@ -83,6 +83,15 @@
         <svg class="ic ic-sm"><use href="#i-info"/></svg>
         <span>Rendements estimés à titre indicatif — aucun gain n'est garanti. Démonstration.</span>
       </p>
+    </section>
+
+    <!-- ============ VUE : VIP / TOUS LES PROJETS PUBLIÉS ============ -->
+    <section class="view" id="view-vip">
+      <h2 class="view-title"><svg class="ic vip-star" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.5 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg> Espace VIP</h2>
+      <p class="muted vip-intro">Retrouvez ici tous les projets actuellement publiés par TTE Energy. La liste est synchronisée avec les projets affichés sur la page d’accueil.</p>
+      <div class="vip-summary"><span id="vipProjectCount">Chargement des projets…</span></div>
+      <div class="plan-list" id="planListVIP"><!-- mêmes projets publiés que l'accueil --></div>
+      <p class="app-note"><svg class="ic ic-sm"><use href="#i-info"/></svg><span>Les rendements affichés sont des estimations et ne constituent pas une garantie de gain.</span></p>
     </section>
 
     <!-- ============ VUE : RECHARGER (PayDunya SoftPay) ============ -->
@@ -296,7 +305,6 @@
           <div class="mini-b"><span>Solde</span><b id="accSolde">0 FCFA</b></div>
           <div class="mini-b"><span>Recharge</span><b id="accRecharge">0 FCFA</b></div>
           <div class="mini-b"><span>Revenus</span><b id="accRevenus">0 FCFA</b></div>
-          <div class="mini-b bonus-mini"><span>Bonus disponible</span><b id="accBonus">0 FCFA</b></div>
         </div>
       </div>
 
@@ -336,17 +344,17 @@
     <a class="bn-item" href="#/home" data-nav="home">
       <svg class="ic"><use href="#i-home"/></svg><span>Accueil</span>
     </a>
+    <a class="bn-item" href="#/vip" data-nav="vip">
+      <svg class="ic vip-star" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.5 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg><span>VIP</span>
+    </a>
     <a class="bn-item" href="#/equipe" data-nav="equipe">
       <svg class="ic"><use href="#i-users"/></svg><span>Équipe</span>
     </a>
     <a class="bn-item" href="#/investissements" data-nav="investissements">
-      <svg class="ic"><use href="#i-chart"/></svg><span>Investisse&#173;ments</span>
-    </a>
-    <a class="bn-item" href="#/assistance" data-nav="assistance">
-      <svg class="ic"><use href="#i-headphones"/></svg><span>Assistance</span>
+      <svg class="ic"><use href="#i-chart"/></svg><span>Mes investissements</span>
     </a>
     <a class="bn-item" href="#/compte" data-nav="compte">
-      <svg class="ic bn-icon-account" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1-3.5 4-5 8-5s7 1.5 8 5"></path></svg><span>Mon Compte</span>
+      <svg class="ic bn-icon-account" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1-3.5 4-5 8-5s7 1.5 8 5"></path></svg><span>Mon compte</span>
     </a>
   </nav>
 </div><!-- /app-shell -->
@@ -446,7 +454,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261024b"></script>
+<script src="assets/js/app.js?v=20261025c"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
