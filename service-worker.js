@@ -1,5 +1,5 @@
-const CACHE_NAME = "tte-shell-v11-20261025c";
-const SHELL = ["./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html", "./assets/css/style.css?v=20261025c", "./assets/js/config.js?v=20261025c", "./assets/js/icons.js?v=20261025c", "./assets/js/store.js?v=20261025c", "./assets/js/main.js?v=20261025c", "./assets/js/auth.js?v=20261025c", "./assets/js/app.js?v=20261025c", "./assets/js/admin.js?v=20261025c", "./assets/img/logo.svg", "./assets/img/hero-tte.svg", "./assets/img/icons/icon-192.png", "./assets/img/icons/icon-512.png", "./manifest.webmanifest"];
+const CACHE_NAME = "tte-shell-v12-20261026a";
+const SHELL = ["./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html", "./assets/css/style.css?v=20261026a", "./assets/js/config.js?v=20261026a", "./assets/js/icons.js?v=20261026a", "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261026a", "./assets/js/auth.js?v=20261026a", "./assets/js/app.js?v=20261026a", "./assets/js/admin.js?v=20261026a", "./assets/img/logo.svg", "./assets/img/hero-tte.svg", "./assets/img/icons/icon-192.png", "./assets/img/icons/icon-512.png", "./manifest.webmanifest"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)));
   self.skipWaiting();
