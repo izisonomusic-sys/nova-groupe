@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261026d" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261026e" />
 </head>
 <body>
 
@@ -302,51 +302,30 @@
 
     <!-- ============ VUE : COMPTE ============ -->
     <section class="view" id="view-compte">
-      <div class="profile-card">
-        <div class="avatar" id="profileAvatar">?</div>
-        <h3 id="profileName">—</h3>
-        <span class="idline" id="profileId">ID : —</span>
-        <div class="status-row">
-          <span class="badge pill-verified" style="background:var(--brand-soft);color:var(--brand-dk);border-color:#bfe9e2">
-            <svg class="ic ic-sm"><use href="#i-shield"/></svg> Compte vérifié
-          </span>
-        </div>
-        <div class="member-details">
-          <div><span>ID membre</span><b id="accMemberId">—</b></div>
-        </div>
-        <div class="mini-balances">
-          <div class="mini-b"><span>Solde</span><b id="accSolde">0 FCFA</b></div>
-          <div class="mini-b"><span>Recharge</span><b id="accRecharge">0 FCFA</b></div>
-          <div class="mini-b"><span>Revenus</span><b id="accRevenus">0 FCFA</b></div>
+      <div class="account-banner">
+        <div class="account-banner-content">
+          <span class="account-label">Numéro de téléphone</span>
+          <strong id="profilePhone">Téléphone non renseigné</strong>
+          <span class="account-balance-label">Solde du compte</span>
+          <strong class="account-balance"><small>FCFA</small> <span id="accSolde">0 FCFA</span></strong>
         </div>
       </div>
-
-      <h2 class="view-title" style="font-size:15.5px">Paramètres</h2>
-      <div class="settings-list">
-        <button class="setting-item" id="btnPassword">
-          <span class="a-ic a-teal"><svg class="ic"><use href="#i-shield"/></svg></span>
-          <div><b>Sécurité</b><span>Modifier votre mot de passe</span></div>
-          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
-        <a class="setting-item" href="#/recharger">
-          <span class="a-ic a-amber"><svg class="ic"><use href="#i-wallet"/></svg></span>
-          <div><b>Portefeuille de retrait</b><span>Pays, opérateur, numéro</span></div>
-          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-        </a>
-        <a class="setting-item" href="#/historique">
-          <span class="a-ic a-purple"><svg class="ic"><use href="#i-clock"/></svg></span>
-          <div><b>Historique</b><span>Vos transactions</span></div>
-          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-        </a>
-        <a class="setting-item" href="#/publications">
-          <span class="a-ic a-teal"><svg class="ic"><use href="#i-news"/></svg></span>
-          <div><b>Publications</b><span>Actualités des projets</span></div>
-          <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
-        </a>
-        <button class="setting-item" id="btnLogout" style="color:var(--red)">
-          <span class="a-ic" style="background:#fdecec;color:var(--red)"><svg class="ic"><use href="#i-logout"/></svg></span>
-          <div><b>Se déconnecter</b><span>Quitter votre session</span></div>
-        </button>
+      <div class="account-primary-actions">
+        <a href="#/recharger" class="account-action">Paiement</a>
+        <a href="#/retrait" class="account-action">Retrait</a>
+      </div>
+      <div class="account-menu">
+        <a class="account-menu-item" href="#/presence"><span class="account-menu-icon">🎁</span><span>Code cadeau</span><b>›</b></a>
+        <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">▤</span><span>Détails du compte</span><b>›</b></a>
+        <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">✎</span><span>Registres des paiements</span><b>›</b></a>
+        <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">✎</span><span>Registres des retraits</span><b>›</b></a>
+        <a class="account-menu-item" href="#/retrait"><span class="account-menu-icon">▰</span><span>Compte de retrait</span><b>›</b></a>
+      </div>
+      <div class="account-menu account-menu-secondary">
+        <a class="account-menu-item" href="#/publications"><span class="account-menu-icon">ⓘ</span><span>À propos de nous</span><b>›</b></a>
+        <a class="account-menu-item" href="#/assistance"><span class="account-menu-icon">▶</span><span>Règles de la plateforme</span><b>›</b></a>
+        <a class="account-menu-item" href="#/assistance"><span class="account-menu-icon">☏</span><span>Service client</span><b>›</b></a>
+        <button class="account-menu-item" id="btnLogout" type="button"><span class="account-menu-icon">⏻</span><span>Se déconnecter</span><b>›</b></button>
       </div>
     </section>
 
@@ -467,7 +446,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261026d"></script>
+<script src="assets/js/app.js?v=20261026e"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
