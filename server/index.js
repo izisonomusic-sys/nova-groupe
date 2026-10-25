@@ -363,8 +363,6 @@ async function reconcileInvestmentIncomeForUser(userId) {
         }
 
         existing.add(reference);
-        credited += 1;
-        amountCredited += daily;
       }
     }
 
@@ -820,16 +818,8 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     const withdrawMode = paydunyaWithdrawMode(countryCode, operator);
     const accountAlias = localPhoneForPayDunya(phone, countryCode);
 
-    if (!Number.isSafeInteger(amount) || amount < 1500 || amount > 5000000) {
-      return res.status(400).json({ error: 'Le montant doit être compris entre 1 500 et 5 000 000 FCFA.' });
-    }
-    const withdrawalsLast24h = await checkWithdrawal24hLimit(req.user.id);
-    if (withdrawalsLast24h >= 2) {
-      return res.status(429).json({
-        error: 'Limite de retrait atteinte.',
-        detail: 'Vous avez déjà effectué 2 retraits sur les dernières 24 heures. Vous pourrez effectuer un nouveau retrait lorsque la fenêtre de 24 heures sera écoulée.',
-        limit: 2, window_hours: 24
-      });
+    if (!Number.isSafeInteger(amount) || amount < 2000 || amount > 5000000) {
+      return res.status(400).json({ error: 'Le montant du retrait doit être compris entre 2 000 et 5 000 000 FCFA.' });
     }
     if (!countryCode || countryCode.length > 8 || !operator || operator.length > 80 ||
         accountAlias.length < 8 || accountAlias.length > 24 ||
@@ -860,6 +850,12 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
       }
       if (/must invest|invest in at least one project|Vous devez investir/i.test(dbMessage)) {
         return res.status(409).json({ error: 'Vous devez investir dans au moins un projet avant de demander un retrait.' });
+      }
+      if (/4 retraits maximum|Limite atteinte/i.test(dbMessage)) {
+        return res.status(429).json({ error: 'Limite atteinte : vous pouvez effectuer au maximum 4 retraits par jour. Réessayez demain.', limit: 4, window: 'Africa/Lome calendar day' });
+      }
+      if (/07 h à 18 h|07:00|18:00|heure du Togo/i.test(dbMessage)) {
+        return res.status(409).json({ error: 'Les retraits sont disponibles tous les jours de 07 h à 18 h (heure du Togo).' });
       }
       if (/Sunday|dimanche/i.test(dbMessage)) {
         return res.status(409).json({ error: 'Les demandes de retrait ne sont pas disponibles le dimanche.' });
@@ -895,7 +891,7 @@ async function startApprovedPayDunyaWithdrawal(withdrawalId) {
   if (!supabase || !withdrawalId) throw new Error('Retrait invalide.');
   const { data: wr, error: readError } = await supabase
     .from('withdrawal_requests')
-    .select('id,user_id,amount,country_code,operator,phone,account_name,status,provider,provider_token,admin_approved_at')
+    .select('id,user_id,amount,fee_amount,payout_amount,country_code,operator,phone,account_name,status,provider,provider_token,admin_approved_at')
     .eq('id', withdrawalId).maybeSingle();
   if (readError) throw readError;
   if (!wr) throw new Error('Withdrawal not found');
@@ -918,7 +914,7 @@ async function startApprovedPayDunyaWithdrawal(withdrawalId) {
   if (!callbackUrl) throw new Error('URL de callback PayDunya pour les retraits invalide.');
 
   const { response: createResponse, data: created } = await paydunyaDisbursementRequest('get-invoice', {
-    account_alias: accountAlias, amount: Number(wr.amount), withdraw_mode: withdrawMode,
+    account_alias: accountAlias, amount: Number(wr.payout_amount || wr.amount), withdraw_mode: withdrawMode,
     callback_url: callbackUrl
   });
   if (!createResponse.ok || created.response_code !== '00' || !created.disburse_token) {
@@ -1352,7 +1348,7 @@ app.post(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/pa
     if (!wr) return res.status(404).send('Withdrawal not found');
 
     const providerAmount = Number(data?.amount ?? data?.total_amount);
-    if (!Number.isSafeInteger(providerAmount) || providerAmount !== Number(wr.amount)) {
+    if (!Number.isSafeInteger(providerAmount) || providerAmount !== Number(wr.payout_amount || wr.amount)) {
       console.error('[PAYDUNYA][WITHDRAWAL] amount mismatch', { withdrawalId: wr.id });
       return res.status(409).send('Amount mismatch');
     }
@@ -1364,7 +1360,7 @@ app.post(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/pa
         p_provider_payload: data
       });
       if (error) throw error;
-      console.log('[PAYDUNYA][WITHDRAWAL] paid', { withdrawalId: wr.id, amount: wr.amount });
+      console.log('[PAYDUNYA][WITHDRAWAL] paid', { withdrawalId: wr.id, amount: wr.payout_amount || wr.amount });
       return res.status(200).send('OK');
     }
 
