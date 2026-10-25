@@ -1417,3 +1417,8 @@ p,.muted,.hint,.app-note { color:var(--muted); }
   .account-menu-item { min-height:56px; }
   .withdrawal-account-intro { font-size:13px; }
 }
+
+.auth-card,.auth-form,.login-card,.register-card,.auth-box,.project-card,.product-card,.feature-card,.faq-item,.contact-card,.modal-content,.modal-box,.footer,.site-footer,.site-header,.main-header,.navbar { background:#171717; color:#F7F1D8; border-color:#51451D; }
+.site-header,.main-header,.navbar,.footer,.site-footer { border-color:rgba(244,209,45,.35); }
+.auth-card h1,.auth-card h2,.auth-form h1,.auth-form h2,.project-card h3,.product-card h3,.feature-card h3,.faq-item h3 { color:#F4D12D; }
+.auth-card a,.auth-form a,.site-footer a,.footer a { color:#F4D12D; }
