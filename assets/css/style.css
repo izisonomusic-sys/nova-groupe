@@ -1087,7 +1087,7 @@ html, body {
 /* TODO: replace the temporary TTE hero gradient with the cleaned petroleum image asset before production deploy. */
 
 /* TTE Energy landing hero — premium black and gold */
-.home-hero{position:relative;overflow:hidden;background:radial-gradient(ellipse at 80% 45%,rgba(212,175,55,.16),transparent 38%),linear-gradient(125deg,#050608 0%,#0d1d2a 54%,#30240c 100%);border-bottom:2px solid #d4af37;color:#fff}
+.home-hero{position:relative;overflow:hidden;background-image:linear-gradient(100deg,rgba(4,5,6,.95) 0%,rgba(4,5,6,.84) 42%,rgba(4,5,6,.42) 100%),url("https://upload.wikimedia.org/wikipedia/commons/d/d6/Pumpjacks.JPG");background-size:cover;background-position:center 48%;background-color:#050608;border-bottom:2px solid #d4af37;color:#fff}
 .hh-inner{padding-top:22px;padding-bottom:30px}.hh-brand img{background:#080808;border:1px solid #d4af37;box-shadow:0 0 20px rgba(212,175,55,.2)}
 .tte-hero-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,1.08fr);align-items:center;gap:26px;margin-top:24px}
 .tte-hero-copy{position:relative;z-index:1}.tte-kicker{display:inline-flex;padding:8px 12px;border:1px solid rgba(212,175,55,.65);border-radius:999px;color:#f5d978;background:rgba(0,0,0,.3);font-size:10px;font-weight:850;letter-spacing:.14em}
@@ -1111,7 +1111,7 @@ html, body {
 .mini-b span { display: block; font-size: 11px; color: inherit; opacity: .82; }
 .mini-b b { display: block; margin-top: 5px; font-size: clamp(13px, 3.4vw, 17px); overflow-wrap: anywhere; }
 .mini-b.bonus-mini { border-color: #D4AF37; background: rgba(212,175,55,.12); }
-.app-hero { background-image: linear-gradient(100deg, rgba(5,7,9,.94), rgba(5,7,9,.62)), url("../img/hero-tte.svg"); background-size: cover; background-position: center; border-bottom: 2px solid #D4AF37; }
+.app-hero { background-image: linear-gradient(100deg, rgba(5,7,9,.94), rgba(5,7,9,.62)), url("https://upload.wikimedia.org/wikipedia/commons/d/d6/Pumpjacks.JPG"); background-size: cover; background-position: center; border-bottom: 2px solid #D4AF37; }
 .app-hero .greet { max-width: 100%; }
 .app-hero .greet img { border: 1px solid #D4AF37; border-radius: 14px; }
 @media (max-width: 420px) {
@@ -1135,7 +1135,7 @@ html, body {
 /* Grand hero panoramique pétrole & éolien — image de bannière pleine largeur. */
 .home-hero {
   min-height:clamp(620px,82vh,820px);
-  background-image:linear-gradient(90deg,rgba(3,6,8,.91) 0%,rgba(3,6,8,.76) 38%,rgba(3,6,8,.28) 100%),url("../img/hero-tte.svg");
+  background-image:linear-gradient(90deg,rgba(3,6,8,.91) 0%,rgba(3,6,8,.76) 38%,rgba(3,6,8,.28) 100%),url("https://upload.wikimedia.org/wikipedia/commons/d/d6/Pumpjacks.JPG");
   background-size:cover;
   background-position:center 54%;
   border-bottom:3px solid #d4af37;
@@ -1235,7 +1235,7 @@ a { text-decoration-color:rgba(184,134,11,.45); }
   margin:0;
   color:#fff;
   background-color:#090909;
-  background-image:linear-gradient(90deg,rgba(4,5,6,.93) 0%,rgba(4,5,6,.78) 43%,rgba(4,5,6,.24) 100%),url("../img/hero-tte.svg");
+  background-image:linear-gradient(90deg,rgba(4,5,6,.93) 0%,rgba(4,5,6,.78) 43%,rgba(4,5,6,.24) 100%),url("https://upload.wikimedia.org/wikipedia/commons/d/d6/Pumpjacks.JPG");
   background-size:cover;
   background-position:center 54%;
   border-bottom:3px solid #D4AF37;
@@ -1310,3 +1310,6 @@ a { text-decoration-color:rgba(184,134,11,.45); }
 .notification-history-link{display:block;margin-top:12px;padding:10px;text-align:center;border-radius:10px;background:var(--brand-soft);color:var(--brand-dk);font-weight:800;font-size:12px}
 .withdraw-fee-preview{margin-top:9px;padding:10px 12px;border-radius:10px;background:var(--brand-soft);color:var(--brand-dk);font-size:12px;font-weight:700;line-height:1.5}
 @media(max-width:520px){.app-header .h-right{gap:7px}.notification-button{width:38px;height:38px}.notification-panel{top:68px}}
+
+/* Attribution for the real oil-field photograph used in both hero banners. */
+.hero-photo-credit a{color:rgba(255,255,255,.78);font-size:9px;text-decoration:underline;text-underline-offset:2px}.hero-photo-credit a:hover{color:#f5d978}
