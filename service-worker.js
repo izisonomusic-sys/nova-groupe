@@ -4,7 +4,7 @@ const SHELL = [
   "./manifest.webmanifest",
   "./assets/css/style.css?v=20261026e",
   "./assets/js/config.js?v=20261026a", "./assets/js/icons.js?v=20261026a",
-  "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261026a",
+  "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261026e",
   "./assets/js/auth.js?v=20261026a", "./assets/js/app.js?v=20261026e",
   "./assets/js/admin.js?v=20261026d",
   "./assets/img/logo.svg", "./assets/img/hero-tte.svg",
