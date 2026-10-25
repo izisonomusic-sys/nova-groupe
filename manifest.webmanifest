@@ -1,25 +1,18 @@
 {
+  "id": "./",
   "name": "TTE Energy — Pétrole & énergie éolienne",
   "short_name": "TTE Energy",
-  "description": "Espace TTE Energy — pétrole et énergie éolienne",
-  "start_url": "./index.html",
+  "description": "TTE Energy : projets et services dans les secteurs pétrolier et de l’énergie éolienne.",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0B0B0C",
-  "theme_color": "#0B0B0C",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#090909",
+  "theme_color": "#D4AF37",
   "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "assets/img/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/img/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
+    {"src": "assets/img/icons/tte-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "assets/img/icons/tte-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
+  ],
+  "categories": ["business", "finance"]
 }
