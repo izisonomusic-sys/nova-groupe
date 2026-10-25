@@ -546,7 +546,7 @@
     var name=el("wdName").value.trim();
     var statusNode=el("withdrawStatus");
     var payload={amount:amount,country_code:country,operator:operator,phone:phone,account_name:name};
-    if(!Number.isSafeInteger(amount)||amount<1500){S.toast("Montant minimum de retrait : 1 500 FCFA");if(statusNode)statusNode.textContent="Montant minimum : 1 500 FCFA.";return;}
+    if(!Number.isSafeInteger(amount)||amount<2000){S.toast("Montant minimum de retrait : 2 000 FCFA");if(statusNode)statusNode.textContent="Montant minimum : 2 000 FCFA.";return;}
     if(!operator){S.toast("Choisissez un opérateur.");if(statusNode)statusNode.textContent="Choisissez un opérateur avant de confirmer.";return;}
      if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
     if(name.length<3){S.toast("Saisissez le nom complet du titulaire.");if(statusNode)statusNode.textContent="Nom du titulaire requis.";return;}
@@ -563,6 +563,42 @@
       S.toast(e.message||"Retrait impossible.");
       if(statusNode)statusNode.textContent=e.message||"Retrait impossible.";
     }finally{b.disabled=false;}
+  });
+  function updateWithdrawalFeePreview(){
+    var input=el("wdAmount"),node=el("withdrawFeePreview");
+    if(!input||!node)return;
+    var amount=Number(input.value);
+    if(!Number.isSafeInteger(amount)||amount<=0){node.textContent="Minimum : 2 000 FCFA · Frais : 15 % · Horaires : tous les jours de 07 h à 18 h (Togo).";return;}
+    var fee=Math.ceil(amount*0.15),net=amount-fee;
+    node.textContent="Frais (15 %) : "+money(fee)+" · Montant net estimé : "+money(net)+". Minimum : 2 000 FCFA.";
+  }
+  if(el("wdAmount"))el("wdAmount").addEventListener("input",updateWithdrawalFeePreview);
+  updateWithdrawalFeePreview();
+
+  function renderNotifications(items){
+    var box=el("notificationList");if(!box)return;
+    if(!items||!items.length){box.innerHTML='<p class="muted notification-empty">Aucune notification récente.</p>';return;}
+    box.innerHTML=items.map(function(n){
+      var amount=Number(n.amount)||0, sign=amount>0?"+":"";
+      return '<article class="notification-item"><span class="notification-item-icon">◈</span><div><b>'+esc(n.title||n.entry_type||"Mise à jour du compte")+'</b><small>'+esc(S.dateFr(n.created_at))+' · '+esc(n.status||"")+'</small></div><strong class="'+(amount>=0?"plus":"minus")+'">'+sign+money(amount)+'</strong></article>';
+    }).join("");
+  }
+  listen("notificationButton","click",async function(){
+    var panel=el("notificationPanel"),button=el("notificationButton");
+    if(!panel||!button)return;
+    var opening=panel.hidden;panel.hidden=!opening;button.setAttribute("aria-expanded",String(opening));
+    if(!opening)return;
+    var box=el("notificationList");if(box)box.innerHTML='<p class="muted notification-empty">Chargement…</p>';
+    try{
+      var data=await api("/api/notifications");
+      renderNotifications(data.notifications||[]);
+      var count=el("notificationCount");
+      if(count){count.textContent=String(data.unread||0);count.hidden=!(Number(data.unread)>0);}
+    }catch(err){if(box)box.innerHTML='<p class="muted notification-empty">'+esc(err.message||"Notifications indisponibles.")+'</p>';}
+  });
+  listen("closeNotifications","click",function(){
+    var panel=el("notificationPanel"),button=el("notificationButton");
+    if(panel)panel.hidden=true;if(button)button.setAttribute("aria-expanded","false");
   });
   listen("btnPresence","click",async function(){
     var b=el("btnPresence");b.disabled=true;
