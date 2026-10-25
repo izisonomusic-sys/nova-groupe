@@ -1805,8 +1805,8 @@ app.get('/api/public/withdrawal-activity', async (_req, res) => {
     }
     const names = new Map(profiles.map(profile => [profile.id, profile.display_name || '']));
     const withdrawals = (rows || []).map(row => {
-      const fullName = String(names.get(row.user_id) || '').replace(/[\\u0000-\\u001F\\u007F]/g, ' ').trim();
-      const firstName = fullName.split(/\\s+/)[0].slice(0, 32);
+      const fullName = String(names.get(row.user_id) || '').trim().replace(/\s+/g, ' ');
+      const firstName = fullName.split(' ')[0].slice(0, 32);
       return {
         first_name: firstName || 'Un membre',
         country_code: String(row.country_code || '').slice(0, 8)
