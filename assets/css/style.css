@@ -1276,3 +1276,16 @@ a { text-decoration-color:rgba(184,134,11,.45); }
   .app-hero-cta { padding:13px 15px; }
   .app-hero-foot { display:grid; gap:9px; font-size:10px; }
 }
+
+/* Final harmonisation: remove leftover teal/blue accents from the old theme. */
+.a-teal,.a-blue,.mi-teal,.mi-amber,.badge-teal,.ts-card.teal { background:#FBF2D5 !important; color:#765400 !important; }
+.a-purple { background:#F8E8C4 !important; color:#765400 !important; }
+.pay-method.active .pm-ic { color:#765400; }
+.team-invite { background:linear-gradient(120deg,#080808,#211907 72%,#3A290D); border:1px solid rgba(212,175,55,.6); }
+.referral-band,.cta-band,.assist-hero,.presence-card { background:linear-gradient(120deg,#080808,#17140D 60%,#3A290D); border:1px solid rgba(212,175,55,.38); }
+.auth-side { background:linear-gradient(125deg,#080808 0%,#17140D 58%,#3A290D 100%); }
+.chip.active { background:#FBF2D5; color:#765400; border-color:#D4AF37; }
+.input:focus,.select:focus { border-color:#D4AF37; box-shadow:0 0 0 3px rgba(212,175,55,.18); }
+.bottom-nav .bn-item.active { color:#936A00; }
+.bottom-nav .bn-item[data-nav="vip"] { color:#A77A06; }
+::selection { background:rgba(212,175,55,.35); color:#17140D; }
