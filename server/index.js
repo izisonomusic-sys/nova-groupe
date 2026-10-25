@@ -1249,7 +1249,7 @@ async function reconcilePayDunyaWithdrawals() {
   try {
     const { data: rows, error } = await supabase
       .from('withdrawal_requests')
-      .select('id,amount,status,provider_token,created_at')
+      .select('id,amount,payout_amount,status,provider_token,created_at')
       .eq('provider','paydunya')
       .in('status',['processing','pending'])
       .not('provider_token','is',null)
@@ -1265,7 +1265,7 @@ async function reconcilePayDunyaWithdrawals() {
         if (!response.ok || data.response_code !== '00') continue;
         const status = String(data.status || '').toLowerCase();
         const providerAmount = Number(data.amount ?? data.total_amount);
-        if (!Number.isSafeInteger(providerAmount) || providerAmount !== Number(row.amount)) {
+        if (!Number.isSafeInteger(providerAmount) || providerAmount !== Number(row.payout_amount || row.amount)) {
           console.error('[PAYDUNYA][WITHDRAWAL] amount mismatch', { withdrawalId: row.id });
           continue;
         }
