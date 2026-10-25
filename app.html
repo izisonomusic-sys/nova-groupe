@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261026b" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261026c" />
 </head>
 <body>
 
@@ -26,12 +26,14 @@
       <span>TTE ENERGY<small>PÉTROLE &amp; ÉOLIEN</small></span>
     </a>
     <div class="h-right">
+      <button type="button" class="notification-button" id="notificationButton" aria-label="Ouvrir les notifications" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count" id="notificationCount" hidden>0</span></button>
       <span class="badge pill-verified status-pill">
         <svg class="ic ic-sm"><use href="#i-shield"/></svg> Vérifié
       </span>
       <div class="avatar" id="headerAvatar">?</div>
     </div>
   </header>
+  <aside class="notification-panel" id="notificationPanel" hidden aria-label="Notifications récentes"><div class="notification-panel-head"><strong>Notifications récentes</strong><button type="button" id="closeNotifications" aria-label="Fermer">×</button></div><div id="notificationList"><p class="muted">Appuyez sur la cloche pour charger les notifications.</p></div><a href="#/historique" class="notification-history-link">Voir tout l’historique →</a></aside>
 
   <!-- ===================== BANDEAU ACCUEIL ===================== -->
   <section class="app-hero" id="appHero" aria-label="Présentation TTE Energy">
@@ -166,7 +168,8 @@
       <div class="form-card">
         <div class="field">
           <label for="wdAmount">Montant à retirer (FCFA)</label>
-          <input class="input" id="wdAmount" type="number" min="1500" step="100" placeholder="Ex. 5000" />
+          <input class="input" id="wdAmount" type="number" min="2000" step="100" placeholder="Ex. 5000" />
+          <p class="withdraw-fee-preview" id="withdrawFeePreview" aria-live="polite">Minimum : 2 000 FCFA · Frais : 15 % · Horaires : tous les jours de 07 h à 18 h (Togo).</p>
         </div>
         <div class="field">
           <label for="wdCountry">Pays</label>
@@ -191,7 +194,7 @@
           <svg class="ic ic-sm"><use href="#i-arrow-up"/></svg> Confirmer le retrait
         </button>
         <p id="withdrawStatus" class="hint muted" aria-live="polite" style="margin-top:10px"></p>
-        <p class="hint muted" style="font-size:12px;margin-top:10px">Minimum de retrait : 1 500 FCFA. Maximum : 2 retraits sur une période glissante de 24 heures par compte.</p>
+        <p class="hint muted" style="font-size:12px;margin-top:10px">Minimum : 2 000 FCFA. Frais de retrait : 15 % du montant demandé. Maximum : 4 retraits par jour et par compte, tous les jours de 07 h à 18 h (heure du Togo). Le montant net après frais vous sera versé.</p>
       </div>
     </section>
 
