@@ -1,4 +1,4 @@
-/* NOVA — tableau de bord relié à Supabase et aux opérations sécurisées du serveur. */
+/* TTE Energy — espace membre relié à Supabase et aux opérations sécurisées du serveur. */
 (async function () {
   "use strict";
   var C=window.NOVA, S=window.NovaStore, auth=window.NovaAuth;
@@ -234,7 +234,7 @@
   }
   function planCard(p){
     var daily=Number(p.daily_return_amount)||0,days=Number(p.duration_days)||0,amount=Number(p.minimum_amount)||0;
-    return '<article class="plan"><div class="ph"><img src="'+esc(imagePath(p.image_url))+'" alt="'+esc(p.title)+'" loading="lazy"><span class="badge">'+esc(p.badge||p.category||"Projet")+'</span></div><div class="pb"><h3>'+esc(p.title)+'</h3><p class="muted">'+esc(p.description||"")+'</p><div class="stats"><div><span>Prix</span><b>'+money(amount)+'</b></div><div><span>Gain/jour estimé</span><b class="est">'+money(daily)+'</b></div><div><span>Durée</span><b>'+days+' jours</b></div><div><span>Gain total estimé</span><b class="est">'+money(daily*days)+'</b></div></div><button class="btn btn-primary btn-block" data-invest="'+esc(p.id)+'">Investir maintenant</button></div></article>';
+    return '<article class="plan product-tile"><h3 class="product-tile-title">'+esc(p.badge||p.category||p.title||"Projet")+'</h3><div class="ph"><img src="'+esc(imagePath(p.image_url))+'" alt="'+esc(p.title)+'" loading="lazy"></div><div class="pb"><h3 class="product-name">'+esc(p.title)+'</h3><p class="muted product-description">'+esc(p.description||"")+'</p><div class="product-metrics"><p>Revenu quotidien: <strong>'+money(daily)+'</strong></p><p>Revenu total: <strong>'+money(daily*days)+'</strong></p><p>Période de validité: <strong>'+days+' jours</strong></p></div><div class="product-buy-row"><b class="product-price">'+money(amount)+'</b><button class="btn btn-primary product-buy" data-invest="'+esc(p.id)+'">Acheter</button></div></div></article>';
   }
   function renderPlans(tab){
     currentTab=tab||"plans";
@@ -326,9 +326,10 @@
     }catch(err){console.warn("Referral dashboard:",err.message);setText("teamSize","0");setText("teamL1","0");setText("teamInvest",money(0));setText("teamComm",money(0));}
   }
   function renderAccount(){
-    var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre NOVA";
+    var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre TTE Energy";
     var code=String(profile.member_code||"").trim(), link=referralLink();
     setText("profileName",name);setText("profileId","ID : "+(code||"—"));setText("profileAvatar",S.initials(name));
+    setText("profilePhone",profile.phone||user.phone||"Téléphone non renseigné");
     setText("accMemberId",code||"—");
     setText("accReferralLink",link||"Lien indisponible");
     setText("accSolde",money(wallet.balance));
