@@ -1497,3 +1497,34 @@ p,.muted,.hint,.app-note { color:var(--muted); }
   #view-regles .platform-rule-card { padding:13px 11px; gap:10px; }
   #view-regles .platform-rule-icon { width:33px; height:33px; }
 }
+
+
+/* TTE Energy — vertical activity feed for confirmed withdrawals only. */
+.withdrawal-activity-wrap { margin: 14px auto 4px; }
+.withdrawal-activity {
+  display:flex; align-items:center; gap:12px; min-height:82px;
+  padding:14px 16px; border:1px solid rgba(212,175,55,.42); border-radius:16px;
+  color:#F5F0DE; background:linear-gradient(115deg,#080808 0%,#17140B 100%);
+  box-shadow:0 10px 28px rgba(0,0,0,.18);
+  transition:opacity .22s ease,transform .22s ease;
+}
+.withdrawal-activity.is-changing { opacity:.2; transform:translateY(-7px); }
+.withdrawal-activity__icon {
+  display:grid; place-items:center; flex:0 0 40px; height:40px; border-radius:12px;
+  color:#0A0906; background:linear-gradient(145deg,#FFE777,#C99B24);
+  font-size:23px; font-weight:900;
+}
+.withdrawal-activity__content { min-width:0; flex:1; }
+.withdrawal-activity__label { display:block; margin-bottom:4px; color:#E3BF4D; font-size:10px; font-weight:800; letter-spacing:1.1px; }
+.withdrawal-activity__message { margin:0; color:#FFFDF5; font-size:13px; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.withdrawal-activity__meta { margin:5px 0 0; color:#C6BFA9; font-size:11px; line-height:1.35; }
+.withdrawal-activity__live { flex:0 0 7px; width:7px; height:7px; border-radius:50%; background:#D4AF37; box-shadow:0 0 0 4px rgba(212,175,55,.12); }
+@media(max-width:420px) {
+  .withdrawal-activity-wrap { margin-top:10px; padding-left:12px; padding-right:12px; }
+  .withdrawal-activity { gap:10px; min-height:76px; padding:12px; border-radius:13px; }
+  .withdrawal-activity__icon { flex-basis:35px; height:35px; }
+  .withdrawal-activity__message { font-size:12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .withdrawal-activity { transition:none; }
+}
