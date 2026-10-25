@@ -1474,7 +1474,7 @@ app.get('/api/notifications', requireUser, async (req, res) => {
 app.post('/api/notifications/read', requireUser, async (req, res) => {
   try {
     const requested = Array.isArray(req.body?.ids) ? req.body.ids : [];
-    const ids = [...new Set(requested.map(value => String(value || '').trim()).filter(value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value))].slice(0, 50);
+    const ids = [...new Set(requested.map(value => String(value || '').trim()).filter(value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)))].slice(0, 50);
     if (!ids.length) return res.json({ ok: true, marked: 0 });
     const { data: ownedRows, error: ownedError } = await supabase.from('wallet_ledger')
       .select('id').eq('user_id', req.user.id).in('id', ids);
