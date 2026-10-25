@@ -209,6 +209,16 @@ async function requireUser(req, res, next) {
     if (!token || !supabase) return res.status(401).json({ error: 'Authentification Supabase requise.' });
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) return res.status(401).json({ error: 'Session invalide ou expirée.' });
+    // Enforce account suspensions even when a previously issued JWT is still valid.
+    const { data: adminUser, error: adminUserError } = await supabase.auth.admin.getUserById(data.user.id);
+    if (adminUserError || !adminUser?.user) {
+      console.error('[AUTH] Could not verify account suspension state:', adminUserError?.message || 'user not found');
+      return res.status(503).json({ error: 'Vérification du compte indisponible. Réessayez.' });
+    }
+    const bannedUntil = Date.parse(adminUser.user.banned_until || '');
+    if (Number.isFinite(bannedUntil) && bannedUntil > Date.now()) {
+      return res.status(403).json({ error: 'Ce compte est suspendu. Contactez l’administrateur.' });
+    }
     req.user = data.user;
     next();
   } catch (_) { return res.status(401).json({ error: 'Authentification impossible.' }); }
@@ -1442,17 +1452,42 @@ app.get('/api/notifications', requireUser, async (req, res) => {
       .eq('user_id', req.user.id)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(15);
+      .limit(50);
     if (error) throw error;
     const rows = data || [];
-    const unread = rows.filter(row => new Date(row.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000).length;
-    return res.json({ ok: true, unread, notifications: rows.map(row => ({
+    if (!rows.length) return res.json({ ok: true, unread: 0, notifications: [] });
+    const { data: readRows, error: readError } = await supabase.from('notification_reads')
+      .select('ledger_id').eq('user_id', req.user.id).in('ledger_id', rows.map(row => row.id));
+    if (readError) throw readError;
+    const readIds = new Set((readRows || []).map(row => row.ledger_id));
+    const unreadRows = rows.filter(row => !readIds.has(row.id));
+    return res.json({ ok: true, unread: unreadRows.length, notifications: unreadRows.map(row => ({
       id: row.id, title: row.description || row.entry_type, entry_type: row.entry_type,
       amount: Number(row.amount || 0), status: row.status, created_at: row.created_at
     })) });
   } catch (err) {
     console.error('[NOTIFICATIONS] read error:', err.message);
     return res.status(500).json({ error: 'Impossible de charger les notifications.' });
+  }
+});
+
+app.post('/api/notifications/read', requireUser, async (req, res) => {
+  try {
+    const requested = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const ids = [...new Set(requested.map(value => String(value || '').trim()).filter(value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value))].slice(0, 50);
+    if (!ids.length) return res.json({ ok: true, marked: 0 });
+    const { data: ownedRows, error: ownedError } = await supabase.from('wallet_ledger')
+      .select('id').eq('user_id', req.user.id).in('id', ids);
+    if (ownedError) throw ownedError;
+    const reads = (ownedRows || []).map(row => ({ user_id: req.user.id, ledger_id: row.id }));
+    if (!reads.length) return res.json({ ok: true, marked: 0 });
+    const { error } = await supabase.from('notification_reads')
+      .upsert(reads, { onConflict: 'user_id,ledger_id', ignoreDuplicates: true });
+    if (error) throw error;
+    return res.json({ ok: true, marked: reads.length });
+  } catch (err) {
+    console.error('[NOTIFICATIONS] mark-read error:', err.message);
+    return res.status(500).json({ error: 'Impossible de marquer les notifications comme lues.' });
   }
 });
 
