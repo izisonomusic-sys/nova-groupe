@@ -1289,3 +1289,24 @@ a { text-decoration-color:rgba(184,134,11,.45); }
 .bottom-nav .bn-item.active { color:#936A00; }
 .bottom-nav .bn-item[data-nav="vip"] { color:#A77A06; }
 ::selection { background:rgba(212,175,55,.35); color:#17140D; }
+
+
+/* Notifications TTE Energy */
+.notification-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid rgba(212,175,55,.34);border-radius:14px;color:var(--brand);background:rgba(212,175,55,.08);flex:none}
+.notification-button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.notification-count{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:20px;background:#d64545;color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;border:2px solid var(--dark1)}
+.notification-panel{position:fixed;z-index:1200;top:76px;right:max(12px,calc((100vw - 1120px)/2));width:min(420px,calc(100vw - 24px));max-height:min(72vh,620px);overflow:auto;padding:15px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 48px rgba(0,0,0,.22)}
+.notification-panel[hidden]{display:none}
+.notification-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.notification-panel-head strong{font-size:15px}
+.notification-panel-head button{width:32px;height:32px;border-radius:9px;background:var(--brand-soft);font-size:23px;color:var(--ink)}
+.notification-item{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid var(--line)}
+.notification-item-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:10px;background:var(--brand-soft);color:var(--brand-dk);font-size:17px}
+.notification-item div{min-width:0}
+.notification-item b{display:block;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.notification-item small{display:block;margin-top:4px;color:var(--muted);font-size:10px}
+.notification-item>strong{font-size:11px;white-space:nowrap}
+.notification-empty{padding:18px 4px;font-size:13px}
+.notification-history-link{display:block;margin-top:12px;padding:10px;text-align:center;border-radius:10px;background:var(--brand-soft);color:var(--brand-dk);font-weight:800;font-size:12px}
+.withdraw-fee-preview{margin-top:9px;padding:10px 12px;border-radius:10px;background:var(--brand-soft);color:var(--brand-dk);font-size:12px;font-weight:700;line-height:1.5}
+@media(max-width:520px){.app-header .h-right{gap:7px}.notification-button{width:38px;height:38px}.notification-panel{top:68px}}
