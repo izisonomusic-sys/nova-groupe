@@ -33,6 +33,9 @@ declare
   has_investment boolean;
 begin
   if p_user_id is null then raise exception 'Invalid user'; end if;
+  if coalesce(auth.role(), '') <> 'service_role' and auth.uid() is distinct from p_user_id then
+    raise exception 'Not authorized to request withdrawal for another user';
+  end if;
   op := case op
     when 'togocom' then 't-money-togo' when 't-money' then 't-money-togo'
     when 'moov togo' then 'moov-togo'
