@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261027a" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261027c" />
 </head>
 <body class="has-bottom-nav">
 
@@ -44,6 +44,19 @@
       </div>
     </div>
   </header>
+
+  <!-- Activité réelle : seuls les retraits confirmés sont affichés. -->
+  <section class="withdrawal-activity-wrap container" aria-label="Retraits récemment confirmés">
+    <div class="withdrawal-activity" id="withdrawalActivity" aria-live="polite" aria-atomic="true">
+      <div class="withdrawal-activity__icon" aria-hidden="true">↗</div>
+      <div class="withdrawal-activity__content">
+        <span class="withdrawal-activity__label">RETRAITS CONFIRMÉS</span>
+        <p class="withdrawal-activity__message" id="withdrawalActivityMessage">Les retraits confirmés apparaîtront ici.</p>
+        <p class="withdrawal-activity__meta" id="withdrawalActivityMeta">TTE Energy · activité vérifiée</p>
+      </div>
+      <span class="withdrawal-activity__live" aria-hidden="true"></span>
+    </div>
+  </section>
 
   <main class="container home-main">
 
@@ -115,7 +128,7 @@
   <script src="assets/js/auth.js?v=20261025c"></script>
   <script src="assets/js/icons.js?v=20261025c"></script>
   <script src="assets/js/store.js?v=20261025c"></script>
-  <script src="assets/js/main.js?v=20261027a"></script>
+  <script src="assets/js/main.js?v=20261027c"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
