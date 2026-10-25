@@ -3,7 +3,7 @@
   "name": "TTE Energy — Pétrole & énergie éolienne",
   "short_name": "TTE Energy",
   "description": "TTE Energy : projets et services dans les secteurs pétrolier et de l’énergie éolienne.",
-  "start_url": "./index.html?source=pwa",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
