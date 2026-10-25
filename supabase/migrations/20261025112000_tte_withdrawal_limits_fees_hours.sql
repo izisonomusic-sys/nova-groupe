@@ -93,3 +93,25 @@ end
 $function$;
 
 grant execute on function public.nova_request_withdrawal(uuid,bigint,text,text,text,text) to service_role;
+
+-- A failed or manually rejected withdrawal is refunded in full, so no fee is collected.
+do $migration$
+declare
+  v_name text;
+  v_definition text;
+  v_old text := 'set status=''rejected'',';
+  v_new text := E'set status=''rejected'',\n      fee_amount=0,\n      payout_amount=wr.amount,';
+begin
+  foreach v_name in array array[
+    'public.nova_admin_reject_withdrawal(uuid,uuid,text)'::regprocedure::text,
+    'public.nova_finalize_withdrawal_failure(uuid,text,jsonb,text)'::regprocedure::text
+  ] loop
+    v_definition := pg_catalog.pg_get_functiondef(v_name::regprocedure);
+    if position(v_old in v_definition) = 0 then
+      raise exception 'Expected rejected-status clause not found in %', v_name;
+    end if;
+    v_definition := replace(v_definition, v_old, v_new);
+    execute v_definition;
+  end loop;
+end
+$migration$;
