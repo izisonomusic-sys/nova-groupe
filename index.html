@@ -13,12 +13,12 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261024b" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261025c" />
 </head>
 <body class="has-bottom-nav">
 
   <!-- ===================== HERO (bannière + photos) ===================== -->
-  <header class="home-hero">
+  <header class="home-hero" id="top">
     <div class="container hh-inner">
       <div class="hh-row">
         <div class="hh-brand">
@@ -41,7 +41,6 @@
           <div class="tte-hero-actions"><a href="register.html" class="btn btn-primary">Créer mon compte →</a><a href="#homePlanList" class="btn btn-ghost">Découvrir les projets</a></div>
           <div class="tte-hero-tags"><span>◆ Pétrole &amp; infrastructures</span><span>◆ Énergie éolienne</span></div>
         </div>
-        <div class="tte-hero-visual"><img src="assets/img/hero-tte.svg" alt="Illustration d’un site pétrolier et d’éoliennes au coucher du soleil"><div class="tte-visual-label"><span></span> ÉNERGIE POUR DEMAIN</div></div>
       </div>
     </div>
   </header>
@@ -95,14 +94,14 @@
     <a class="bn-item active" href="#top">
       <svg class="ic"><use href="#i-home"/></svg><span>Accueil</span>
     </a>
+    <a class="bn-item" href="#homePlanList">
+      <svg class="ic vip-star" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.5 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg><span>VIP</span>
+    </a>
     <a class="bn-item" data-app="/equipe" href="login.html">
       <svg class="ic"><use href="#i-users"/></svg><span>Équipe</span>
     </a>
     <a class="bn-item" data-app="/investissements" href="login.html">
-      <svg class="ic"><use href="#i-chart"/></svg><span>Investisse&#173;ments</span>
-    </a>
-    <a class="bn-item" data-app="/assistance" href="login.html">
-      <svg class="ic"><use href="#i-headphones"/></svg><span>Assistance</span>
+      <svg class="ic"><use href="#i-chart"/></svg><span>Mes investissements</span>
     </a>
     <a class="bn-item" data-app="/compte" href="login.html">
       <svg class="ic bn-icon-account" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1-3.5 4-5 8-5s7 1.5 8 5"></path></svg><span>Mon Compte</span>
@@ -112,11 +111,11 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/js/config.js?v=20261024b"></script>
-  <script src="assets/js/auth.js?v=20261024b"></script>
-  <script src="assets/js/icons.js?v=20261024b"></script>
-  <script src="assets/js/store.js?v=20261024b"></script>
-  <script src="assets/js/main.js?v=20261024b"></script>
+  <script src="assets/js/config.js?v=20261025c"></script>
+  <script src="assets/js/auth.js?v=20261025c"></script>
+  <script src="assets/js/icons.js?v=20261025c"></script>
+  <script src="assets/js/store.js?v=20261025c"></script>
+  <script src="assets/js/main.js?v=20261025c"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
