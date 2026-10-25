@@ -1475,10 +1475,10 @@ app.get('/api/referrals/me', requireUser, async (req, res) => {
     }
     const names = new Map(profiles.map(p => [p.id, p.display_name]));
     const investmentTotal = investments.filter(i => ['active','completed'].includes(i.status)).reduce((sum, i) => sum + Number(i.principal_amount || 0), 0);
-    const { data: bonusRows, error: bonusError } = await supabase.from('wallet_ledger').select('amount,reference').eq('user_id', req.user.id).eq('entry_type', 'referral_bonus').eq('status', 'posted');
+    const { data: bonusRows, error: bonusError } = await supabase.from('wallet_ledger').select('amount,reference,entry_type').eq('user_id', req.user.id).in('entry_type', ['referral_bonus','referral_commission']).eq('status', 'posted');
     if (bonusError) throw bonusError;
     // A filleul also receives a welcome bonus; it is not a commission earned by the parrain.
-    // Count only the parrain-side ledger references (legacy REF-* and current REF-BONUS-*).
+    // Count only parrain-side credits, including legacy records and the current 400-FCFA policy.
     const earnedCommissions = (bonusRows || []).filter(row => String(row.reference || '').endsWith('-PARRAIN'));
     return res.json({
       team_size: rows.length,      investment_total: investmentTotal,
