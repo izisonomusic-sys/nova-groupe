@@ -378,7 +378,8 @@
   function render(view){
     if(view==="home")renderHome();if(view==="vip")renderVIP();if(view==="presence")renderPresence();if(view==="investissements")renderInvestments();
     if(view==="historique")renderHistory();if(view==="compte")renderAccount();if(view==="equipe")renderTeam();if(view==="publications")renderNews();
-    if(view==="retrait"){setText("wdAvail",money(wallet.balance));prepareWithdrawalAccountForm("wd");}\n    if(view==="compte-retrait"){prepareWithdrawalAccountForm("wa");}
+    if(view==="retrait"){setText("wdAvail",money(wallet.balance));prepareWithdrawalAccountForm("wd");}
+    if(view==="compte-retrait"){prepareWithdrawalAccountForm("wa");}
   }
   var VIEWS=["home","vip","recharger","retrait","compte-retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
   function route(){
