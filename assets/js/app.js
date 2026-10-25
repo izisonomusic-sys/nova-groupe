@@ -5,7 +5,7 @@
   if(!auth){location.replace("login.html");return;}
   var sr=await auth.auth.getSession(), session=sr.data&&sr.data.session;
   if(sr.error||!session){location.replace("login.html");return;}
-  var user=session.user, profile={}, wallet={balance:0,bonus_balance:0,bonus_locked:0}, projects=[], investments=[], ledger=[];
+  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];
   var currentTab="plans", selectedProject=null, handlersReady=false;
   function el(id){return document.getElementById(id);}
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
@@ -163,7 +163,7 @@
     // The Render snapshot remains a fallback for deployments where a browser query fails.
     var tasks=[
       auth.from('profiles').select('id,member_code,display_name,phone,country_code,role').eq('id',user.id).maybeSingle(),
-      auth.from('wallet_balances').select('balance,bonus_balance,bonus_locked,updated_at').eq('user_id',user.id).maybeSingle(),
+      auth.from('wallet_balances').select('balance,updated_at').eq('user_id',user.id).maybeSingle(),
       auth.from('projects').select('id,slug,title,badge,description,category,image_url,minimum_amount,duration_days,daily_return_amount,return_terms,status').eq('status','published').order('minimum_amount'),
       auth.from('investments').select('id,project_id,principal_amount,status,started_at,ends_at,created_at,projects(title,daily_return_amount,duration_days)').eq('user_id',user.id).order('created_at',{ascending:false}),
       auth.from('wallet_ledger').select('id,entry_type,amount,status,reference,description,created_at,posted_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
@@ -334,7 +334,6 @@
     setText("accSolde",money(wallet.balance));
     setText("accRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("accRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
-    setText("accBonus",money(Number(wallet.bonus_balance)||0));
     setText("accMemberId",String(profile.member_code||"—"));
     setText("accReferralLink",referralLink()||"Lien indisponible");
   }
