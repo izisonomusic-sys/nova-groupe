@@ -591,9 +591,15 @@
     var box=el("notificationList");if(box)box.innerHTML='<p class="muted notification-empty">Chargement…</p>';
     try{
       var data=await api("/api/notifications");
-      renderNotifications(data.notifications||[]);
+      var items=data.notifications||[];
+      renderNotifications(items);
       var count=el("notificationCount");
-      if(count){count.textContent=String(data.unread||0);count.hidden=!(Number(data.unread)>0);}
+      if(items.length){
+        try{
+          await api("/api/notifications/read",{method:"POST",body:JSON.stringify({ids:items.map(function(n){return n.id;})})});
+          if(count){count.textContent="0";count.hidden=true;}
+        }catch(markErr){console.warn("Notification read status:",markErr.message);if(count){count.textContent=String(data.unread||items.length);count.hidden=!(Number(data.unread||items.length)>0);}}
+      }else if(count){count.textContent="0";count.hidden=true;}
     }catch(err){if(box)box.innerHTML='<p class="muted notification-empty">'+esc(err.message||"Notifications indisponibles.")+'</p>';}
   });
   listen("closeNotifications","click",function(){
