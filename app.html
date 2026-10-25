@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261027a" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261027b" />
 </head>
 <body>
 
@@ -283,6 +283,83 @@
       </div>
     </section>
 
+    <!-- ============ VUE : RÈGLES DE LA PLATEFORME ============ -->
+    <section class="view" id="view-regles">
+      <h2 class="view-title"><svg class="ic"><use href="#i-shield"/></svg> Règles de la plateforme</h2>
+      <p class="rules-intro">Pour protéger les membres et garantir un traitement clair des opérations, les règles ci-dessous s'appliquent à tous les comptes TTE Energy.</p>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">₣</div>
+        <div class="platform-rule-content">
+          <h3>1. Recharges et dépôts</h3>
+          <p>Utilisez uniquement les moyens de paiement affichés dans votre espace. TTE Energy n'ajoute pas de frais de recharge dans l'application. Des frais éventuels du prestataire de paiement peuvent s'appliquer et doivent être vérifiés sur son écran de confirmation. Une recharge n'est créditée qu'après confirmation effective du paiement.</p>
+        </div>
+      </article>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">%</div>
+        <div class="platform-rule-content">
+          <h3>2. Frais de retrait</h3>
+          <p>Les frais de retrait sont de <strong>15 % du montant demandé</strong>. Ils sont calculés avant le versement et le montant net est affiché avant confirmation.</p>
+          <div class="rules-example"><span>Exemple pour 2 000 FCFA</span><b>Frais : 300 FCFA · Net estimé : 1 700 FCFA</b></div>
+        </div>
+      </article>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">↗</div>
+        <div class="platform-rule-content">
+          <h3>3. Limites et horaires de retrait</h3>
+          <ul>
+            <li>Retrait minimum : <strong>2 000 FCFA</strong>.</li>
+            <li>Retrait maximum : <strong>5 000 000 FCFA par demande</strong>, sous réserve du solde disponible et des contrôles.</li>
+            <li>Maximum : <strong>4 demandes de retrait par compte et par jour</strong>.</li>
+            <li>Horaires annoncés : <strong>tous les jours de 07 h à 18 h</strong>, heure du Togo (Africa/Lomé).</li>
+            <li>Le retrait reste soumis aux contrôles de sécurité et à la validation requise avant paiement.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">▣</div>
+        <div class="platform-rule-content">
+          <h3>4. Compte de réception</h3>
+          <p>Enregistrez un numéro valide et le nom du titulaire correspondant. Vérifiez soigneusement le pays, l'opérateur et le numéro avant de confirmer une demande. Un moyen de paiement non pris en charge ne pourra pas être utilisé pour un versement automatique.</p>
+        </div>
+      </article>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">◎</div>
+        <div class="platform-rule-content">
+          <h3>5. Conditions de retrait du solde principal</h3>
+          <p>Le solde retirable est déterminé par les opérations réellement confirmées. Les bonus non libérés et les commissions bloquées ne sont pas assimilés au solde principal disponible. Le serveur vérifie également les conditions d'éligibilité du compte avant d'accepter la demande.</p>
+        </div>
+      </article>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">＋</div>
+        <div class="platform-rule-content">
+          <h3>6. Bonus et parrainage</h3>
+          <ul>
+            <li>Bonus de bienvenue : <strong>800 FCFA</strong>, attribué une seule fois selon les contrôles de la plateforme.</li>
+            <li>Bonus de parrainage : <strong>400 FCFA au parrain et 400 FCFA au filleul</strong>, après confirmation d'un dépôt éligible d'au moins <strong>3 000 FCFA</strong>.</li>
+            <li>Le parrainage fonctionne sur un seul niveau. Les comptes artificiels, doublons ou tentatives de fraude peuvent être exclus.</li>
+            <li>Bonus quotidien : <strong>50 FCFA</strong>, selon l'intervalle prévu par la plateforme.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="platform-rule-card">
+        <div class="platform-rule-icon">✓</div>
+        <div class="platform-rule-content">
+          <h3>7. Traitement des demandes et incidents</h3>
+          <p>Une demande affichée « en attente » n'est pas encore un paiement confirmé. En cas de rejet ou d'échec confirmé d'un retrait, le montant réservé est traité selon la procédure de remboursement de la plateforme. Ne transmettez jamais votre mot de passe ni vos codes de validation au service d'assistance.</p>
+        </div>
+      </article>
+
+      <p class="rules-footnote">Ces règles résument le fonctionnement actuellement configuré. Les montants, frais et conditions affichés au moment de confirmer une opération font foi pour cette opération. Contactez l'assistance en cas de différence ou de doute.</p>
+      <a class="btn btn-outline btn-block" href="#/assistance">Contacter l'assistance</a>
+    </section>
+
     <!-- ============ VUE : ÉQUIPE (parrainage) ============ -->
     <section class="view" id="view-equipe">
       <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-users"/></svg> Invitez vos amis &amp; gagnez</h2>
@@ -354,7 +431,7 @@
       </div>
       <div class="account-menu account-menu-secondary">
         <a class="account-menu-item" href="#/publications"><span class="account-menu-icon">ⓘ</span><span>À propos de nous</span><b>›</b></a>
-        <a class="account-menu-item" href="#/assistance"><span class="account-menu-icon">▶</span><span>Règles de la plateforme</span><b>›</b></a>
+        <a class="account-menu-item" href="#/regles"><span class="account-menu-icon">▶</span><span>Règles de la plateforme</span><b>›</b></a>
         <a class="account-menu-item" href="#/assistance"><span class="account-menu-icon">☏</span><span>Service client</span><b>›</b></a>
         <button class="account-menu-item" id="btnLogout" type="button"><span class="account-menu-icon">⏻</span><span>Se déconnecter</span><b>›</b></button>
       </div>
@@ -477,7 +554,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261027a"></script>
+<script src="assets/js/app.js?v=20261027b"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
