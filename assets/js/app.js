@@ -5,7 +5,7 @@
   if(!auth){location.replace("login.html");return;}
   var sr=await auth.auth.getSession(), session=sr.data&&sr.data.session;
   if(sr.error||!session){location.replace("login.html");return;}
-  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];
+  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];\n  var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
   var currentTab="plans", selectedProject=null, handlersReady=false;
   function el(id){return document.getElementById(id);}
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
@@ -282,6 +282,39 @@
     if(ops.indexOf(previous)!==-1)o.value=previous;
     else if(ops.length)o.value=ops[0];
   }
+  async function getWithdrawalAccount(force){
+    if(withdrawalAccountLoaded&&!force)return withdrawalAccount||{};
+    if(withdrawalAccountLoading)return withdrawalAccountLoading;
+    withdrawalAccountLoading=api("/api/member/withdrawal-account").then(function(result){
+      withdrawalAccount=result&&result.account?result.account:null;
+      withdrawalAccountLoaded=true;
+      return withdrawalAccount||{};
+    }).catch(function(err){
+      console.warn("Withdrawal account load:",err.message);
+      throw err;
+    }).finally(function(){withdrawalAccountLoading=null;});
+    return withdrawalAccountLoading;
+  }
+  function applyWithdrawalAccount(prefix,account){
+    if(!account)return;
+    var c=el(prefix+"Country"),o=el(prefix+"Operator"),d=el(prefix+"Dial");
+    if(c&&account.country_code){c.value=account.country_code;fillOperators(prefix);}
+    if(o&&account.operator)o.value=account.operator;
+    if(d&&c)d.value=c.value;
+    var phone=String(account.phone||"").replace(/\\D/g,"");
+    var cc=String((c&&c.value)||account.country_code||"").replace(/\\D/g,"");
+    if(cc&&phone.indexOf(cc)===0)phone=phone.slice(cc.length);
+    var p=el(prefix+"Phone");if(p)p.value=phone;
+    var n=el(prefix+"Name");if(n)n.value=account.account_name||"";
+  }
+  async function prepareWithdrawalAccountForm(prefix){
+    fillWalletForm(prefix);
+    try{var account=await getWithdrawalAccount();if(account&&account.phone)applyWithdrawalAccount(prefix,account);}
+    catch(err){
+      var status=el("withdrawalAccountStatus");
+      if(status&&prefix==="wa")status.textContent="Impossible de charger le compte enregistré. Vérifiez votre connexion puis réessayez.";
+    }
+  }
   function renderPresence(){
     setText("presenceDate",new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}));
     var claims=ledger.filter(x=>x.entry_type==="daily_bonus"&&x.status==="posted");
@@ -344,9 +377,9 @@
   function render(view){
     if(view==="home")renderHome();if(view==="vip")renderVIP();if(view==="presence")renderPresence();if(view==="investissements")renderInvestments();
     if(view==="historique")renderHistory();if(view==="compte")renderAccount();if(view==="equipe")renderTeam();if(view==="publications")renderNews();
-    if(view==="retrait"){setText("wdAvail",money(wallet.balance));fillWalletForm("wd");}
+    if(view==="retrait"){setText("wdAvail",money(wallet.balance));prepareWithdrawalAccountForm("wd");}\n    if(view==="compte-retrait"){prepareWithdrawalAccountForm("wa");}
   }
-  var VIEWS=["home","vip","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
+  var VIEWS=["home","vip","recharger","retrait","compte-retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
   function route(){
     var v=(location.hash||"#/home").replace(/^#\//,"");if(!VIEWS.includes(v))v="home";
     document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+v));
@@ -540,6 +573,26 @@
       }
     }catch(e){S.toast(e.message||"Paiement SoftPay impossible. Aucun solde n'a été crédité.");}
     finally{b.disabled=false;}
+  });
+  listen("btnSaveWithdrawalAccount","click",async function(){
+    var country=el("waCountry").value,operator=el("waOperator").value;
+    var phone=normalizeWalletPhone(country,el("waPhone").value),name=el("waName").value.trim();
+    var statusNode=el("withdrawalAccountStatus"),button=el("btnSaveWithdrawalAccount");
+    if(!operator){S.toast("Choisissez un opérateur.");if(statusNode)statusNode.textContent="Choisissez un opérateur.";return;}
+    if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));if(statusNode)statusNode.textContent=walletPhoneError(country,operator);return;}
+    if(name.length<3){S.toast("Saisissez le nom complet du titulaire.");if(statusNode)statusNode.textContent="Le nom complet du titulaire est requis.";return;}
+    button.disabled=true;if(statusNode)statusNode.textContent="Enregistrement sécurisé en cours…";
+    try{
+      var result=await api("/api/member/withdrawal-account",{method:"PUT",body:JSON.stringify({country_code:country,operator:operator,phone:phone,account_name:name})});
+      withdrawalAccount=result.account||{country_code:country,operator:operator,phone:phone,account_name:name};
+      withdrawalAccountLoaded=true;
+      applyWithdrawalAccount("wd",withdrawalAccount);
+      if(statusNode)statusNode.textContent="Compte de retrait enregistré. Il sera prérempli pour vos prochaines demandes.";
+      S.toast(result.message||"Compte de retrait enregistré.");
+    }catch(err){
+      if(statusNode)statusNode.textContent=err.message||"Impossible d’enregistrer le compte de retrait.";
+      S.toast(err.message||"Impossible d’enregistrer le compte de retrait.");
+    }finally{button.disabled=false;}
   });
   listen("btnWithdraw","click",async function(){
     var amount=Number(el("wdAmount").value),country=el("wdCountry").value,operator=el("wdOperator").value;
