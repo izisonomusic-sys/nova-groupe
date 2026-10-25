@@ -381,7 +381,7 @@
     if(view==="retrait"){setText("wdAvail",money(wallet.balance));prepareWithdrawalAccountForm("wd");}
     if(view==="compte-retrait"){prepareWithdrawalAccountForm("wa");}
   }
-  var VIEWS=["home","vip","recharger","retrait","compte-retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
+  var VIEWS=["home","vip","recharger","retrait","compte-retrait","presence","assistance","regles","equipe","publications","investissements","historique","compte"];
   function route(){
     var v=(location.hash||"#/home").replace(/^#\//,"");if(!VIEWS.includes(v))v="home";
     document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+v));
