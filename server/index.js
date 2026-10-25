@@ -876,6 +876,9 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     return res.status(201).json({
       ok: true,
       withdrawal_id: withdrawalId,
+      amount_requested: amount,
+      fee_amount: Math.ceil(amount * 0.15),
+      payout_amount: amount - Math.ceil(amount * 0.15),
       status: 'pending',
       provider: 'paydunya',
       message: 'Demande reçue. Votre retrait sera envoyé à PayDunya après validation par l’administrateur.'
@@ -1492,7 +1495,7 @@ app.get('/api/referrals/me', requireUser, async (req, res) => {
 app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (_req, res) => {
   try {
     const { data: rows, error } = await supabase.from('withdrawal_requests')
-      .select('id,user_id,amount,country_code,operator,phone,account_name,status,provider,provider_token,provider_status,failure_reason,admin_note,admin_approved_at,admin_rejected_at,created_at,processed_at')
+      .select('id,user_id,amount,fee_amount,payout_amount,country_code,operator,phone,account_name,status,provider,provider_token,provider_status,failure_reason,admin_note,admin_approved_at,admin_rejected_at,created_at,processed_at')
       .eq('status', 'pending')
       .is('admin_approved_at', null)
       .order('created_at', { ascending: true })
