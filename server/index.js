@@ -845,7 +845,7 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
       if (/Insufficient balance|solde insuffisant/i.test(dbMessage)) {
         return res.status(409).json({ error: 'Solde réel insuffisant. Les bonus et commissions bloqués ne sont pas inclus dans le solde retirable.' });
       }
-      if (/Invalid withdrawal amount|Missing withdrawal details|unsupported country|unsupported operator/i.test(dbMessage)) {
+      if (/Invalid withdrawal amount|Le montant doit être compris entre 2 000|Missing withdrawal details|unsupported country|unsupported operator/i.test(dbMessage)) {
         return res.status(400).json({ error: 'Demande de retrait invalide. Vérifiez le montant, le pays et le moyen de paiement.' });
       }
       if (/must invest|invest in at least one project|Vous devez investir/i.test(dbMessage)) {
