@@ -600,6 +600,7 @@
     var panel=el("notificationPanel"),button=el("notificationButton");
     if(panel)panel.hidden=true;if(button)button.setAttribute("aria-expanded","false");
   });
+  api("/api/notifications").then(function(data){var count=el("notificationCount");if(count){count.textContent=String(data.unread||0);count.hidden=!(Number(data.unread)>0);}}).catch(function(err){console.warn("Notification badge:",err.message);});
   listen("btnPresence","click",async function(){
     var b=el("btnPresence");b.disabled=true;
     try{await api("/api/bonus/claim",{method:"POST",body:JSON.stringify({})});await loadAll();renderPresence();renderHome();S.toast("Bonus de 50 FCFA crédité.");}
