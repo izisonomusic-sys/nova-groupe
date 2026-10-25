@@ -5,7 +5,8 @@
   if(!auth){location.replace("login.html");return;}
   var sr=await auth.auth.getSession(), session=sr.data&&sr.data.session;
   if(sr.error||!session){location.replace("login.html");return;}
-  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];\n  var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
+  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];
+  var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
   var currentTab="plans", selectedProject=null, handlersReady=false;
   function el(id){return document.getElementById(id);}
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
@@ -301,8 +302,8 @@
     if(c&&account.country_code){c.value=account.country_code;fillOperators(prefix);}
     if(o&&account.operator)o.value=account.operator;
     if(d&&c)d.value=c.value;
-    var phone=String(account.phone||"").replace(/\\D/g,"");
-    var cc=String((c&&c.value)||account.country_code||"").replace(/\\D/g,"");
+    var phone=String(account.phone||"").replace(/\D/g,"");
+    var cc=String((c&&c.value)||account.country_code||"").replace(/\D/g,"");
     if(cc&&phone.indexOf(cc)===0)phone=phone.slice(cc.length);
     var p=el(prefix+"Phone");if(p)p.value=phone;
     var n=el(prefix+"Name");if(n)n.value=account.account_name||"";
