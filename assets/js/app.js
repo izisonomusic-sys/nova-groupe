@@ -555,7 +555,7 @@
     try{
       var result=await api("/api/withdrawals",{method:"POST",body:JSON.stringify(payload)});
       S.toast(result.message||"Demande de retrait enregistrée.");
-      if(statusNode)statusNode.textContent="Demande enregistrée. Statut : en attente de validation.";
+      if(statusNode)statusNode.textContent="Demande enregistrée. Montant : "+money(result.amount_requested||amount)+" · frais : "+money(result.fee_amount||Math.ceil(amount*0.15))+" · net à payer : "+money(result.payout_amount||amount-Math.ceil(amount*0.15))+". Statut : en attente de validation.";
       el("wdAmount").value="";
       try{await loadAll();}catch(loadError){console.warn("Withdrawal wallet refresh:",loadError.message);}
       setText("wdAvail",money(wallet.balance));
