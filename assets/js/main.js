@@ -57,4 +57,57 @@
   }
   document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");render(t.dataset.tab);});});
   render("plans");
+
+  // Rotating vertical feed backed exclusively by completed withdrawals from the server.
+  (function initWithdrawalActivity(){
+    var card=document.getElementById("withdrawalActivity");
+    var message=document.getElementById("withdrawalActivityMessage");
+    var meta=document.getElementById("withdrawalActivityMeta");
+    if(!card||!message||!meta)return;
+    var entries=[],index=0,timer=null;
+    var countryInfo={
+      "+228":{flag:"🇹🇬",country:"Togo"},
+      "+226":{flag:"🇧🇫",country:"Burkina Faso"},
+      "+229":{flag:"🇧🇯",country:"Bénin"},
+      "+225":{flag:"🇨🇮",country:"Côte d’Ivoire"},
+      "+221":{flag:"🇸🇳",country:"Sénégal"},
+      "+237":{flag:"🇨🇲",country:"Cameroun"},
+      "+223":{flag:"🇲🇱",country:"Mali"}
+    };
+    function paint(){
+      if(!entries.length){
+        message.textContent="Les retraits confirmés apparaîtront ici.";
+        meta.textContent="TTE Energy · activité vérifiée";
+        return;
+      }
+      var item=entries[index%entries.length],info=countryInfo[item.country_code]||{flag:"🌍",country:""};
+      card.classList.add("is-changing");
+      window.setTimeout(function(){
+        message.textContent=item.first_name+" vient d’effectuer un retrait.";
+        meta.textContent=info.flag+" "+(info.country?info.country+" · ":"")+(item.country_code||"")+"  •••• ••••";
+        card.classList.remove("is-changing");
+      },220);
+      index=(index+1)%entries.length;
+    }
+    async function load(){
+      try{
+        var bases=[];
+        [C.apiBase,location.origin].forEach(function(base){base=String(base||"").replace(/\\/$/,"");if(base&&!bases.includes(base))bases.push(base);});
+        var data=null;
+        for(var i=0;i<bases.length&&!data;i++){
+          try{
+            var response=await fetch(bases[i]+"/api/public/withdrawal-activity",{headers:{"Accept":"application/json"},cache:"no-store"});
+            if(response.ok){var parsed=await response.json();if(Array.isArray(parsed.withdrawals))data=parsed.withdrawals;}
+          }catch(_){}
+        }
+        entries=(data||[]).filter(function(x){return x&&typeof x.first_name==="string"&&typeof x.country_code==="string";});
+        index=0;
+        paint();
+        if(timer)window.clearInterval(timer);
+        if(entries.length>1)timer=window.setInterval(paint,4000);
+      }catch(err){console.warn("TTE Energy withdrawal activity:",err.message);}
+    }
+    load();
+    window.setInterval(load,60000);
+  })();
 })();
