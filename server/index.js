@@ -1784,6 +1784,41 @@ app.get('/api/public/projects', async (_req, res) => {
   }
 });
 
+// Public activity feed: show only genuinely paid withdrawals and never expose phone numbers.
+app.get('/api/public/withdrawal-activity', async (_req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'Supabase n’est pas configuré sur le serveur.' });
+    res.setHeader('Cache-Control', 'no-store');
+    const { data: rows, error } = await supabase
+      .from('withdrawal_requests')
+      .select('user_id,country_code')
+      .eq('status', 'paid')
+      .order('created_at', { ascending: false })
+      .limit(12);
+    if (error) throw error;
+    const ids = [...new Set((rows || []).map(row => row.user_id).filter(Boolean))];
+    let profiles = [];
+    if (ids.length) {
+      const result = await supabase.from('profiles').select('id,display_name').in('id', ids);
+      if (result.error) throw result.error;
+      profiles = result.data || [];
+    }
+    const names = new Map(profiles.map(profile => [profile.id, profile.display_name || '']));
+    const withdrawals = (rows || []).map(row => {
+      const fullName = String(names.get(row.user_id) || '').replace(/[\\u0000-\\u001F\\u007F]/g, ' ').trim();
+      const firstName = fullName.split(/\\s+/)[0].slice(0, 32);
+      return {
+        first_name: firstName || 'Un membre',
+        country_code: String(row.country_code || '').slice(0, 8)
+      };
+    });
+    return res.json({ withdrawals });
+  } catch (err) {
+    console.error('[WITHDRAWAL ACTIVITY] public feed error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger les retraits confirmés.' });
+  }
+});
+
 // Investment and bonus endpoints: authenticated identity is taken only from the verified token.
 app.post('/api/investments', requireUser, async (req, res) => {
   try {
