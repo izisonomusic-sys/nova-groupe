@@ -53,7 +53,7 @@
     if(!loaded&&publishedFallback.length)list=publishedFallback.slice();
   }catch(e){console.error("TTE Energy public projects:",e.message);}
   function render(tab){
-    var filtered=list.filter(p=>{var special=String(p.return_terms||"").startsWith("SPECIAL:");return tab==="speciaux"?special:!special;});
+    var filtered=list.filter(p=>{var special=String(p.return_terms||"").startsWith("SPECIAL:");return tab==="speciaux"?special:true;});
     var n=document.getElementById("homePlanList");if(n)n.innerHTML=filtered.length?filtered.map(card).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par TTE Energy.</div>';
   }
   document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");render(t.dataset.tab);});});
