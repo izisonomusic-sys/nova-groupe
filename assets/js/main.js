@@ -39,7 +39,7 @@
     }
     if(!loaded){
       var bases=[];
-      [C.apiBase,location.origin].forEach(function(base){base=String(base||"").replace(/\/$/,"");if(base&&!bases.includes(base))bases.push(base);});
+        [C.apiBase,location.origin].forEach(function(base){base=String(base||"");if(base&&!bases.includes(base))bases.push(base);});
       for(var bi=0;bi<bases.length&&!loaded;bi++){
         try{
           var serverResponse=await fetch(bases[bi]+"/api/public/projects",{headers:{"Accept":"application/json"}});
@@ -92,7 +92,7 @@
     async function load(){
       try{
         var bases=[];
-        [C.apiBase,location.origin].forEach(function(base){base=String(base||"").replace(/\\/$/,"");if(base&&!bases.includes(base))bases.push(base);});
+        [C.apiBase,location.origin].forEach(function(base){base=String(base||"");if(base&&!bases.includes(base))bases.push(base);});
         var data=null;
         for(var i=0;i<bases.length&&!data;i++){
           try{
