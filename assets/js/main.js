@@ -1,4 +1,4 @@
-/* TTE Energy — projets publiés depuis Supabase. */
+/* TTE Energy — catalogue de produits publié depuis Supabase. */
 (async function(){
   "use strict";
   var S=window.NovaStore,A=window.NovaAuth,C=window.NOVA;
@@ -6,7 +6,7 @@
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function card(p){
     var d=Number(p.daily_return_amount)||0,days=Number(p.duration_days)||0,amount=Number(p.minimum_amount)||0;
-    return '<article class="plan"><div class="ph"><img src="'+esc(p.image_url||"assets/img/hero-tte.svg")+'" alt="'+esc(p.title)+'" loading="lazy"><span class="badge">'+esc(p.badge||p.category||"Projet")+'</span></div><div class="pb"><h3>'+esc(p.title)+'</h3><p class="muted">'+esc(p.description||"")+'</p><div class="stats"><div><span>Prix</span><b>'+S.fcn(amount)+'</b></div><div><span>Gain/jour estimé</span><b class="est">'+S.fcn(d)+'</b></div><div><span>Durée</span><b>'+days+' jours</b></div><div><span>Gain total estimé</span><b class="est">'+S.fcn(d*days)+'</b></div></div><a class="btn btn-primary btn-block" href="login.html">Investir maintenant</a></div></article>';
+    return '<article class="plan product-tile"><h3 class="product-tile-title">'+esc(p.badge||p.category||p.title||"Projet")+'</h3><div class="ph"><img src="'+esc(p.image_url||"assets/img/hero-tte.svg")+'" alt="'+esc(p.title)+'" loading="lazy"></div><div class="pb"><h3 class="product-name">'+esc(p.title)+'</h3><p class="muted product-description">'+esc(p.description||"")+'</p><div class="product-metrics"><p>Revenu quotidien: <strong>'+S.fcn(d)+'</strong></p><p>Revenu total: <strong>'+S.fcn(d*days)+'</strong></p><p>Période de validité: <strong>'+days+' jours</strong></p></div><div class="product-buy-row"><b class="product-price">'+S.fcn(amount)+'</b><a class="btn btn-primary product-buy" href="login.html">Acheter</a></div></div></article>';
   }
   var session=null;
   if(A){var r=await A.auth.getSession();session=r.data&&r.data.session;}
