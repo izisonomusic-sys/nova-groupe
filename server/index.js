@@ -1431,6 +1431,28 @@ app.get('/api/admin/stats', requireUser, requireAdmin, async (_req, res) => {
   }
 });
 
+app.get('/api/notifications', requireUser, async (req, res) => {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase.from('wallet_ledger')
+      .select('id,entry_type,amount,status,description,created_at')
+      .eq('user_id', req.user.id)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(15);
+    if (error) throw error;
+    const rows = data || [];
+    const unread = rows.filter(row => new Date(row.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000).length;
+    return res.json({ ok: true, unread, notifications: rows.map(row => ({
+      id: row.id, title: row.description || row.entry_type, entry_type: row.entry_type,
+      amount: Number(row.amount || 0), status: row.status, created_at: row.created_at
+    })) });
+  } catch (err) {
+    console.error('[NOTIFICATIONS] read error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger les notifications.' });
+  }
+});
+
 app.get('/api/referrals/me', requireUser, async (req, res) => {
   try {
     const { data: referrals, error } = await supabase.from('referrals')
