@@ -239,7 +239,7 @@
   function renderPlans(tab){
     currentTab=tab||"plans";
     var source=projects.length?projects:(Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback:[]);
-    var list=source.filter(function(p){var special=String(p.return_terms||"").startsWith("SPECIAL:");return currentTab==="speciaux" ? special : !special;});
+    var list=source.filter(function(p){var special=String(p.return_terms||"").startsWith("SPECIAL:");return currentTab==="speciaux" ? special : true;});
     var n=el("planListHome");
     if(n)n.innerHTML=list.length?list.map(planCard).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par NOVA.</div>';
   }
@@ -248,11 +248,16 @@
     setText("balSolde",money(bal));
     setText("balRevenus",money(ledger.filter(x=>x.entry_type==="investment_income"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
     setText("balRecharge",money(ledger.filter(x=>x.entry_type==="deposit"&&x.status==="posted").reduce((s,x)=>s+Number(x.amount),0)));
-    setText("balBonus",money(Number(wallet.bonus_balance)||0));
     if(!projects.length && Array.isArray(C.publishedProjectsFallback) && C.publishedProjectsFallback.length){
       projects=C.publishedProjectsFallback.slice();
     }
     renderPlans(currentTab);fillWalletForm("rc");
+  }
+  function renderVIP(){
+    var source=projects.length?projects:(Array.isArray(C.publishedProjectsFallback)?C.publishedProjectsFallback:[]);
+    var n=el("planListVIP");
+    setText("vipProjectCount",source.length+" projet"+(source.length>1?"s":"")+" publié"+(source.length>1?"s":""));
+    if(n)n.innerHTML=source.length?source.map(planCard).join(""):'<div class="empty"><strong>Aucun projet publié pour le moment.</strong><br>Les projets apparaîtront ici après leur publication par TTE Energy.</div>';
   }
   function fillWalletForm(prefix){
     var c=el(prefix+"Country"),o=el(prefix+"Operator"),d=el(prefix+"Dial");
@@ -337,11 +342,11 @@
     var n=el("newsList");if(n)n.innerHTML=(C.news||[]).map(x=>'<article class="news-card"><img src="'+esc(x.img)+'" alt="" loading="lazy"><div class="news-body"><div class="meta"><span class="badge">'+esc(x.tag)+'</span><span>'+esc(x.date)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p></div></article>').join("");
   }
   function render(view){
-    if(view==="home")renderHome();if(view==="presence")renderPresence();if(view==="investissements")renderInvestments();
+    if(view==="home")renderHome();if(view==="vip")renderVIP();if(view==="presence")renderPresence();if(view==="investissements")renderInvestments();
     if(view==="historique")renderHistory();if(view==="compte")renderAccount();if(view==="equipe")renderTeam();if(view==="publications")renderNews();
     if(view==="retrait"){setText("wdAvail",money(wallet.balance));fillWalletForm("wd");}
   }
-  var VIEWS=["home","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
+  var VIEWS=["home","vip","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
   function route(){
     var v=(location.hash||"#/home").replace(/^#\//,"");if(!VIEWS.includes(v))v="home";
     document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+v));
