@@ -55,23 +55,23 @@
     </div>
   </section>
 
-  <!-- Activité de retraits : reste visible dans toutes les vues de l'espace membre. -->
-  <section class="withdrawal-activity-wrap member-withdrawal-activity container" aria-label="Retraits récemment confirmés">
-    <div class="withdrawal-activity" id="memberWithdrawalActivity" aria-live="polite" aria-atomic="true">
-      <div class="withdrawal-activity__icon" aria-hidden="true">↗</div>
-      <div class="withdrawal-activity__content">
-        <span class="withdrawal-activity__label">RETRAITS CONFIRMÉS</span>
-        <p class="withdrawal-activity__message" id="memberWithdrawalActivityMessage">Les retraits confirmés apparaîtront ici.</p>
-        <p class="withdrawal-activity__meta" id="memberWithdrawalActivityMeta">TTE Energy · activité vérifiée</p>
-      </div>
-      <span class="withdrawal-activity__live" aria-hidden="true"></span>
-    </div>
-  </section>
-
   <div class="app-content">
 
     <!-- ============ VUE : ACCUEIL ============ -->
     <section class="view" id="view-home">
+      <!-- Activité de retraits : affichée uniquement sur la vue Accueil. -->
+      <section class="withdrawal-activity-wrap member-withdrawal-activity container" aria-label="Retraits récemment confirmés">
+      <div class="withdrawal-activity" id="memberWithdrawalActivity" aria-live="polite" aria-atomic="true">
+      <div class="withdrawal-activity__icon" aria-hidden="true">↗</div>
+      <div class="withdrawal-activity__content">
+      <span class="withdrawal-activity__label">RETRAITS CONFIRMÉS</span>
+      <p class="withdrawal-activity__message" id="memberWithdrawalActivityMessage">Les retraits confirmés apparaîtront ici.</p>
+      <p class="withdrawal-activity__meta" id="memberWithdrawalActivityMeta">TTE Energy · activité vérifiée</p>
+      </div>
+      <span class="withdrawal-activity__live" aria-hidden="true"></span>
+      </div>
+      </section>
+
       <div class="balances">
         <div class="bal-card solde"><span>Solde</span><b id="balSolde">0 FCFA</b></div>
         <div class="bal-card revenus"><span>Revenus</span><b id="balRevenus">0 FCFA</b></div>
@@ -567,7 +567,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261027d"></script>
+<script src="assets/js/app.js?v=20261027e"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
