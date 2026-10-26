@@ -11,8 +11,8 @@
   "theme_color": "#D4AF37",
   "orientation": "portrait-primary",
   "icons": [
-    {"src": "assets/img/icons/tte-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
-    {"src": "assets/img/icons/tte-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
+    {"src": "assets/img/icons/tte-icon.svg?v=20261027a", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "assets/img/icons/tte-icon.svg?v=20261027a", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"}
   ],
   "categories": ["business", "finance"]
 }

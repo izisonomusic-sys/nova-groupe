@@ -6,7 +6,7 @@
   <title>Administration — TTE Energy</title>
   <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" type="image/svg+xml" sizes="any" href="assets/img/icons/tte-icon.svg" />
+  <link rel="icon" type="image/svg+xml" sizes="any" href="assets/img/icons/tte-icon.svg?v=20261027a" />
   <link rel="apple-touch-icon" href="assets/img/icons/tte-icon.svg" />
   <meta name="theme-color" content="#0B0B0C" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -169,11 +169,11 @@
           <div class="field">
             <label for="pImg">Image</label>
             <select class="select" id="pImg">
-              <option value="https://upload.wikimedia.org/wikipedia/commons/d/d6/Pumpjacks.JPG">Champ pétrolier — pompes à pétrole</option>
-              <option value="https://upload.wikimedia.org/wikipedia/commons/c/ca/Fuel_Barrels.JPG">Barils de carburant / essence</option>
-              <option value="https://commons.wikimedia.org/wiki/Special:FilePath/3%20Jerrycans.JPG?width=1600">Bidons de carburant</option>
-              <option value="https://live.staticflickr.com/65535/54085005965_9cb2b9962b_o.jpg">Champ de panneaux solaires</option>
-              <option value="assets/img/projet-vent.jpg">Parc éolien</option>
+              <option data-category="petroleum" value="https://upload.wikimedia.org/wikipedia/commons/c/ca/Fuel_Barrels.JPG">Huile — fûts et stockage</option>
+              <option data-category="fuel" value="https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&amp;fit=crop&amp;w=1400&amp;q=85">Station-service</option>
+              <option data-category="petroleum" value="https://upload.wikimedia.org/wikipedia/commons/d/d6/Pumpjacks.JPG">Pétrole — champ de pompes</option>
+              <option data-category="wind" value="https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&amp;fit=crop&amp;w=1400&amp;q=85">Éolien — parc d’éoliennes</option>
+              <option data-category="solar" value="https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&amp;fit=crop&amp;w=1400&amp;q=85">Solaire — panneaux photovoltaïques</option>
             </select>
           </div>
         </div>
@@ -215,7 +215,7 @@
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/icons.js"></script>
   <script src="assets/js/store.js"></script>
-  <script src="assets/js/admin.js?v=20261026d"></script>
+  <script src="assets/js/admin.js?v=20261027a"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>

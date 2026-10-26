@@ -1,5 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1B8"/><stop offset=".5" stop-color="#D4AF37"/><stop offset="1" stop-color="#B8860B"/></linearGradient></defs>
-<rect width="512" height="512" rx="96" fill="#090909"/><circle cx="256" cy="224" r="168" fill="none" stroke="#D4AF37" stroke-opacity=".28" stroke-width="5"/>
-<g fill="none" stroke="url(#g)" stroke-linecap="round" stroke-linejoin="round"><path d="M78 344H434" stroke-width="13"/><path d="M106 334V238H150V334M116 238V205H140V238M128 205V181M150 274H183V334" stroke-width="13"/><path d="M183 334V275H220V334M192 275V245H211V275M201 245V220" stroke-width="11"/><path d="M323 334V226M323 226L282 185M323 226L369 211M323 226L312 275" stroke-width="14"/><circle cx="323" cy="226" r="13" fill="#D4AF37" stroke="none"/><path d="M323 213L332 140Q334 130 344 137L363 148M310 233L246 272Q237 278 232 268L224 247M336 233L392 282Q400 290 392 298L377 308" stroke-width="13"/></g>
-<text x="256" y="408" text-anchor="middle" fill="#F9E7A0" font-family="Arial,sans-serif" font-size="59" font-weight="800" letter-spacing="10">TTE</text><text x="256" y="451" text-anchor="middle" fill="#D4AF37" font-family="Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="10">ENERGY</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="512" height="512" role="img" aria-labelledby="title desc">
+  <title id="title">TTE Energy</title>
+  <desc id="desc">Symbole doré associant une installation pétrolière et une éolienne sur fond noir.</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1B8"/><stop offset=".45" stop-color="#D4AF37"/><stop offset="1" stop-color="#B8860B"/></linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="48" fill="#090909"/>
+  <circle cx="160" cy="148" r="105" fill="none" stroke="#D4AF37" stroke-opacity=".24" stroke-width="2"/>
+  <g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M48 224H272" stroke-width="7"/>
+    <path d="M64 218V164H91V218M70 164V145H85V164M77 145V130M91 183H111V218" stroke-width="7"/>
+    <path d="M111 218V184H132V218M117 184V166H126V184M122 166V148" stroke-width="6"/>
+    <path d="M199 218V150M199 150L176 127M199 150L226 141M199 150L192 179" stroke-width="7"/>
+    <circle cx="199" cy="150" r="7" fill="#D4AF37" stroke="none"/>
+    <path d="M199 143L204 96Q205 91 210 94L221 100M192 154L155 176Q150 179 147 174L143 162M206 154L238 183Q242 187 238 191L229 197" stroke-width="7"/>
+    <path d="M146 238H174M160 238V252M116 252H204" stroke-width="5"/>
+  </g>
+  <text x="160" y="280" text-anchor="middle" fill="#F9E7A0" font-family="Arial,sans-serif" font-size="25" font-weight="800" letter-spacing="4">TTE</text>
+  <text x="160" y="300" text-anchor="middle" fill="#D4AF37" font-family="Arial,sans-serif" font-size="9" font-weight="700" letter-spacing="3">ENERGY</text>
+</svg>
