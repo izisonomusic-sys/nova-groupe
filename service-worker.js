@@ -1,4 +1,4 @@
-const CACHE_NAME = "tte-pwa-v26-20261027a";
+const CACHE_NAME = "tte-pwa-v27-20261028a";
 const SHELL = [
   "./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html",
   "./manifest.webmanifest",
@@ -6,9 +6,11 @@ const SHELL = [
   "./assets/js/config.js?v=20261026a", "./assets/js/icons.js?v=20261026a",
   "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261027c",
   "./assets/js/auth.js?v=20261026a", "./assets/js/app.js?v=20261027e",
-  "./assets/js/admin.js?v=20261027a",
+  "./assets/js/admin.js?v=20261028a",
   "./assets/img/logo.svg", "./assets/img/hero-tte.svg",
-  "./assets/img/icons/tte-icon.svg", "./assets/img/icons/tte-icon.svg?v=20261027a"
+  "./assets/img/icons/tte-icon.svg", "./assets/img/icons/tte-icon.svg?v=20261027a",
+  "./assets/img/projects/futs-huile.svg?v=20261028a", "./assets/img/projects/bidon-essence-5l.svg?v=20261028a",
+  "./assets/img/projects/bidon-essence-10l.svg?v=20261028a", "./assets/img/projects/bidon-essence-20l.svg?v=20261028a"
 ];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)));
