@@ -302,7 +302,37 @@ footer { background: var(--dark1); color: #aab1d6; margin-top: 80px; }
 .h-name { font-size: 14px; font-weight: 700; }
 .h-name small { display: block; font-size: 11px; font-weight: 500; color: #aab1d6; }
 
-.app-hero { background: var(--header-grad); color: #fff; padding: 4px 18px 22px; margin-top: -4px; }
+.app-hero { position: relative; isolation: isolate; overflow: hidden; background: #090909; color: #fff; padding: 4px 18px 22px; margin-top: -4px; border-radius: 0 0 20px 20px; }
+.app-hero::before,
+.app-hero::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background-position: center; background-size: cover; background-repeat: no-repeat;
+  pointer-events: none; will-change: opacity;
+}
+.app-hero::before {
+  background-image: linear-gradient(110deg, rgba(5,5,5,.88) 0%, rgba(5,5,5,.70) 52%, rgba(5,5,5,.48) 100%), url("https://www.lubuniversal.com/35874-large_default/huile-moteur-total-rubia-optima-1100-fe-10w30.jpg");
+  animation: tte-hero-oil 120s ease-in-out infinite;
+}
+.app-hero::after {
+  background-image: linear-gradient(110deg, rgba(5,5,5,.88) 0%, rgba(5,5,5,.70) 52%, rgba(5,5,5,.48) 100%), url("https://www.goafricaonline.com/uploads/media/default/0002/74/6229cf0c47266-1.JPG");
+  animation: tte-hero-station 120s ease-in-out infinite;
+}
+.app-hero-inner { position: relative; z-index: 0; }
+@keyframes tte-hero-oil {
+  0%, 46% { opacity: 1; }
+  50%, 96% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes tte-hero-station {
+  0%, 46% { opacity: 0; }
+  50%, 96% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-hero::before, .app-hero::after { animation: none; }
+  .app-hero::before { opacity: 1; }
+  .app-hero::after { opacity: 0; }
+}
 .app-hero .greet { display: flex; align-items: center; gap: 12px; }
 .app-hero .logo img { width: 42px; height: 42px; border-radius: 12px; background: #fff; }
 .app-hero h2 { font-size: 19px; font-weight: 800; }
