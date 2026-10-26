@@ -44,7 +44,7 @@
       try{
         var bases=[];
         [location.origin,C.apiBase].forEach(function(base){
-          base=String(base||"").trim().replace(/\\/$/,"");
+          base=String(base||"").trim().replace(/\/$/,"");
           if(base&&!bases.includes(base))bases.push(base);
         });
         var data=null;
