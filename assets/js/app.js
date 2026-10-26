@@ -8,6 +8,65 @@
   var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];
   var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
   var currentTab="plans", selectedProject=null, handlersReady=false;
+
+  // Public activity feed, independent of member authentication and visible throughout the member shell.
+  (function initMemberWithdrawalActivity(){
+    var card=document.getElementById("memberWithdrawalActivity");
+    var message=document.getElementById("memberWithdrawalActivityMessage");
+    var meta=document.getElementById("memberWithdrawalActivityMeta");
+    if(!card||!message||!meta)return;
+    var entries=[],index=0,timer=null;
+    var countryInfo={
+      "+228":{flag:"🇹🇬",country:"Togo"},
+      "+226":{flag:"🇧🇫",country:"Burkina Faso"},
+      "+229":{flag:"🇧🇯",country:"Bénin"},
+      "+225":{flag:"🇨🇮",country:"Côte d’Ivoire"},
+      "+221":{flag:"🇸🇳",country:"Sénégal"},
+      "+237":{flag:"🇨🇲",country:"Cameroun"},
+      "+223":{flag:"🇲🇱",country:"Mali"}
+    };
+    function paint(){
+      if(!entries.length){
+        message.textContent="Les retraits confirmés apparaîtront ici.";
+        meta.textContent="TTE Energy · activité vérifiée";
+        return;
+      }
+      var item=entries[index%entries.length],info=countryInfo[item.country_code]||{flag:"🌍",country:""};
+      card.classList.add("is-changing");
+      window.setTimeout(function(){
+        message.textContent=item.first_name+" vient d’effectuer un retrait.";
+        meta.textContent=info.flag+" "+(info.country?info.country+" · ":"")+(item.country_code||"")+"  •••• ••••";
+        card.classList.remove("is-changing");
+      },220);
+      index=(index+1)%entries.length;
+    }
+    async function load(){
+      try{
+        var bases=[];
+        [location.origin,C.apiBase].forEach(function(base){
+          base=String(base||"").trim().replace(/\/$/,"");
+          if(base&&!bases.includes(base))bases.push(base);
+        });
+        var data=null;
+        for(var i=0;i<bases.length&&!data;i++){
+          try{
+            var response=await fetch(bases[i]+"/api/public/withdrawal-activity",{headers:{"Accept":"application/json"},cache:"no-store"});
+            if(response.ok){
+              var parsed=await response.json();
+              if(Array.isArray(parsed.withdrawals))data=parsed.withdrawals;
+            }
+          }catch(_){}
+        }
+        entries=(data||[]).filter(function(x){return x&&typeof x.first_name==="string"&&typeof x.country_code==="string";});
+        index=0;
+        paint();
+        if(timer)window.clearInterval(timer);
+        if(entries.length>1)timer=window.setInterval(paint,4000);
+      }catch(err){console.warn("TTE Energy member withdrawal activity:",err.message);}
+    }
+    load();
+    window.setInterval(load,60000);
+  })();
   function el(id){return document.getElementById(id);}
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}

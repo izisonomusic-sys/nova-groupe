@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261027b" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261027c" />
 </head>
 <body>
 
@@ -52,6 +52,19 @@
         <a class="app-hero-cta" href="#/vip">Découvrir les projets <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>
       <div class="app-hero-foot"><span>◆ Pétrole & infrastructures</span><span>◆ Énergie éolienne</span><span>◆ Vision durable</span><span class="hero-photo-credit"><a href="https://commons.wikimedia.org/wiki/File:Pumpjacks.JPG">Photo : Arne Hückelheim / Wikimedia Commons (CC BY-SA 3.0)</a></span></div>
+    </div>
+  </section>
+
+  <!-- Activité de retraits : reste visible dans toutes les vues de l'espace membre. -->
+  <section class="withdrawal-activity-wrap member-withdrawal-activity container" aria-label="Retraits récemment confirmés">
+    <div class="withdrawal-activity" id="memberWithdrawalActivity" aria-live="polite" aria-atomic="true">
+      <div class="withdrawal-activity__icon" aria-hidden="true">↗</div>
+      <div class="withdrawal-activity__content">
+        <span class="withdrawal-activity__label">RETRAITS CONFIRMÉS</span>
+        <p class="withdrawal-activity__message" id="memberWithdrawalActivityMessage">Les retraits confirmés apparaîtront ici.</p>
+        <p class="withdrawal-activity__meta" id="memberWithdrawalActivityMeta">TTE Energy · activité vérifiée</p>
+      </div>
+      <span class="withdrawal-activity__live" aria-hidden="true"></span>
     </div>
   </section>
 
@@ -554,7 +567,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261027b"></script>
+<script src="assets/js/app.js?v=20261027d"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
