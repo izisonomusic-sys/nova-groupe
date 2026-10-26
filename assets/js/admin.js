@@ -98,11 +98,11 @@
   });
   function draft(){
     var title=$("pTitle").value.trim(),slug=title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-    return {title:title,slug:slug,badge:$("pBadge").value.trim(),description:$("pDesc").value.trim(),category:$("pType").value==="1"?"other":categoryFromImage($("pImg").value),
+    return {title:title,slug:slug,badge:$("pBadge").value.trim(),description:$("pDesc").value.trim(),category:$("pType").value==="1"?"other":selectedImageCategory(),
       minimum_amount:Number($("pPrice").value),daily_return_amount:Number($("pDaily").value),duration_days:Number($("pDays").value),
       image_url:$("pImg").value,return_terms:($("pType").value==="1"?"SPECIAL: ":"")+"Rendement estimatif affiché à titre indicatif."};
   }
-  function categoryFromImage(img){var s=String(img||"").toLowerCase();if(/pumpjacks|oilfield|petrol|pétrole/.test(s))return "petroleum";if(/fuel_barrels|fuel|jerrycans|carburant|essence/.test(s))return "fuel";if(/vent|wind/.test(s))return "wind";if(/solar|solaire|photovoltaic|panneau/.test(s))return "solar";return "petroleum";}
+  function selectedImageCategory(){var select=$("pImg"),option=select.options[select.selectedIndex];return option&&option.dataset.category||"petroleum";}
   function preview(){
     var d=draft(),total=(d.daily_return_amount||0)*(d.duration_days||0);
     $("previewCard").innerHTML='<article class="plan-card"><div class="plan-head"><img src="'+esc(d.image_url)+'" alt=""><span class="badge">'+esc($("pBadge").value.trim()||"Projet")+'</span></div><div class="plan-body"><h3>'+esc(d.title||"Titre du projet")+'</h3><p class="desc">'+esc(d.description||"Description du projet")+'</p><div class="plan-stats"><div class="plan-stat"><span>Prix</span><b>'+money(d.minimum_amount)+'</b></div><div class="plan-stat"><span>Gain/jour</span><b>'+money(d.daily_return_amount)+'</b></div><div class="plan-stat"><span>Durée</span><b>'+d.duration_days+' jours</b></div><div class="plan-stat"><span>Gain total estimé</span><b>'+money(total)+'</b></div></div></div></article>';
@@ -119,7 +119,7 @@
   });
   function card(p){
     var status=p.status==="published",category=p.category==="special"?"Plan spécial":p.category==="petroleum"?"Pétrole":p.category==="fuel"?"Carburants":p.category==="solar"?"Solaire":p.category==="wind"?"Éolien":p.category==="agriculture"?"Agriculture":p.category;
-    return '<div class="admin-row"><img class="ar-img" src="'+esc(p.image_url||"assets/img/projet-solaire.jpg")+'" alt=""><div class="ar-info"><span class="badge">'+esc(p.badge||category)+'</span><b>'+esc(p.title)+'</b><small>'+esc(p.description)+'</small></div><div class="ar-right"><div class="ar-stats"><div class="ar-stat"><span>Investissement</span><b>'+money(p.minimum_amount)+'</b></div><div class="ar-stat"><span>Gain/jour</span><b>'+money(p.daily_return_amount)+'</b></div><div class="ar-stat"><span>Durée</span><b>'+p.duration_days+' j</b></div></div><div class="ar-actions"><span class="badge '+(status?"badge-teal":"badge-amber")+'">'+(status?"Publié":"Masqué")+'</span><button class="btn btn-sm btn-outline" data-toggle="'+esc(p.id)+'">'+(status?"Masquer":"Publier")+'</button><button class="btn btn-sm btn-danger" data-del="'+esc(p.id)+'">Supprimer</button></div></div></div>';
+    return '<div class="admin-row"><img class="ar-img" src="'+esc(p.image_url||"assets/img/logo.svg")+'" alt=""><div class="ar-info"><span class="badge">'+esc(p.badge||category)+'</span><b>'+esc(p.title)+'</b><small>'+esc(p.description)+'</small></div><div class="ar-right"><div class="ar-stats"><div class="ar-stat"><span>Investissement</span><b>'+money(p.minimum_amount)+'</b></div><div class="ar-stat"><span>Gain/jour</span><b>'+money(p.daily_return_amount)+'</b></div><div class="ar-stat"><span>Durée</span><b>'+p.duration_days+' j</b></div></div><div class="ar-actions"><span class="badge '+(status?"badge-teal":"badge-amber")+'">'+(status?"Publié":"Masqué")+'</span><button class="btn btn-sm btn-outline" data-toggle="'+esc(p.id)+'">'+(status?"Masquer":"Publier")+'</button><button class="btn btn-sm btn-danger" data-del="'+esc(p.id)+'">Supprimer</button></div></div></div>';
   }
   async function loadProjects(){
     var data=await request("/api/admin/projects");var list=data.projects||[];
