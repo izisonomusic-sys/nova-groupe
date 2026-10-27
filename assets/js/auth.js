@@ -5,6 +5,25 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   window.NovaAuth = client;
+
+  // Route entry points safely: the public root opens registration, while active members
+  // return to their private app. Supabase keeps the session in its normal persistent store.
+  var pageName = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  if (pageName === 'index.html' || pageName === '') {
+    client.auth.getSession().then(function (result) {
+      var activeSession = result.data && result.data.session;
+      var destination = activeSession ? 'app.html' : 'register.html' + location.search;
+      if (location.pathname !== '/' || location.href.indexOf(destination) === -1) {
+        location.replace(destination);
+      }
+    }).catch(function () {
+      location.replace('register.html' + location.search);
+    });
+  } else if ((pageName === 'register.html' || pageName === 'login.html')) {
+    client.auth.getSession().then(function (result) {
+      if (result.data && result.data.session) location.replace('app.html');
+    }).catch(function () {});
+  }
   var countrySel = document.getElementById('country');
   var dialSel = document.getElementById('dial');
   if (countrySel) {
