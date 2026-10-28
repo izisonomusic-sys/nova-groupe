@@ -473,16 +473,19 @@
 </div><!-- /app-shell -->
 
 <!-- ===================== MODALE BIENVENUE ===================== -->
-<div class="modal-overlay" id="welcomeModal">
-  <div class="modal">
-    <div class="m-ic mi-teal"><svg class="ic ic-lg"><use href="#i-whatsapp"/></svg></div>
-    <h3>Bienvenue chez TTE Energy !</h3>
+<div class="modal-overlay" id="welcomeModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="m-ic mi-teal"><svg class="ic ic-lg"><use href="#i-users"/></svg></div>
+    <h3 id="welcomeTitle">Bienvenue chez TTE Energy !</h3>
     <p>Votre compte a été créé. Rejoignez notre communauté pour recevoir les actualités et les informations importantes, ou continuez plus tard.</p>
     <div class="m-actions">
-      <a class="btn btn-primary btn-block" id="welcomeWa" href="#" target="_blank" rel="noopener">
-        <svg class="ic ic-sm"><use href="#i-whatsapp"/></svg> Rejoindre la communauté
+      <a class="btn btn-primary btn-block" id="welcomeTelegram" href="#" target="_blank" rel="noopener">
+        <svg class="ic ic-sm"><use href="#i-telegram"/></svg> Rejoindre la communauté Telegram
       </a>
-      <button class="btn btn-outline btn-block" id="welcomeLater">Plus tard</button>
+      <a class="btn btn-outline btn-block" id="welcomeWa" href="#" target="_blank" rel="noopener">
+        <svg class="ic ic-sm"><use href="#i-whatsapp"/></svg> Rejoindre la communauté WhatsApp
+      </a>
+      <button class="btn btn-outline btn-block" id="welcomeLater" type="button">Plus tard</button>
     </div>
   </div>
 </div>
@@ -547,7 +550,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/js/config.js?v=20261026a"></script>
+<script src="assets/js/config.js?v=20261028c"></script>
 <script src="assets/js/auth.js?v=20261028b"></script>
 <script src="assets/js/icons.js?v=20261026a"></script>
 <script src="assets/js/store.js?v=20261026a"></script>
@@ -567,7 +570,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261028b"></script>
+<script src="assets/js/app.js?v=20261028c"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
