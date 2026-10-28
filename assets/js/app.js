@@ -17,7 +17,7 @@
     location.replace("login.html?blocked=1");
     return;
   }
-  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];
+  var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[], withdrawals=[];
   var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
   var currentTab="plans", selectedProject=null, handlersReady=false;
 
@@ -430,6 +430,41 @@
       var n=el("teamList");if(n)n.innerHTML=(team.referrals||[]).length?team.referrals.map(function(r){return '<div class="hist-item"><span class="h-ic h-in">↗</span><div class="h-info"><b>'+esc(r.display_name||"Membre NOVA")+'</b><span>'+esc(S.dateFr(r.created_at))+' · '+esc(r.status||"inscrit")+'</span></div><span class="h-amt">'+money(r.bonus_amount||0)+'</span></div>';}).join(""):'<p class="empty">Aucun filleul pour le moment.</p>';
     }catch(err){console.warn("Referral dashboard:",err.message);setText("teamSize","0");setText("teamL1","0");setText("teamInvest",money(0));setText("teamComm",money(0));}
   }
+  async function renderWithdrawalDetails(){
+    var container=el("withdrawalTrackingList");if(!container)return;
+    container.innerHTML='<p class="empty">Chargement de vos retraits…</p>';
+    try{
+      var result=await api("/api/member/withdrawals",{method:"GET"});
+      withdrawals=Array.isArray(result.withdrawals)?result.withdrawals:[];
+      if(!withdrawals.length){container.innerHTML='<div class="card-flat"><p class="empty">Vous n’avez pas encore effectué de demande de retrait.</p><a class="btn btn-primary btn-block mt-2" href="#/retrait">Demander un retrait</a></div>';return;}
+      function step(title,description,state){
+        var icon=state==="done"?"✓":state==="current"?"•":state==="failed"?"!":"○";
+        var color=state==="done"?"#16845b":state==="current"?"#b7791f":state==="failed"?"#c53030":"#9ca3af";
+        return '<div class="withdrawal-step withdrawal-step--'+state+'"><span class="withdrawal-step__icon" style="border-color:'+color+';color:'+color+'">'+icon+'</span><div class="withdrawal-step__body"><strong>'+esc(title)+'</strong><span>'+esc(description)+'</span></div></div>';
+      }
+      container.innerHTML=withdrawals.map(function(w){
+        var status=String(w.status||"pending").toLowerCase();
+        var submitted=!["cancelled","canceled"].includes(status);
+        var processing=["processing","paid"].includes(status);
+        var paid=status==="paid";
+        var failed=["rejected","cancelled","canceled","failed"].includes(status);
+        var date=w.created_at?S.dateFr(w.created_at):"Date indisponible";
+        var statusLabel=paid?"Retrait réussi":failed?(status==="cancelled"||status==="canceled"?"Demande annulée":"Retrait refusé ou échoué"):processing?"Paiement en cours":"En attente d’examen";
+        var statusColor=paid?"#16845b":failed?"#c53030":"#b7791f";
+        var info=failed?(w.failure_reason||"Cette demande n’a pas abouti. Contactez l’assistance si vous avez besoin d’aide."):
+          paid?"Le paiement est confirmé par le système.":processing?"La demande a été validée et transmise pour paiement.":"Votre demande a été reçue et attend son traitement par l’administration.";
+        var timeline=step("Demande de retrait soumise",date,submitted?"done":"failed")+
+          step("En cours d’examen","Statut : "+(processing?"validée et transmise":failed?"interrompue":"en attente"),failed?"failed":processing?"done":"current")+
+          step("Retrait réussi",paid?"Paiement confirmé":failed?"Non effectué":"En attente de confirmation du paiement",paid?"done":failed?"failed":"pending");
+        var net=w.payout_amount!=null?Number(w.payout_amount):Math.max(0,Number(w.amount||0)-Number(w.fee_amount||0));
+        return '<article class="withdrawal-tracking-card"><div class="withdrawal-tracking-card__head"><div><span class="muted" style="font-size:12px">DEMANDE DU '+esc(date)+'</span><h3 style="margin-top:4px">'+money(w.amount||0)+'</h3></div><span class="withdrawal-status" style="color:'+statusColor+';border-color:'+statusColor+'">'+esc(statusLabel)+'</span></div><div class="withdrawal-tracking-card__meta"><span>Montant net estimé : <strong>'+money(net)+'</strong></span><span>Référence : <strong>'+esc(String(w.id||"").slice(0,8).toUpperCase()||"—")+'</strong></span></div><div class="withdrawal-timeline">'+timeline+'</div><p class="withdrawal-tracking-note">'+esc(info)+'</p></article>';
+      }).join("");
+    }catch(err){
+      console.warn("Withdrawal tracking load:",err.message);
+      container.innerHTML='<div class="card-flat"><p class="muted">Impossible de charger les détails de vos retraits pour le moment.</p><button class="btn btn-outline btn-block mt-2" id="retryWithdrawalTracking" type="button">Réessayer</button></div>';
+      var retry=el("retryWithdrawalTracking");if(retry)retry.addEventListener("click",renderWithdrawalDetails);
+    }
+  }
   function renderAccount(){
     var name=profile.display_name||(user.user_metadata&&user.user_metadata.full_name)||"Membre TTE Energy";
     var code=String(profile.member_code||"").trim(), link=referralLink();
@@ -451,8 +486,9 @@
     if(view==="historique")renderHistory();if(view==="compte")renderAccount();if(view==="equipe")renderTeam();if(view==="publications")renderNews();
     if(view==="retrait"){setText("wdAvail",money(wallet.balance));prepareWithdrawalAccountForm("wd");}
     if(view==="compte-retrait"){prepareWithdrawalAccountForm("wa");}
+    if(view==="details-retrait"){renderWithdrawalDetails();}
   }
-  var VIEWS=["home","vip","recharger","retrait","compte-retrait","presence","assistance","regles","equipe","publications","investissements","historique","compte"];
+  var VIEWS=["home","vip","recharger","retrait","compte-retrait","details-retrait","presence","assistance","regles","equipe","publications","investissements","historique","compte"];
   function route(){
     var v=(location.hash||"#/home").replace(/^#\//,"");if(!VIEWS.includes(v))v="home";
     document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+v));
