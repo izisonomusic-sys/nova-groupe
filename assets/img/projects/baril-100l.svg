@@ -1,13 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Baril d’huile 100 litres">
-<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#f0efec"/></linearGradient><linearGradient id="black" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#090909"/><stop offset=".2" stop-color="#383838"/><stop offset=".42" stop-color="#050505"/><stop offset=".72" stop-color="#222"/><stop offset="1" stop-color="#030303"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#8b5c06"/><stop offset=".2" stop-color="#ffe99a"/><stop offset=".45" stop-color="#d59b18"/><stop offset=".65" stop-color="#fff0a1"/><stop offset="1" stop-color="#8e5b04"/></linearGradient><linearGradient id="label" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7d66b"/><stop offset=".48" stop-color="#b67d0c"/><stop offset="1" stop-color="#f9db70"/></linearGradient></defs>
-<rect width="600" height="760" rx="24" fill="url(#bg)"/>
-<ellipse cx="300" cy="694" rx="190" ry="23" fill="#000" opacity=".12"/>
-<ellipse cx="300" cy="124" rx="177" ry="43" fill="url(#gold)"/><ellipse cx="300" cy="126" rx="160" ry="31" fill="#111"/><rect x="123" y="125" width="354" height="510" rx="28" fill="url(#black)" stroke="url(#gold)" stroke-width="8"/><path d="M126 220 H474 M126 485 H474" stroke="url(#gold)" stroke-width="13"/><path d="M145 232 H455 M145 473 H455" stroke="#090909" stroke-width="6"/>
-<path d="M144 255 Q300 205 456 255 L456 470 Q300 520 144 470 Z" fill="url(#label)" stroke="#f8dc79" stroke-width="5"/>
-<path d="M150 285 Q300 240 450 285" fill="none" stroke="#080808" stroke-width="16"/>
-<defs><linearGradient id="brandRainbow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#ed1c24"/><stop offset=".28" stop-color="#f58220"/><stop offset=".48" stop-color="#f7df22"/><stop offset=".66" stop-color="#00a651"/><stop offset=".82" stop-color="#0072ce"/><stop offset="1" stop-color="#662d91"/></linearGradient></defs><path d="M218 263 C238 240 268 247 292 260 C313 271 331 267 350 252 C370 235 389 244 389 259 C389 276 364 283 340 278 L282 267 C260 263 245 264 240 279 L252 291" fill="none" stroke="url(#brandRainbow)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="316" font-family="Arial,sans-serif" font-size="25" font-weight="800" text-anchor="middle" fill="#d71920">TotalEnergies</text>
-<rect x="171" y="348" width="258" height="78" rx="18" fill="#080808" stroke="url(#gold)" stroke-width="5"/><text x="300" y="395" font-family="Arial,sans-serif" font-size="39" font-style="italic" font-weight="900" text-anchor="middle" fill="url(#gold)">QUARTZ</text>
-<text x="300" y="454" font-family="Arial,sans-serif" font-size="28" font-style="italic" font-weight="800" text-anchor="middle" fill="#080808">INEO FIRST</text><text x="300" y="493" font-family="Arial,sans-serif" font-size="32" font-weight="900" text-anchor="middle" fill="#080808">5W-30</text>
-<text x="300" y="535" font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#171717">ACEA C2 · API SN/CF</text>
-<text x="300" y="580" font-family="Arial,sans-serif" font-size="48" font-weight="900" text-anchor="middle" fill="url(#gold)" stroke="#111" stroke-width="1">100 L</text>
-<path d="M165 590 Q300 630 435 590" stroke="url(#gold)" stroke-width="8" fill="none"/><text x="300" y="724" font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#292929">BARIL D’HUILE 100 LITRES</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Baril noir et or d’huile 100 litres">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#ecebe8"/></linearGradient>
+ <linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#050505"/><stop offset=".13" stop-color="#343434"/><stop offset=".28" stop-color="#111"/><stop offset=".5" stop-color="#050505"/><stop offset=".77" stop-color="#292929"/><stop offset="1" stop-color="#050505"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#805400"/><stop offset=".2" stop-color="#ffe69a"/><stop offset=".48" stop-color="#c58b12"/><stop offset=".72" stop-color="#ffeb9b"/><stop offset="1" stop-color="#805400"/></linearGradient>
+ <linearGradient id="label" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff0b0"/><stop offset=".45" stop-color="#d7a62c"/><stop offset="1" stop-color="#f6d873"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur stdDeviation="13"/></filter>
+</defs>
+<rect width="600" height="760" rx="28" fill="url(#bg)"/>
+<ellipse cx="300" cy="675" rx="185" ry="20" fill="#000" opacity=".17" filter="url(#shadow)"/>
+<!-- cylindrical steel drum with rolled rim and curved shoulders -->
+<ellipse cx="300" cy="156" rx="178" ry="43" fill="url(#gold)" stroke="#171717" stroke-width="5"/>
+<ellipse cx="300" cy="158" rx="159" ry="29" fill="#171717" stroke="#b98920" stroke-width="4"/>
+<path d="M122 157 Q108 179 115 213 L136 590 Q139 624 172 635 Q300 665 428 635 Q461 624 464 590 L485 213 Q492 179 478 157 Q300 202 122 157Z" fill="url(#body)" stroke="url(#gold)" stroke-width="8" stroke-linejoin="round"/>
+<!-- raised steel hoops -->
+<path d="M122 239 Q300 280 478 239 L481 258 Q300 299 119 258Z" fill="url(#gold)" stroke="#161616" stroke-width="4"/>
+<path d="M132 502 Q300 541 468 502 L471 523 Q300 562 129 523Z" fill="url(#gold)" stroke="#161616" stroke-width="4"/>
+<path d="M136 266 Q300 302 464 266 M143 493 Q300 530 457 493" fill="none" stroke="#777" stroke-width="3" opacity=".7"/>
+<path d="M143 289 Q300 325 457 289 L457 477 Q300 511 143 477Z" fill="url(#label)" stroke="#f9df87" stroke-width="5"/>
+<!-- multicolour brand mark -->
+<path d="M220 326 C239 302 259 307 282 322 C304 336 326 332 345 313 C363 295 383 306 380 321 C377 336 355 343 333 337 L284 327 C263 322 248 328 244 343 L254 353" fill="none" stroke="#e5232e" stroke-width="10" stroke-linecap="round"/>
+<path d="M245 343 Q280 323 311 336 Q341 350 377 319" fill="none" stroke="#f39a22" stroke-width="7" stroke-linecap="round"/>
+<path d="M250 348 Q291 331 326 341 Q352 346 376 320" fill="none" stroke="#12a65a" stroke-width="5" stroke-linecap="round"/>
+<path d="M260 353 Q304 340 337 343 Q361 340 376 320" fill="none" stroke="#1476cf" stroke-width="4" stroke-linecap="round"/>
+<text x="300" y="379" font-family="Arial,sans-serif" font-size="25" font-weight="900" text-anchor="middle" fill="#c91520">TotalEnergies</text>
+<rect x="196" y="399" width="208" height="55" rx="12" fill="#080808" stroke="url(#gold)" stroke-width="4"/>
+<text x="300" y="436" font-family="Arial,sans-serif" font-size="31" font-style="italic" font-weight="900" text-anchor="middle" fill="url(#gold)">QUARTZ</text>
+<text x="300" y="474" font-family="Arial,sans-serif" font-size="19" font-weight="800" text-anchor="middle" fill="#101010">HUILE MOTEUR</text>
+<text x="300" y="528" font-family="Arial,sans-serif" font-size="43" font-weight="900" text-anchor="middle" fill="#111">100 L</text>
+<path d="M173 548 Q300 584 427 548" fill="none" stroke="url(#gold)" stroke-width="6"/>
+<text x="300" y="711" font-family="Arial,sans-serif" font-size="20" font-weight="800" text-anchor="middle" fill="#242424">BARIL D’HUILE • 100 LITRES</text>
+</svg>
