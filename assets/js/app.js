@@ -766,7 +766,10 @@
   setExternalContact('welcomeWa',wa,'WhatsApp bientôt disponible');
   setExternalContact('assistTg',C.telegramService,'Lien Telegram en attente');
   setExternalContact('assistGroup',C.telegramGroup,'Groupe Telegram en attente');
-  if(el("welcomeLater"))el("welcomeLater").addEventListener("click",function(event){event.preventDefault();event.stopPropagation();var modal=el("welcomeModal");if(modal){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");}});
+  setExternalContact('welcomeTelegram',C.telegramGroup,'Telegram bientôt disponible');
+  function closeWelcomeModal(){var modal=el("welcomeModal");if(modal){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");}}
+  if(el("welcomeLater"))el("welcomeLater").addEventListener("click",function(event){event.preventDefault();event.stopPropagation();closeWelcomeModal();});
+  ['welcomeWa','welcomeTelegram'].forEach(function(id){var link=el(id);if(link)link.addEventListener('click',function(){closeWelcomeModal();});});
   if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
   // Afficher immédiatement la vue demandée. Le chargement Supabase est asynchrone et ne doit jamais laisser l'interface vide.
   route();
