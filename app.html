@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="stylesheet" href="assets/css/style.css?v=20261027f" />
+  <link rel="stylesheet" href="assets/css/style.css?v=20261028d" />
 </head>
 <body>
 
@@ -421,6 +421,14 @@
       <div class="hist-list" id="histList"><!-- rendu par app.js --></div>
     </section>
 
+
+    <!-- ============ VUE : DÉTAILS DU RETRAIT ============ -->
+    <section class="view" id="view-details-retrait">
+      <h2 class="view-title"><svg class="ic" style="color:var(--brand)"><use href="#i-clock"/></svg> Détails du retrait</h2>
+      <p class="muted" style="margin:0 0 18px">Suivez chaque demande de retrait, de son enregistrement jusqu'à la confirmation du paiement.</p>
+      <div id="withdrawalTrackingList" aria-live="polite"><p class="empty">Chargement de vos retraits…</p></div>
+    </section>
+
     <!-- ============ VUE : COMPTE ============ -->
     <section class="view" id="view-compte">
       <div class="account-banner">
@@ -440,6 +448,7 @@
         <a class="account-menu-item" href="#/historique"><span class="account-menu-icon">▤</span><span>Détails du compte</span><b>›</b></a>
         <a class="account-menu-item" href="#/recharger"><span class="account-menu-icon">↘</span><span>Registres des paiements</span><b>›</b></a>
         <a class="account-menu-item" href="#/retrait"><span class="account-menu-icon">↗</span><span>Registres des retraits</span><b>›</b></a>
+        <a class="account-menu-item" href="#/details-retrait"><span class="account-menu-icon">◷</span><span>Détails du retrait</span><b>›</b></a>
         <a class="account-menu-item" href="#/compte-retrait"><span class="account-menu-icon">▰</span><span>Compte de retrait</span><b>›</b></a>
       </div>
       <div class="account-menu account-menu-secondary">
@@ -556,7 +565,7 @@
 <script src="assets/js/store.js?v=20261026a"></script>
 <script id="nova-boot-fallback">
 (function(){
-  var views=["home","vip","recharger","retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
+  var views=["home","vip","recharger","retrait","details-retrait","presence","assistance","equipe","publications","investissements","historique","compte"];
   function bootRoute(){
     var v=(location.hash||"#/home").replace(/^#\//,"");
     if(views.indexOf(v)<0)v="home";
@@ -570,7 +579,7 @@
 })();
 </script>
 
-<script src="assets/js/app.js?v=20261028c"></script>
+<script src="assets/js/app.js?v=20261028d"></script>
 
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("PWA service worker:", err))); }</script>
 </body>
