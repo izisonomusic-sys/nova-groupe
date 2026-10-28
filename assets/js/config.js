@@ -16,8 +16,8 @@ window.NOVA = {
   /* ---------- Contacts / assistance ---------- */
   // Lien officiel de la communauté WhatsApp NOVA Group.
   whatsapp: "https://chat.whatsapp.com/GdjJdEXsXmv4D2jiR6Nrms",
-  telegramService: "",
-  telegramGroup: "",
+  telegramService: "https://t.me/+21tt5ahmAw1jYTU0",
+  telegramGroup: "https://t.me/+21tt5ahmAw1jYTU0",
   email: "contact@nova-immo-energie.tg",
   address: "Boulevard du Mono, Lomé — Togo",
 
