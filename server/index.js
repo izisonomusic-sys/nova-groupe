@@ -803,6 +803,22 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
   }
 });
 
+// Historique privé des retraits : chaque membre ne peut consulter que ses propres demandes.
+app.get('/api/member/withdrawals', requireUser, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('withdrawal_requests')
+      .select('id,amount,fee_amount,payout_amount,status,created_at,processed_at,admin_approved_at,admin_rejected_at,failure_reason')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    return res.json({ ok: true, withdrawals: data || [] });
+  } catch (err) {
+    console.error('[WITHDRAWAL HISTORY] read error:', err.message);
+    return res.status(500).json({ error: 'Impossible de charger les détails des retraits.' });
+  }
+});
+
 // Compte de retrait du membre : les données sont écrites côté serveur uniquement.
 app.get('/api/member/withdrawal-account', requireUser, async (req, res) => {
   try {
