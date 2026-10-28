@@ -478,44 +478,6 @@
     setText("accMemberId",String(profile.member_code||"—"));
     setText("accReferralLink",referralLink()||"Lien indisponible");
   }
-  async function renderWithdrawalDetails(){
-    var n=el("withdrawalTrackingList");if(!n)return;
-    n.innerHTML='<p class="empty">Chargement de vos retraits…</p>';
-    try{
-      // RLS limits this query to the authenticated member's own withdrawal requests.
-      var result=await auth.from("withdrawal_requests")
-        .select("id,amount,status,created_at,processed_at,admin_approved_at,admin_rejected_at,fee_amount,payout_amount,operator,country_code,admin_note,failure_reason")
-        .eq("user_id",user.id).order("created_at",{ascending:false});
-      if(result.error)throw result.error;
-      var rows=result.data||[];
-      if(!rows.length){n.innerHTML='<p class="empty">Vous n’avez pas encore effectué de demande de retrait.</p>';return;}
-      function dateLabel(value){return value?S.dateFr(value):"En attente";}
-      n.innerHTML=rows.map(function(w){
-        var status=String(w.status||"pending").toLowerCase();
-        var paid=status==="paid",rejected=["rejected","cancelled","failed"].includes(status);
-        var processing=["processing","approved","approved_pending"].includes(status);
-        var stage2=paid||processing;
-        var statusLabel=paid?"Retrait réussi":rejected?(status==="cancelled"?"Demande annulée":"Retrait refusé / échoué"):(processing?"Paiement en cours":"En attente d’examen");
-        var statusClass=paid?"is-success":rejected?"is-error":"is-pending";
-        var amount=Number(w.amount)||0,fee=Number(w.fee_amount)||0,net=Number(w.payout_amount);
-        if(!Number.isFinite(net))net=amount-fee;
-        var reference=String(w.id||"").slice(0,8).toUpperCase(),note=w.admin_note||w.failure_reason||"";
-        return '<article class="withdrawal-track-card">'+
-          '<div class="withdrawal-track-head"><div><span class="withdrawal-track-eyebrow">DEMANDE DU '+esc(dateLabel(w.created_at))+'</span><h3>'+money(amount)+'</h3><span class="muted">Montant demandé · Réf. '+esc(reference)+'</span></div><span class="withdrawal-track-status '+statusClass+'">'+esc(statusLabel)+'</span></div>'+
-          '<div class="withdrawal-steps">'+
-            '<div class="withdrawal-step '+(!rejected?'is-done':'')+'"><span class="withdrawal-step-marker">'+(!rejected?'✓':'1')+'</span><div><b>1. Demande de retrait soumise</b><small>'+esc(dateLabel(w.created_at))+'</small></div></div>'+
-            '<div class="withdrawal-step '+(stage2?'is-done':(!paid&&!rejected?'is-current':''))+'"><span class="withdrawal-step-marker">'+(stage2?'✓':(!paid&&!rejected?'…':'2'))+'</span><div><b>2. En cours d’examen</b><small>'+esc(processing?"Paiement transmis au prestataire":(paid?"Demande traitée":(rejected?"Demande clôturée":"En attente de validation par l’administration")))+'</small></div></div>'+
-            '<div class="withdrawal-step '+(paid?'is-done':(rejected?'is-error':''))+'"><span class="withdrawal-step-marker">'+(paid?'✓':(rejected?'!':'3'))+'</span><div><b>3. Retrait réussi</b><small>'+esc(paid?("Paiement confirmé"+(w.processed_at?" · "+dateLabel(w.processed_at):"")):(rejected?"Le paiement n’a pas abouti":"Sera confirmé après paiement effectif"))+'</small></div></div>'+
-          '</div>'+
-          '<div class="withdrawal-track-meta"><span>Frais : '+money(fee)+'</span><span>Net prévu : '+money(net)+'</span>'+(w.operator?'<span>'+esc(w.operator)+'</span>':'')+'</div>'+
-          (note?'<p class="withdrawal-track-note">'+esc(note)+'</p>':'')+
-        '</article>';
-      }).join("");
-    }catch(err){
-      console.warn("Withdrawal status tracker:",err.message);
-      n.innerHTML='<p class="empty">Impossible de charger vos détails de retrait pour le moment. Réessayez dans quelques instants.</p>';
-    }
-  }
   function renderNews(){
     var n=el("newsList");if(n)n.innerHTML=(C.news||[]).map(x=>'<article class="news-card"><img src="'+esc(x.img)+'" alt="" loading="lazy"><div class="news-body"><div class="meta"><span class="badge">'+esc(x.tag)+'</span><span>'+esc(x.date)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p></div></article>').join("");
   }
@@ -524,7 +486,6 @@
     if(view==="historique")renderHistory();if(view==="compte")renderAccount();if(view==="details-retrait")renderWithdrawalDetails();if(view==="equipe")renderTeam();if(view==="publications")renderNews();
     if(view==="retrait"){setText("wdAvail",money(wallet.balance));prepareWithdrawalAccountForm("wd");}
     if(view==="compte-retrait"){prepareWithdrawalAccountForm("wa");}
-    if(view==="details-retrait"){renderWithdrawalDetails();}
   }
   var VIEWS=["home","vip","recharger","retrait","compte-retrait","details-retrait","presence","assistance","regles","equipe","publications","investissements","historique","compte"];
   function route(){
