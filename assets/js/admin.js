@@ -18,7 +18,9 @@
     if(!token)throw new Error("Session expirée. Connectez-vous à nouveau.");
     async function send(accessToken){
       var headers=Object.assign({"Content-Type":"application/json","Authorization":"Bearer "+accessToken},opts.headers||{});
-      return fetch(path,Object.assign({},opts,{headers:headers}));
+      // L’API métier est hébergée sur apiBase, qui peut être différente du domaine du site.
+      var apiUrl=(C.apiBase||"").replace(/\/+$/,"")+path;
+      return fetch(apiUrl||path,Object.assign({},opts,{headers:headers}));
     }
     var r=await send(token);
     if(r.status===401){
