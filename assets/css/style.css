@@ -1689,3 +1689,27 @@ p,.muted,.hint,.app-note { color:var(--muted); }
   .withdrawal-tracking-card { padding: 22px; }
   .withdrawal-tracking-card__meta { flex-direction: row; justify-content: space-between; }
 }
+
+
+/* Suivi vertical des demandes de retrait — TTE Energy */
+.withdrawal-tracking-list{display:grid;gap:16px;margin:16px 0 22px}
+.withdrawal-track-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px;box-shadow:var(--shadow-sm)}
+.withdrawal-track-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:15px;border-bottom:1px solid var(--line)}
+.withdrawal-track-head h3{font-size:22px;line-height:1.25;margin:5px 0}
+.withdrawal-track-eyebrow{font-size:10px;letter-spacing:.7px;font-weight:800;color:var(--muted)}
+.withdrawal-track-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:800;text-align:center;max-width:145px}
+.withdrawal-track-status.is-pending{background:#fff4d6;color:#8a5a00}
+.withdrawal-track-status.is-success{background:#e1f7e9;color:#176b3a}
+.withdrawal-track-status.is-error{background:#fde8e7;color:#a52323}
+.withdrawal-steps{display:grid;gap:0;padding:17px 0 7px}
+.withdrawal-step{display:grid;grid-template-columns:30px minmax(0,1fr);gap:11px;position:relative;min-height:68px;padding-bottom:16px}
+.withdrawal-step:not(:last-child):before{content:"";position:absolute;left:14px;top:30px;bottom:-1px;width:2px;background:var(--line)}
+.withdrawal-step.is-done:not(:last-child):before{background:var(--green)}
+.withdrawal-step-marker{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f0eee8;color:var(--muted);font-weight:900;z-index:1}
+.withdrawal-step.is-done .withdrawal-step-marker{background:#e1f7e9;color:#176b3a}
+.withdrawal-step.is-current .withdrawal-step-marker{background:#fff0c2;color:#8a5a00}
+.withdrawal-step.is-error .withdrawal-step-marker{background:#fde8e7;color:#a52323}
+.withdrawal-step b{display:block;font-size:13px;line-height:1.4;padding-top:4px}
+.withdrawal-step small{display:block;color:var(--muted);font-size:11px;margin-top:4px;line-height:1.45}
+.withdrawal-track-meta{display:flex;flex-wrap:wrap;gap:7px 14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.withdrawal-track-note{margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff4f2;color:#8b3028;font-size:12px}
