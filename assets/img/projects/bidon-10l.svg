@@ -1,34 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Bidon noir et or d’huile 10 litres">
-<defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#ecebe8"/></linearGradient>
- <linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#080808"/><stop offset=".16" stop-color="#343434"/><stop offset=".34" stop-color="#101010"/><stop offset=".68" stop-color="#050505"/><stop offset=".88" stop-color="#292929"/><stop offset="1" stop-color="#080808"/></linearGradient>
- <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#805400"/><stop offset=".2" stop-color="#ffe69a"/><stop offset=".48" stop-color="#c58b12"/><stop offset=".72" stop-color="#ffeb9b"/><stop offset="1" stop-color="#805400"/></linearGradient>
- <linearGradient id="label" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff0b0"/><stop offset=".45" stop-color="#d7a62c"/><stop offset="1" stop-color="#f6d873"/></linearGradient>
- <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur stdDeviation="13"/></filter>
-</defs>
-<rect width="600" height="760" rx="28" fill="url(#bg)"/>
-<ellipse cx="300" cy="674" rx="175" ry="20" fill="#000" opacity=".17" filter="url(#shadow)"/>
-<!-- molded plastic jerrycan silhouette -->
-<path d="M188 190 Q168 176 174 147 Q180 120 213 119 L242 119 L256 91 Q263 77 283 77 L345 77 Q367 77 372 99 L386 151 L417 184 Q444 207 444 244 L444 596 Q444 632 409 640 L185 640 Q151 632 151 597 L151 246 Q151 213 188 190Z" fill="url(#body)" stroke="url(#gold)" stroke-width="8" stroke-linejoin="round"/>
-<!-- integrated handle opening -->
-<path d="M257 111 L342 111 Q353 111 356 128 L366 163 L328 190 L250 174 L229 151 L242 122 Q246 111 257 111Z" fill="#ecebe8" stroke="url(#gold)" stroke-width="7" stroke-linejoin="round"/>
-<path d="M266 125 L337 125 L344 145 L320 164 L267 153Z" fill="#c5c4c0" opacity=".55"/>
-<!-- cap and neck -->
-<path d="M187 139 L227 139 L232 169 L193 181Z" fill="#111" stroke="url(#gold)" stroke-width="6"/>
-<rect x="182" y="117" width="52" height="28" rx="7" fill="url(#gold)" stroke="#171717" stroke-width="4"/>
-<path d="M160 250 Q300 273 435 250 M158 578 Q300 600 437 578" fill="none" stroke="url(#gold)" stroke-width="8" opacity=".9"/>
-<path d="M164 267 Q300 289 431 267 L431 488 Q300 512 164 488Z" fill="url(#label)" stroke="#f9df87" stroke-width="5"/>
-<path d="M177 285 Q300 304 418 285" fill="none" stroke="#171717" stroke-width="5" opacity=".7"/>
-<!-- multicolour brand mark -->
-<path d="M220 325 C239 301 259 306 282 321 C304 335 326 331 345 312 C363 294 383 305 380 320 C377 335 355 342 333 336 L284 326 C263 321 248 327 244 342 L254 352" fill="none" stroke="#e5232e" stroke-width="10" stroke-linecap="round"/>
-<path d="M245 342 Q280 322 311 335 Q341 349 377 318" fill="none" stroke="#f39a22" stroke-width="7" stroke-linecap="round"/>
-<path d="M250 347 Q291 330 326 340 Q352 345 376 319" fill="none" stroke="#12a65a" stroke-width="5" stroke-linecap="round"/>
-<path d="M260 352 Q304 339 337 342 Q361 339 376 319" fill="none" stroke="#1476cf" stroke-width="4" stroke-linecap="round"/>
-<text x="300" y="378" font-family="Arial,sans-serif" font-size="25" font-weight="900" text-anchor="middle" fill="#c91520">TotalEnergies</text>
-<rect x="197" y="399" width="206" height="55" rx="12" fill="#080808" stroke="url(#gold)" stroke-width="4"/>
-<text x="300" y="436" font-family="Arial,sans-serif" font-size="31" font-style="italic" font-weight="900" text-anchor="middle" fill="url(#gold)">QUARTZ</text>
-<text x="300" y="474" font-family="Arial,sans-serif" font-size="19" font-weight="800" text-anchor="middle" fill="#101010">HUILE MOTEUR</text>
-<text x="300" y="528" font-family="Arial,sans-serif" font-size="43" font-weight="900" text-anchor="middle" fill="#111">10 L</text>
-<path d="M191 548 Q300 570 409 548" fill="none" stroke="url(#gold)" stroke-width="6"/>
-<text x="300" y="711" font-family="Arial,sans-serif" font-size="20" font-weight="800" text-anchor="middle" fill="#242424">BIDON D’HUILE • 10 LITRES</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Bidon noir, blanc et rouge TotalEnergies 10 litres">
+ <defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#eceff2"/></linearGradient>
+  <linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#151719"/><stop offset=".15" stop-color="#3d4144"/><stop offset=".33" stop-color="#111315"/><stop offset=".68" stop-color="#090a0b"/><stop offset=".88" stop-color="#333638"/><stop offset="1" stop-color="#101112"/></linearGradient>
+  <linearGradient id="red" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#b90e18"/><stop offset=".25" stop-color="#f12a32"/><stop offset=".7" stop-color="#e31b23"/><stop offset="1" stop-color="#a90912"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur stdDeviation="13"/></filter>
+ </defs>
+ <rect width="600" height="760" rx="28" fill="url(#bg)"/>
+ <ellipse cx="300" cy="674" rx="175" ry="20" fill="#000" opacity=".17" filter="url(#shadow)"/>
+ <path d="M188 190 Q168 176 174 147 Q180 120 213 119 L242 119 L256 91 Q263 77 283 77 L345 77 Q367 77 372 99 L386 151 L417 184 Q444 207 444 244 L444 596 Q444 632 409 640 L185 640 Q151 632 151 597 L151 246 Q151 213 188 190Z" fill="url(#body)" stroke="#e31b23" stroke-width="7" stroke-linejoin="round"/>
+ <path d="M257 111 L342 111 Q353 111 356 128 L366 163 L328 190 L250 174 L229 151 L242 122 Q246 111 257 111Z" fill="#eceff2" stroke="#e31b23" stroke-width="6" stroke-linejoin="round"/>
+ <path d="M266 125 L337 125 L344 145 L320 164 L267 153Z" fill="#c5c8cb" opacity=".55"/>
+ <path d="M187 139 L227 139 L232 169 L193 181Z" fill="#111315" stroke="#e31b23" stroke-width="5"/>
+ <rect x="182" y="117" width="52" height="28" rx="7" fill="url(#red)" stroke="#111315" stroke-width="4"/>
+ <path d="M160 250 Q300 273 435 250 M158 578 Q300 600 437 578" fill="none" stroke="#e31b23" stroke-width="8"/>
+ <path d="M164 267 Q300 289 431 267 L431 488 Q300 512 164 488Z" fill="#fff" stroke="#e31b23" stroke-width="5"/>
+ <path d="M177 285 Q300 304 418 285" fill="none" stroke="#d7d9dc" stroke-width="5"/>
+ <g transform="translate(0 333)">
+ <path d="M215 0 C235 -25 257 -19 278 -5 C300 10 324 5 345 -15 C362 -32 382 -22 378 -7 C374 9 352 16 331 10 L284 0 C264 -5 249 1 245 16 L254 26" fill="none" stroke="#e31b23" stroke-width="10" stroke-linecap="round"/>
+ <path d="M244 16 Q278 -5 310 8 Q341 22 377 -8" fill="none" stroke="#f58220" stroke-width="7" stroke-linecap="round"/>
+ <path d="M249 21 Q290 4 325 14 Q351 19 376 -7" fill="none" stroke="#ffd500" stroke-width="5" stroke-linecap="round"/>
+ <path d="M257 25 Q302 12 336 15 Q360 12 375 -7" fill="none" stroke="#159447" stroke-width="5" stroke-linecap="round"/>
+ <path d="M267 29 Q307 17 341 17 Q362 13 375 -7" fill="none" stroke="#0084ca" stroke-width="4" stroke-linecap="round"/>
+ </g>
+ <text x="300" y="385" font-family="Arial,sans-serif" font-size="25" font-weight="900" text-anchor="middle" fill="#e31b23">TotalEnergies</text>
+ <rect x="197" y="402" width="206" height="51" rx="8" fill="#e31b23"/>
+ <text x="300" y="437" font-family="Arial,sans-serif" font-size="30" font-style="italic" font-weight="900" text-anchor="middle" fill="#fff">QUARTZ</text>
+ <text x="300" y="475" font-family="Arial,sans-serif" font-size="18" font-weight="800" text-anchor="middle" fill="#17191b">HUILE MOTEUR</text>
+ <text x="300" y="529" font-family="Arial,sans-serif" font-size="43" font-weight="900" text-anchor="middle" fill="#e31b23">10 L</text>
+ <path d="M191 548 Q300 570 409 548" fill="none" stroke="#e31b23" stroke-width="6"/>
+ <text x="300" y="711" font-family="Arial,sans-serif" font-size="20" font-weight="800" text-anchor="middle" fill="#242629">BIDON D’HUILE • 10 LITRES</text>
+ </svg>
