@@ -105,14 +105,14 @@
   function selectedImageCategory(){var select=$("pImg"),option=select.options[select.selectedIndex];return option&&option.dataset.category||"petroleum";}
   function autoProjectText(){
     var select=$("pImg"),option=select.options[select.selectedIndex],value=select.value||"",label=option?option.textContent.trim():"";
-    var match=value.match(/(bidon|baril)-(\\d+)l/i),title,description,badge;
+    var match=value.match(/(bidon|baril)-(\d+)l/i),title,description,badge;
     if(match){
       var type=match[1].toLowerCase()==="bidon"?"Bidon":"Baril",volume=match[2]+" L";
       title="Projet "+type+" TotalEnergies "+volume;
       description="Projet lié à un contenant d’huile TotalEnergies de type "+type.toLowerCase()+" d’une capacité indiquée de "+volume+". Consultez les conditions, le montant et la durée affichés avant toute participation.";
       badge="TotalEnergies "+volume;
     }else{
-      title="Projet "+label.replace(/^.*?—\\s*/,"").replace(/\\s*\\([^)]*\\)/g,"").trim();
+      title="Projet "+label.replace(/^.*?—\s*/,"").replace(/\s*\\([^)]*\\)/g,"").trim();
       if(!title||title==="Projet")title="Projet TTE Energy";
       description="Présentation du projet "+label+". Consultez les informations, le montant, la durée et les conditions affichés avant toute participation.";
       badge=selectedImageCategory()==="solar"?"Énergie solaire":selectedImageCategory()==="wind"?"Énergie éolienne":"Pétrole";
