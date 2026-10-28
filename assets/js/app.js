@@ -770,7 +770,7 @@
   function closeWelcomeModal(){var modal=el("welcomeModal");if(modal){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");}}
   if(el("welcomeLater"))el("welcomeLater").addEventListener("click",function(event){event.preventDefault();event.stopPropagation();closeWelcomeModal();});
   ['welcomeWa','welcomeTelegram'].forEach(function(id){var link=el(id);if(link)link.addEventListener('click',function(){closeWelcomeModal();});});
-  if(location.search.includes("welcome=1")){if(el("welcomeModal"))el("welcomeModal").classList.add("open");history.replaceState(null,"",location.pathname+location.hash);}
+  if(location.search.includes("welcome=1")){var welcomeModal=el("welcomeModal");if(welcomeModal){welcomeModal.classList.add("open");welcomeModal.setAttribute("aria-hidden","false");}history.replaceState(null,"",location.pathname+location.hash);}
   // Afficher immédiatement la vue demandée. Le chargement Supabase est asynchrone et ne doit jamais laisser l'interface vide.
   route();
   try{
