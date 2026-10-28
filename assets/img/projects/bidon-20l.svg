@@ -1,13 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Bidon d’huile 20 litres">
-<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#f0efec"/></linearGradient><linearGradient id="black" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#090909"/><stop offset=".2" stop-color="#383838"/><stop offset=".42" stop-color="#050505"/><stop offset=".72" stop-color="#222"/><stop offset="1" stop-color="#030303"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#8b5c06"/><stop offset=".2" stop-color="#ffe99a"/><stop offset=".45" stop-color="#d59b18"/><stop offset=".65" stop-color="#fff0a1"/><stop offset="1" stop-color="#8e5b04"/></linearGradient><linearGradient id="label" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7d66b"/><stop offset=".48" stop-color="#b67d0c"/><stop offset="1" stop-color="#f9db70"/></linearGradient></defs>
-<rect width="600" height="760" rx="24" fill="url(#bg)"/>
-<ellipse cx="300" cy="694" rx="190" ry="23" fill="#000" opacity=".12"/>
-<path d="M190 122 Q190 88 228 88 H365 Q394 88 394 123 L425 170 Q455 188 455 226 V615 Q455 647 424 647 H176 Q145 647 145 615 V226 Q145 190 176 170 Z" fill="url(#black)" stroke="url(#gold)" stroke-width="8"/><rect x="190" y="66" width="112" height="62" rx="18" fill="url(#black)" stroke="url(#gold)" stroke-width="7"/><path d="M375 175 Q405 185 405 222 V420 Q405 450 380 455" fill="none" stroke="url(#gold)" stroke-width="24" stroke-linecap="round"/>
-<path d="M155 238 Q300 192 445 238 L445 472 Q300 515 155 472 Z" fill="url(#label)" stroke="#f8dc79" stroke-width="5"/>
-<path d="M160 276 Q300 230 440 276" fill="none" stroke="#080808" stroke-width="16"/>
-<defs><linearGradient id="brandRainbow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#ed1c24"/><stop offset=".28" stop-color="#f58220"/><stop offset=".48" stop-color="#f7df22"/><stop offset=".66" stop-color="#00a651"/><stop offset=".82" stop-color="#0072ce"/><stop offset="1" stop-color="#662d91"/></linearGradient></defs><path d="M218 263 C238 240 268 247 292 260 C313 271 331 267 350 252 C370 235 389 244 389 259 C389 276 364 283 340 278 L282 267 C260 263 245 264 240 279 L252 291" fill="none" stroke="url(#brandRainbow)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="316" font-family="Arial,sans-serif" font-size="25" font-weight="800" text-anchor="middle" fill="#d71920">TotalEnergies</text>
-<rect x="171" y="348" width="258" height="78" rx="18" fill="#080808" stroke="url(#gold)" stroke-width="5"/><text x="300" y="395" font-family="Arial,sans-serif" font-size="39" font-style="italic" font-weight="900" text-anchor="middle" fill="url(#gold)">QUARTZ</text>
-<text x="300" y="454" font-family="Arial,sans-serif" font-size="28" font-style="italic" font-weight="800" text-anchor="middle" fill="#080808">INEO FIRST</text><text x="300" y="493" font-family="Arial,sans-serif" font-size="32" font-weight="900" text-anchor="middle" fill="#080808">5W-30</text>
-<text x="300" y="535" font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#171717">ACEA C2 · API SN/CF</text>
-<text x="300" y="575" font-family="Arial,sans-serif" font-size="48" font-weight="900" text-anchor="middle" fill="url(#gold)" stroke="#111" stroke-width="1">20 L</text>
-<path d="M165 590 Q300 630 435 590" stroke="url(#gold)" stroke-width="8" fill="none"/><text x="300" y="724" font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#292929">BIDON D’HUILE 20 LITRES</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Bidon noir et or d’huile 20 litres">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#ecebe8"/></linearGradient>
+ <linearGradient id="body" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#080808"/><stop offset=".16" stop-color="#343434"/><stop offset=".34" stop-color="#101010"/><stop offset=".68" stop-color="#050505"/><stop offset=".88" stop-color="#292929"/><stop offset="1" stop-color="#080808"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#805400"/><stop offset=".2" stop-color="#ffe69a"/><stop offset=".48" stop-color="#c58b12"/><stop offset=".72" stop-color="#ffeb9b"/><stop offset="1" stop-color="#805400"/></linearGradient>
+ <linearGradient id="label" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff0b0"/><stop offset=".45" stop-color="#d7a62c"/><stop offset="1" stop-color="#f6d873"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur stdDeviation="13"/></filter>
+</defs>
+<rect width="600" height="760" rx="28" fill="url(#bg)"/>
+<ellipse cx="300" cy="674" rx="175" ry="20" fill="#000" opacity=".17" filter="url(#shadow)"/>
+<!-- molded plastic jerrycan silhouette -->
+<path d="M188 190 Q168 176 174 147 Q180 120 213 119 L242 119 L256 91 Q263 77 283 77 L345 77 Q367 77 372 99 L386 151 L417 184 Q444 207 444 244 L444 596 Q444 632 409 640 L185 640 Q151 632 151 597 L151 246 Q151 213 188 190Z" fill="url(#body)" stroke="url(#gold)" stroke-width="8" stroke-linejoin="round"/>
+<!-- integrated handle opening -->
+<path d="M257 111 L342 111 Q353 111 356 128 L366 163 L328 190 L250 174 L229 151 L242 122 Q246 111 257 111Z" fill="#ecebe8" stroke="url(#gold)" stroke-width="7" stroke-linejoin="round"/>
+<path d="M266 125 L337 125 L344 145 L320 164 L267 153Z" fill="#c5c4c0" opacity=".55"/>
+<!-- cap and neck -->
+<path d="M187 139 L227 139 L232 169 L193 181Z" fill="#111" stroke="url(#gold)" stroke-width="6"/>
+<rect x="182" y="117" width="52" height="28" rx="7" fill="url(#gold)" stroke="#171717" stroke-width="4"/>
+<path d="M160 250 Q300 273 435 250 M158 578 Q300 600 437 578" fill="none" stroke="url(#gold)" stroke-width="8" opacity=".9"/>
+<path d="M164 267 Q300 289 431 267 L431 488 Q300 512 164 488Z" fill="url(#label)" stroke="#f9df87" stroke-width="5"/>
+<path d="M177 285 Q300 304 418 285" fill="none" stroke="#171717" stroke-width="5" opacity=".7"/>
+<!-- multicolour brand mark -->
+<path d="M220 325 C239 301 259 306 282 321 C304 335 326 331 345 312 C363 294 383 305 380 320 C377 335 355 342 333 336 L284 326 C263 321 248 327 244 342 L254 352" fill="none" stroke="#e5232e" stroke-width="10" stroke-linecap="round"/>
+<path d="M245 342 Q280 322 311 335 Q341 349 377 318" fill="none" stroke="#f39a22" stroke-width="7" stroke-linecap="round"/>
+<path d="M250 347 Q291 330 326 340 Q352 345 376 319" fill="none" stroke="#12a65a" stroke-width="5" stroke-linecap="round"/>
+<path d="M260 352 Q304 339 337 342 Q361 339 376 319" fill="none" stroke="#1476cf" stroke-width="4" stroke-linecap="round"/>
+<text x="300" y="378" font-family="Arial,sans-serif" font-size="25" font-weight="900" text-anchor="middle" fill="#c91520">TotalEnergies</text>
+<rect x="197" y="399" width="206" height="55" rx="12" fill="#080808" stroke="url(#gold)" stroke-width="4"/>
+<text x="300" y="436" font-family="Arial,sans-serif" font-size="31" font-style="italic" font-weight="900" text-anchor="middle" fill="url(#gold)">QUARTZ</text>
+<text x="300" y="474" font-family="Arial,sans-serif" font-size="19" font-weight="800" text-anchor="middle" fill="#101010">HUILE MOTEUR</text>
+<text x="300" y="528" font-family="Arial,sans-serif" font-size="43" font-weight="900" text-anchor="middle" fill="#111">20 L</text>
+<path d="M191 548 Q300 570 409 548" fill="none" stroke="url(#gold)" stroke-width="6"/>
+<text x="300" y="711" font-family="Arial,sans-serif" font-size="20" font-weight="800" text-anchor="middle" fill="#242424">BIDON D’HUILE • 20 LITRES</text>
+</svg>
