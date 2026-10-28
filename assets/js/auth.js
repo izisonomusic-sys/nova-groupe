@@ -36,6 +36,7 @@
   function showError(id,msg){ var el=document.querySelector('#'+id+' .err'); if(el)el.textContent=msg; var f=document.getElementById(id); if(f)f.classList.add('invalid'); }
   function clearErrors(){ document.querySelectorAll('.field.invalid').forEach(function(el){el.classList.remove('invalid');}); }
   function toast(msg){ if(window.NovaStore)window.NovaStore.toast(msg,'check'); else {var t=document.getElementById('toast');if(t){t.textContent=msg;t.classList.add('show');}} }
+  if(new URLSearchParams(location.search).get("blocked")==="1") toast("Ce compte est suspendu ou la vérification du compte est indisponible. Contactez l’administrateur.");
   var rf=document.getElementById('registerForm');
   var refInput=document.getElementById('ref');
   if(refInput){var incomingRef=new URLSearchParams(location.search).get('ref');if(incomingRef&&!refInput.value)refInput.value=incomingRef.trim().slice(0,80);}
