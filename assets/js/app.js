@@ -5,6 +5,18 @@
   if(!auth){location.replace("login.html");return;}
   var sr=await auth.auth.getSession(), session=sr.data&&sr.data.session;
   if(sr.error||!session){location.replace("login.html");return;}
+  // Validate the session against the server before rendering private profile or wallet data.
+  // Supabase may retain an old JWT after suspension, so a stored session alone is not enough.
+  var accessCheck=null;
+  try {
+    var checkBase=String(C.apiBase||"").trim().replace(/\/+$/,"");
+    accessCheck=await fetch(checkBase+"/api/member/dashboard",{method:"GET",headers:{"Accept":"application/json","Authorization":"Bearer "+session.access_token},cache:"no-store"});
+  } catch (_) {}
+  if(!accessCheck||!accessCheck.ok){
+    await auth.auth.signOut();
+    location.replace("login.html?blocked=1");
+    return;
+  }
   var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[];
   var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
   var currentTab="plans", selectedProject=null, handlersReady=false;
