@@ -9,7 +9,7 @@
   function money(n){return S.fcn(n);}
   function productImagePath(url,title,badge){
     var source=String(url||""),text=[source,title||"",badge||""].join(" ").toLowerCase();
-    var match=text.match(/(bidon|baril)[-_ ]?(10|15|20|25|26|30|50|100|150|400)\\s*l?/i);
+    var match=text.match(/(bidon|baril)[-_ ]?(10|15|20|25|26|30|50|100|150|400)\s*l?/i);
     if(match){var kind=match[1].toLowerCase(),litres=Number(match[2]);if(kind==="bidon"&&litres<=25)return "assets/img/products/bidon-"+litres+"l.jpg?v=20261102a";if(kind==="baril"&&litres>=26)return "assets/img/products/baril-"+litres+"l.jpg?v=20261102a";}
     return source||"assets/img/logo.svg";
   }
