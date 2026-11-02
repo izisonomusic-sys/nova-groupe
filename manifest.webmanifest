@@ -11,8 +11,18 @@
   "theme_color": "#D4AF37",
   "orientation": "portrait-primary",
   "icons": [
-    {"src": "assets/img/tte-energy-official.jpg?v=20261030a", "sizes": "128x128", "type": "image/jpeg", "purpose": "any"},
-    {"src": "assets/img/tte-energy-official.jpg?v=20261030a", "sizes": "128x128", "type": "image/jpeg", "purpose": "maskable"}
+    {
+      "src": "assets/img/tte-energy-official.jpg?v=20261102b",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/tte-energy-official.jpg?v=20261102b",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
   ],
   "categories": ["business", "finance"]
 }
