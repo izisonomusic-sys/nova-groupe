@@ -21,6 +21,16 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
+// The legacy Nova hostname is the API endpoint, not the public website.
+// Keep the TTE Energy frontend homepage available on its own Render hostname.
+app.get('/', (req, res, next) => {
+  if (String(req.hostname || '').toLowerCase() !== 'nova-groupe-dpnx.onrender.com') return next();
+  return res.status(200).json({
+    service: 'TTE Energy API',
+    message: 'Service technique. Pour accéder au site public, utilisez le lien TTE Energy.',
+    website: 'https://tte-energy-site.onrender.com'
+  });
+});
 app.use(express.static(path.join(__dirname, '..')));
 
 const paydunyaMode = (process.env.PAYDUNYA_MODE || 'live').trim().toLowerCase();
