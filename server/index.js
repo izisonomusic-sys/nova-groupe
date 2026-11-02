@@ -21,16 +21,7 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
-// The API hostname must not serve the public TTE Energy website at its root.
-// Keep API endpoints and explicit static assets available for existing integrations.
-app.get('/', (_req, res) => {
-  res.status(200).json({
-    service: 'TTE Energy API',
-    message: 'Service technique. Pour accéder au site, utilisez le lien public TTE Energy.',
-    website: 'https://tte-energy-site.onrender.com'
-  });
-});
-app.use(express.static(path.join(__dirname, '..'), { index: false }));
+app.use(express.static(path.join(__dirname, '..')));
 
 const paydunyaMode = (process.env.PAYDUNYA_MODE || 'live').trim().toLowerCase();
 const isTest = paydunyaMode === 'test';
