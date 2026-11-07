@@ -642,9 +642,9 @@ app.post('/webhooks/lomopay', async (req,res) => {
       const withdrawalId=reference;
       const {data:wr,error}=await supabase.from('withdrawal_requests')
         .select('id,payout_amount,provider_token,status,provider')
-        .eq('id',withdrawalId).eq('provider','lomopay').maybeSingle();
+        .eq('id',withdrawalId).maybeSingle();
       if(error) throw error;
-      if(!wr) return res.status(404).send('Unknown payout');
+      if(!wr || (wr.provider && wr.provider!=='lomopay')) return res.status(404).send('Unknown payout');
       const providerId=String(data.payout_id || data.id || data.transaction_id || '').trim();
       if(wr.provider_token && providerId && wr.provider_token!==providerId) return res.status(409).send('Payout id mismatch');
       if(Number(data.amount)!==Number(wr.payout_amount)) return res.status(409).send('Payout amount mismatch');
@@ -1676,6 +1676,42 @@ async function reconcilePayDunyaWithdrawals() {
   }
 }
 
+
+async function reconcileLomoPayWithdrawals() {
+  if(!supabase || lomoPayMissing.length) return;
+  try {
+    const {data:rows,error}=await supabase.from('withdrawal_requests')
+      .select('id,payout_amount,provider_token,status')
+      .eq('provider','lomopay').eq('status','processing')
+      .not('provider_token','is',null).order('created_at',{ascending:true}).limit(20);
+    if(error) throw error;
+    for(const wr of rows || []) {
+      try {
+        const {response,data}=await lomoPayRequest('payout.php?id='+encodeURIComponent(wr.provider_token),{method:'GET'});
+        if(!response.ok || data?.success!==true) continue;
+        const payout=data.data || {};
+        const status=String(payout.status || '').toLowerCase();
+        if(status==='paid') {
+          const {error:doneError}=await supabase.rpc('nova_finalize_lomopay_withdrawal_success',{
+            p_withdrawal_id:wr.id,p_provider_token:wr.provider_token,p_provider_payload:data
+          });
+          if(doneError) throw doneError;
+        } else if(status==='failed') {
+          const {error:failError}=await supabase.rpc('nova_finalize_lomopay_withdrawal_failure',{
+            p_withdrawal_id:wr.id,p_provider_token:wr.provider_token,p_provider_payload:data,
+            p_failure_reason:String(payout.message || payout.reason || 'Versement LomoPay échoué.')
+          });
+          if(failError) throw failError;
+        }
+      } catch(err) {
+        console.error('[LOMOPAY][PAYOUT RECONCILE] transaction error',{withdrawalId:wr.id,message:err.message});
+      }
+    }
+  } catch(err) {
+    console.error('[LOMOPAY][PAYOUT RECONCILE] query error:',err.message);
+  }
+}
+
 function paydunyaDisbursementCallbackHealth(_req, res) {
   return res.status(200).json({ ok: true, service: 'nova-paydunya-disbursement-callback' });
 }
@@ -2169,9 +2205,11 @@ app.get('/app.html/:view', (req, res, next) => {
 
 setTimeout(() => {
   reconcilePendingPayDunyaPayments().catch(err => console.error('[PAYDUNYA][RECONCILE] initial sweep error:', err.message));
+  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT RECONCILE] initial sweep error:', err.message));
 }, 20000);
 setInterval(() => {
   reconcilePendingPayDunyaPayments().catch(err => console.error('[PAYDUNYA][RECONCILE] scheduled sweep error:', err.message));
+  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT RECONCILE] scheduled sweep error:', err.message));
 }, 5 * 60 * 1000);
 
 setTimeout(() => {
