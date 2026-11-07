@@ -83,7 +83,7 @@
     var id=(approve||reject).dataset.approveWithdrawal||reject.dataset.rejectWithdrawal;
     try{
       if(approve){
-        if(!confirm("Valider ce retrait et autoriser l'envoi PayDunya ?"))return;
+        if(!confirm("Valider ce retrait et autoriser l'envoi via LomoPay ?"))return;
         approve.disabled=true;
         var r=await request("/api/admin/withdrawals/"+encodeURIComponent(id)+"/approve",{method:"POST",body:"{}"});
         S.toast(r.message||"Retrait validé.");
