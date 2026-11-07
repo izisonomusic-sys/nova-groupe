@@ -598,8 +598,7 @@
     if(verify)verify.disabled=true;
     if(statusNode)statusNode.textContent="Vérification…";
     try{
-      var result=await api("/api/payments/paydunya/sync",{method:"POST",body:JSON.stringify({reference:softpayReference})});
-      var row=Array.isArray(result.results)?result.results[0]:null;
+      var row=await api("/api/payments/lomopay/"+encodeURIComponent(softpayReference),{method:"GET"});
       var status=String(row&&row.status||"pending").toLowerCase();
       if(status==="completed"){
         if(statusNode)statusNode.textContent="Confirmé";
@@ -663,13 +662,13 @@
      if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
      if(!validWalletPhone(country,operator,phone)){S.toast(walletPhoneError(country,operator));return;}
     var softpayOtp="";
-    if((country==="+225" && operator==="Orange CI") || (country==="+226" && operator==="Orange Burkina")){
+    if((country==="+225" && operator==="Orange CI") || (country==="+226" && operator==="Orange Burkina") || (country==="+221" && operator==="Orange SN")){
       softpayOtp=window.prompt("Saisissez le code de paiement/OTP fourni par "+operator+" avant de continuer :")||"";
       if(!softpayOtp.trim()){S.toast("Le code de validation est requis pour cet opérateur.");return;}
     }
     var b=el("btnRecharge");b.disabled=true;
     try{
-      var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
+      var result=await api("/api/payments/lomopay/direct",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
       showSoftPayModal(result);
       if(result.status==="completed"){
@@ -679,7 +678,7 @@
       }else{
         startSoftPayPolling();
       }
-    }catch(e){S.toast(e.message||"Paiement SoftPay impossible. Aucun solde n'a été crédité.");}
+    }catch(e){S.toast(e.message||"Paiement LomoPay impossible. Aucun solde n'a été crédité.");}
     finally{b.disabled=false;}
   });
   listen("btnSaveWithdrawalAccount","click",async function(){
