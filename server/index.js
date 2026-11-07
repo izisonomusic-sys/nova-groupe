@@ -8,7 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: '32kb' }));
+app.use(express.json({ limit: '32kb', verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
 app.use(express.urlencoded({ extended: true, limit: '32kb' }));
 app.use((req, res, next) => {
   const origin = String(req.headers.origin || '').trim();
@@ -157,13 +157,18 @@ const paydunyaKeys = {
     ? envFirst('PAYDUNYA_TEST_TOKEN', 'PAYDUNYA_TOKEN')
     : envFirst('PAYDUNYA_LIVE_TOKEN', 'PAYDUNYA_TOKEN')
 };
+const lomoPayKeys = {
+  publicKey: envFirst('LOMOPAY_PUBLIC_KEY'),
+  secretKey: envFirst('LOMOPAY_SECRET_KEY'),
+  mode: envFirst('LOMOPAY_MODE').toLowerCase() || 'live'
+};
 const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 const missing = [];
 if (!process.env.SUPABASE_URL) missing.push('SUPABASE_URL');
 if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-if (!paydunyaKeys.master) missing.push('PAYDUNYA_MASTER_KEY');
-if (!paydunyaKeys.privateKey) missing.push(isTest ? 'PAYDUNYA_TEST_PRIVATE_KEY ou PAYDUNYA_PRIVATE_KEY' : 'PAYDUNYA_LIVE_PRIVATE_KEY ou PAYDUNYA_PRIVATE_KEY');
-if (!paydunyaKeys.token) missing.push(isTest ? 'PAYDUNYA_TEST_TOKEN ou PAYDUNYA_TOKEN' : 'PAYDUNYA_LIVE_TOKEN ou PAYDUNYA_TOKEN');
+const lomoPayMissing = [];
+if (!lomoPayKeys.publicKey) lomoPayMissing.push('LOMOPAY_PUBLIC_KEY');
+if (!lomoPayKeys.secretKey) lomoPayMissing.push('LOMOPAY_SECRET_KEY');
 
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -204,6 +209,65 @@ function publicHttpsUrl(value) {
 function maskedKeyInfo(value) {
   const v = String(value || '');
   return { present: !!v, length: v.length, prefix: v.slice(0, 14) };
+}
+
+
+function lomoPayHeaders(idempotencyKey) {
+  return {
+    'Content-Type': 'application/json',
+    'X-Public-Key': lomoPayKeys.publicKey,
+    'X-Secret-Key': lomoPayKeys.secretKey,
+    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
+  };
+}
+async function lomoPayRequest(endpoint, { method = 'POST', payload, idempotencyKey } = {}) {
+  if (lomoPayMissing.length) throw new Error('Configuration LomoPay incomplète : ' + lomoPayMissing.join(', '));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch('https://lomopay.net/api/v1/' + endpoint, {
+      method, headers: lomoPayHeaders(idempotencyKey),
+      ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      signal: controller.signal
+    });
+    const raw = await response.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (_) { data = { response_text: raw }; }
+    return { response, data };
+  } finally { clearTimeout(timeout); }
+}
+const LOMOPAY_COUNTRY_CODES = new Map([
+  ['+228','TG'],['TG','TG'],['+225','CI'],['CI','CI'],['+221','SN'],['SN','SN'],
+  ['+226','BF'],['BF','BF'],['+229','BJ'],['BJ','BJ'],['+223','ML'],['ML','ML'],
+  ['+237','CM'],['CM','CM'],['+227','NE'],['NE','NE'],['+224','GN'],['GN','GN'],
+  ['+245','GW'],['GW','GW']
+]);
+function lomoPayCountryCode(value) {
+  return LOMOPAY_COUNTRY_CODES.get(String(value || '').trim().toUpperCase()) || '';
+}
+function lomoPayOperatorCode(countryCode, operator) {
+  const cc = lomoPayCountryCode(countryCode);
+  const op = normalizeOperator(operator);
+  const maps = {
+    TG: [['togocom','tmoney'],['t-money','tmoney'],['t-money-togo','tmoney'],['tmoney','tmoney'],['yas','tmoney'],['mixx by yas','tmoney'],['moov togo','flooz'],['moov-togo','flooz'],['moov','flooz'],['flooz','flooz']],
+    CI: [['orange ci','orange'],['orange money ci','orange'],['orange-money-ci','orange'],['mtn ci','mtn'],['mtn-ci','mtn'],['moov ci','moov'],['moov-ci','moov'],['wave ci','wave'],['wave-ci','wave']],
+    SN: [['orange sn','orange'],['orange money senegal','orange'],['orange-money-senegal','orange'],['free sn','free'],['free money','free'],['free-money-senegal','free'],['expresso','expresso'],['expresso-senegal','expresso'],['wave sn','wave'],['wave-senegal','wave']],
+    BF: [['orange burkina','orange'],['orange money burkina','orange'],['orange-money-burkina','orange'],['moov burkina','moov'],['moov-burkina-faso','moov']],
+    BJ: [['mtn bénin','mtn'],['mtn benin','mtn'],['mtn-benin','mtn'],['moov bénin','moov'],['moov benin','moov'],['moov-benin','moov'],['celtiis cash','celtiis'],['celtiis-cash','celtiis']],
+    ML: [['orange ml','orange'],['orange mali','orange'],['orange-money-mali','orange'],['moov ml','moov'],['moov mali','moov'],['moov-ml','moov']],
+    CM: [['mtn cm','mtn'],['mtn cameroun','mtn'],['mtn-cameroun','mtn']]
+  };
+  return (maps[cc] || []).find(([label]) => normalizeOperator(label) === op)?.[1] || '';
+}
+function verifyLomoPaySignature(req) {
+  const secret = lomoPayKeys.secretKey;
+  const raw = req.rawBody;
+  const received = String(req.headers['x-lomopay-signature'] || '').trim();
+  if (!secret || !Buffer.isBuffer(raw) || !received) return false;
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(raw).digest('hex');
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 function verifyPayDunyaHash(payload) {
@@ -442,7 +506,8 @@ app.get('/api/health', (_req, res) => {
   const callbackConfigured = !!process.env.PAYDUNYA_CALLBACK_URL;
   const callbackUrl = callbackConfigured ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
   res.json({
-    ok: true, service: 'nova-api', configured: missing.length === 0, missing,
+    ok: true, service: 'nova-api', configured: missing.length === 0 && lomoPayMissing.length === 0, missing: [...missing, ...lomoPayMissing],
+    lomopay: { mode: lomoPayKeys.mode, publicKey: maskedKeyInfo(lomoPayKeys.publicKey), secretKey: maskedKeyInfo(lomoPayKeys.secretKey) },
     paydunya: {
       mode: isTest ? 'test' : 'live', base: paydunyaBase,
       master: maskedKeyInfo(paydunyaKeys.master), privateKey: maskedKeyInfo(paydunyaKeys.privateKey),
@@ -452,8 +517,189 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+
+app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
+  let pendingId = null;
+  let pendingReference = null;
+  let providerRequestStarted = false;
+  try {
+    const amount = Number(req.body.amount);
+    const rawCountry = String(req.body.country_code || req.body.country || '').trim();
+    const country = lomoPayCountryCode(rawCountry);
+    const operator = String(req.body.operator || '').trim();
+    const operatorCode = lomoPayOperatorCode(rawCountry, operator);
+    const phone = String(req.body.phone || '').replace(/[^0-9+]/g, '');
+    const otp = String(req.body.otp || '').trim();
+    const phoneDigits = phone.replace(/\D/g,'');
+    if (!Number.isSafeInteger(amount) || amount < 3000 || amount > 5000000) {
+      return res.status(400).json({ error: 'Le montant doit être compris entre 3 000 et 5 000 000 FCFA.' });
+    }
+    if (!country || !operatorCode || phoneDigits.length < 8 || phoneDigits.length > 15) {
+      return res.status(400).json({ error: 'Pays, opérateur ou numéro non pris en charge par LomoPay. Vérifiez les informations.' });
+    }
+    if (['orange'].includes(operatorCode) && ['CI','BF','SN','GN'].includes(country) && !/^\d{4,8}$/.test(otp)) {
+      return res.status(400).json({ error: 'Le code Orange obtenu avec #144#391# est requis pour cet opérateur.' });
+    }
+    if (lomoPayMissing.length) return res.status(503).json({ error: 'Configuration LomoPay incomplète.', missing: lomoPayMissing });
+    const currency = country === 'CM' ? 'XAF' : 'XOF';
+    const reference = 'TTE-' + crypto.randomUUID();
+    const { data: pending, error: dbError } = await supabase.from('payment_transactions').insert({
+      user_id: req.user.id, reference, amount, provider: 'lomopay', status: 'pending', currency
+    }).select('id,reference,amount').single();
+    if (dbError) throw dbError;
+    pendingId = pending.id;
+    pendingReference = pending.reference;
+    const { data: profile, error: profileError } = await supabase.from('profiles')
+      .select('display_name,phone').eq('id',req.user.id).maybeSingle();
+    if (profileError) throw profileError;
+    const webhookUrl = 'https://nova-groupe-dpnx.onrender.com/webhooks/lomopay';
+    const payload = {
+      amount, currency, country, operator: operatorCode, phone,
+      ...(profile?.display_name ? { customer_name: String(profile.display_name).slice(0,120) } : {}),
+      ...(req.user.email ? { customer_email: String(req.user.email).slice(0,180) } : {}),
+      external_reference: reference, webhook_url: webhookUrl, method: 'mobile_money',
+      ...(otp ? { otp } : {})
+    };
+    providerRequestStarted = true;
+    const { response, data } = await lomoPayRequest('direct.php',{payload,idempotencyKey:reference});
+    const providerData = data?.data || {};
+    const providerId = String(providerData.id || providerData.transaction_id || '').trim();
+    if (!response.ok || data?.success !== true || !providerId) {
+      await supabase.from('payment_transactions').update({
+        status:'failed', provider_payload:data || {http_status:response.status}
+      }).eq('id',pending.id);
+      const code = String(data?.error || data?.code || '');
+      return res.status(response.status >= 400 ? response.status : 502).json({
+        error: 'LomoPay n’a pas pu démarrer le paiement.',
+        detail: data?.message || data?.detail || code || 'Réponse du prestataire invalide.',
+        provider_code: code || null
+      });
+    }
+    await supabase.from('payment_transactions').update({
+      provider_token:providerId, provider_payload:data
+    }).eq('id',pending.id);
+    const nextAction = providerData.next_action || {};
+    return res.status(201).json({
+      ok:true, reference, amount, currency, operator, phone,
+      provider_id:providerId, status:String(providerData.status || 'pending').toLowerCase(),
+      next_action:nextAction.type || 'confirm_on_phone',
+      payment_url:nextAction.type==='redirect' ? (nextAction.url || null) : null,
+      message:nextAction.message || data.message || 'Une demande de confirmation a été envoyée sur votre téléphone. Validez-la pour finaliser le dépôt.'
+    });
+  } catch (err) {
+    // A timeout/network failure after sending the request is ambiguous: LomoPay may
+    // already have sent the USSD prompt. Keep the transaction pending and expose
+    // its reference so the member can continue checking without creating a duplicate.
+    if (pendingId && providerRequestStarted) {
+      console.error('[LOMOPAY][DEPOSIT] ambiguous initiation result:',err.message);
+      return res.status(202).json({
+        ok:true, reference:pendingReference, amount:Number(req.body.amount),
+        currency:lomoPayCountryCode(req.body.country_code || req.body.country)==='CM'?'XAF':'XOF',
+        status:'pending', next_action:'confirm_on_phone',
+        message:'La demande a peut-être déjà été envoyée. Vérifiez votre téléphone et ne relancez pas le paiement. Le statut sera actualisé automatiquement.'
+      });
+    }
+    if (pendingId) await supabase.from('payment_transactions').update({
+      status:'failed', provider_payload:{ error:String(err?.message || 'LomoPay initiation error') }
+    }).eq('id',pendingId);
+    console.error('[LOMOPAY][DEPOSIT] initiation error:',err.message);
+    return res.status(err?.name==='AbortError'?504:500).json({
+      error:'Impossible de démarrer le dépôt.',
+      detail:err?.message || 'Erreur serveur.'
+    });
+  }
+});
+
+app.get('/api/payments/lomopay/:reference', requireUser, async (req,res) => {
+  try {
+    const {data:tx,error}=await supabase.from('payment_transactions')
+      .select('id,reference,user_id,amount,currency,status,provider_token,provider_payload,created_at,completed_at')
+      .eq('reference',req.params.reference).eq('user_id',req.user.id).eq('provider','lomopay').maybeSingle();
+    if(error) throw error;
+    if(!tx) return res.status(404).json({error:'Transaction introuvable.'});
+    // LomoPay's status endpoint is the fallback if a webhook is delayed or lost.
+    if(tx.status==='pending' && tx.provider_token) {
+      const {response,data:providerResponse}=await lomoPayRequest('payments.php?id='+encodeURIComponent(tx.provider_token),{method:'GET'});
+      const providerData=providerResponse?.data || {};
+      if(response.ok && providerResponse?.success===true) {
+        const providerStatus=String(providerData.status || '').toLowerCase();
+        if(providerStatus==='completed') {
+          const {error:creditError}=await supabase.rpc('nova_confirm_lomopay_payment',{
+            p_payment_id:tx.id,p_provider_token:tx.provider_token,
+            p_paid_amount:Number(providerData.amount ?? tx.amount),
+            p_currency:String(providerData.currency || tx.currency).toUpperCase(),
+            p_provider_payload:providerResponse
+          });
+          if(creditError) throw creditError;
+        } else if(providerStatus==='failed') {
+          const {error:failedError}=await supabase.from('payment_transactions').update({
+            status:'failed',provider_payload:providerResponse
+          }).eq('id',tx.id).eq('status','pending');
+          if(failedError) throw failedError;
+        }
+      }
+    }
+    const {data:current,error:currentError}=await supabase.from('payment_transactions')
+      .select('reference,amount,currency,status,created_at,completed_at')
+      .eq('id',tx.id).single();
+    if(currentError) throw currentError;
+    return res.json(current);
+  } catch(err) {
+    console.error('[LOMOPAY] status lookup error:',err.message);
+    return res.status(500).json({error:'Impossible de consulter le statut du dépôt.'});
+  }
+});
+
+app.post('/webhooks/lomopay', async (req,res) => {
+  try {
+    if (!supabase || lomoPayMissing.length) return res.status(503).send('Not configured');
+    if (!verifyLomoPaySignature(req)) return res.status(401).send('Invalid signature');
+    const event=req.body || {};
+    const eventId=String(req.headers['x-lomopay-event-id'] || event.id || '').trim();
+    const eventType=String(event.type || '').trim();
+    const data=event.data || {};
+    if (!eventId || !eventType || !data.external_reference) return res.status(400).send('Invalid event');
+    const reference=String(data.external_reference);
+    if (eventType.startsWith('payment.')) {
+      const {data:tx,error}=await supabase.from('payment_transactions')
+        .select('id,reference,amount,currency,status,provider_token')
+        .eq('reference',reference).eq('provider','lomopay').maybeSingle();
+      if(error) throw error;
+      if(!tx) return res.status(404).send('Unknown payment');
+      const providerId=String(data.transaction_id || data.id || '').trim();
+      if(tx.provider_token && providerId && tx.provider_token!==providerId) return res.status(409).send('Provider id mismatch');
+      if(Number(data.amount)!==Number(tx.amount) || String(data.currency||'').toUpperCase()!==tx.currency) return res.status(409).send('Amount/currency mismatch');
+      if(eventType==='payment.succeeded' || String(data.status).toLowerCase()==='completed') {
+        const {error:creditError}=await supabase.rpc('nova_confirm_lomopay_payment',{
+          p_payment_id:tx.id,p_provider_token:providerId,p_paid_amount:Number(data.amount),
+          p_currency:String(data.currency).toUpperCase(),p_provider_payload:event
+        });
+        if(creditError) throw creditError;
+      } else if(['failed','cancelled','expired'].includes(String(data.status||'').toLowerCase())) {
+        const {error:stateError}=await supabase.from('payment_transactions').update({
+          status:'failed',provider_token:providerId || tx.provider_token,provider_payload:event
+        }).eq('id',tx.id).eq('status','pending');
+        if(stateError) throw stateError;
+      }
+    } else {
+      return res.status(200).send('Ignored');
+    }
+    const {error:eventError}=await supabase.from('lomopay_webhook_events').upsert({
+      event_id:eventId,event_type:eventType,payload:event
+    },{onConflict:'event_id',ignoreDuplicates:true});
+    if(eventError) throw eventError;
+    return res.status(200).send('OK');
+  } catch(err) {
+    console.error('[LOMOPAY][WEBHOOK] processing error:',err.message);
+    return res.status(500).send('Webhook processing failed');
+  }
+});
+
+// Legacy PayDunya deposit endpoints are blocked for new transactions; callbacks remain for historical records.
+app.post('/api/payments/paydunya/create', requireUser, (_req,res) => res.status(410).json({error:'PayDunya est désactivé. Utilisez LomoPay pour les dépôts.'}));
+
 // Crée une facture PayDunya pour le compte authentifié. Aucun solde n'est crédité ici.
-app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
+app.post('/api/payments/paydunya/create-legacy', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     const requestedCountry = String(req.body.country_code || '').trim();
@@ -623,7 +869,9 @@ async function paydunyaJsonRequest(url, method, payload) {
   }
 }
 
-app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
+app.post('/api/payments/paydunya/softpay', requireUser, (_req,res) => res.status(410).json({error:'PayDunya est désactivé. Utilisez LomoPay pour les dépôts.'}));
+
+app.post('/api/payments/paydunya/softpay-legacy-disabled', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     const countryCode = String(req.body.country_code || '').trim();
@@ -988,6 +1236,7 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
   }
 });
 
+// Legacy PayDunya payout implementation retained only for historical in-flight payouts.
 // Starts the real PayDunya disbursement only after the admin approval RPC has succeeded.
 async function startApprovedPayDunyaWithdrawal(withdrawalId) {
   if (!supabase || !withdrawalId) throw new Error('Retrait invalide.');
@@ -1393,6 +1642,7 @@ async function reconcilePayDunyaWithdrawals() {
     console.error('[PAYDUNYA][WITHDRAWAL] reconcile query error:', err.message);
   }
 }
+
 
 function paydunyaDisbursementCallbackHealth(_req, res) {
   return res.status(200).json({ ok: true, service: 'nova-paydunya-disbursement-callback' });
@@ -1912,9 +2162,9 @@ console.log('[NOVA][CONFIG] PayDunya/Supabase configuration check', {
   paydunyaMode: isTest ? 'test' : 'live',
   supabaseUrlConfigured: !!process.env.SUPABASE_URL,
   supabaseServiceRoleConfigured: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  paydunyaMasterConfigured: !!paydunyaKeys.master,
-  paydunyaPrivateConfigured: !!paydunyaKeys.privateKey,
-  paydunyaTokenConfigured: !!paydunyaKeys.token,
+  lomoPayPublicConfigured: !!lomoPayKeys.publicKey,
+  lomoPaySecretConfigured: !!lomoPayKeys.secretKey,
+  paydunyaLegacyConfigured: !!(paydunyaKeys.master && paydunyaKeys.privateKey && paydunyaKeys.token),
   paymentCallback: process.env.PAYDUNYA_CALLBACK_URL ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) || 'invalid' : 'default',
   disbursementCallback: publicHttpsUrl(paydunyaDisbursementCallbackUrl) || 'invalid'
 });
