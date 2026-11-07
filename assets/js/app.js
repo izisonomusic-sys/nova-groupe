@@ -197,6 +197,14 @@
     }
   }
   async function syncPendingPayment(reference) {
+    if(reference) {
+      try {
+        var current = await api("/api/payments/lomopay/"+encodeURIComponent(reference),{method:"GET"});
+        return {results:[current]};
+      } catch (lomoError) {
+        // Existing PayDunya transactions remain readable during the migration.
+      }
+    }
     try {
       var body = reference ? { reference: reference } : {};
       return await api("/api/payments/paydunya/sync", {
@@ -204,7 +212,7 @@
         body: JSON.stringify(body)
       });
     } catch (err) {
-      console.warn("PayDunya sync:", err.message);
+      console.warn("Legacy payment sync:", err.message);
       return null;
     }
   }
