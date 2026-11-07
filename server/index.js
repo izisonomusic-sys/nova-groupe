@@ -1680,6 +1680,16 @@ async function reconcilePayDunyaWithdrawals() {
 async function reconcileLomoPayWithdrawals() {
   if(!supabase || lomoPayMissing.length) return;
   try {
+    // Retry administrator-approved requests whose first API call timed out before
+    // the provider ID was stored. The same idempotency key prevents duplicate payouts.
+    const {data:approvedRows,error:approvedError}=await supabase.from('withdrawal_requests')
+      .select('id').eq('status','pending').not('admin_approved_at','is',null)
+      .is('provider_token',null).limit(10);
+    if(approvedError) throw approvedError;
+    for(const approved of approvedRows || []) {
+      try { await startApprovedLomoPayWithdrawal(approved.id); }
+      catch(err) { console.error('[LOMOPAY][PAYOUT RETRY] initiation error',{withdrawalId:approved.id,message:err.message}); }
+    }
     const {data:rows,error}=await supabase.from('withdrawal_requests')
       .select('id,payout_amount,provider_token,status')
       .eq('provider','lomopay').eq('status','processing')
