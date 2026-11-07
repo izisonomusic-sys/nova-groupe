@@ -448,6 +448,18 @@ async function reconcileInvestmentIncomeForUser(userId) {
 
         existing.add(reference);
       }
+
+      // Close an investment only after all income days due up to its end date
+      // have been reconciled successfully. This keeps the member status accurate
+      // without changing the idempotent daily-credit references.
+      if (Number.isFinite(configuredEnd.getTime()) && now >= configuredEnd.getTime() && inv.status === 'active') {
+        const { error: completionError } = await supabase.from('investments')
+          .update({ status: 'completed' })
+          .eq('id', inv.id)
+          .eq('user_id', userId)
+          .eq('status', 'active');
+        if (completionError) throw completionError;
+      }
     }
 
     return { ok: true, status: credited ? 'credited' : 'already_credited', credited, amount_credited: amountCredited };
