@@ -520,6 +520,8 @@ app.get('/api/health', (_req, res) => {
 
 app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
   let pendingId = null;
+  let pendingReference = null;
+  let providerRequestStarted = false;
   try {
     const amount = Number(req.body.amount);
     const rawCountry = String(req.body.country_code || req.body.country || '').trim();
@@ -546,6 +548,7 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
     }).select('id,reference,amount').single();
     if (dbError) throw dbError;
     pendingId = pending.id;
+    pendingReference = pending.reference;
     const { data: profile, error: profileError } = await supabase.from('profiles')
       .select('display_name,phone').eq('id',req.user.id).maybeSingle();
     if (profileError) throw profileError;
@@ -557,6 +560,7 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
       external_reference: reference, webhook_url: webhookUrl, method: 'mobile_money',
       ...(otp ? { otp } : {})
     };
+    providerRequestStarted = true;
     const { response, data } = await lomoPayRequest('direct.php',{payload,idempotencyKey:reference});
     const providerData = data?.data || {};
     const providerId = String(providerData.id || providerData.transaction_id || '').trim();
@@ -579,15 +583,28 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
       ok:true, reference, amount, currency, operator, phone,
       provider_id:providerId, status:String(providerData.status || 'pending').toLowerCase(),
       next_action:nextAction.type || 'confirm_on_phone',
+      payment_url:nextAction.type==='redirect' ? (nextAction.url || null) : null,
       message:nextAction.message || data.message || 'Une demande de confirmation a été envoyée sur votre téléphone. Validez-la pour finaliser le dépôt.'
     });
   } catch (err) {
+    // A timeout/network failure after sending the request is ambiguous: LomoPay may
+    // already have sent the USSD prompt. Keep the transaction pending and expose
+    // its reference so the member can continue checking without creating a duplicate.
+    if (pendingId && providerRequestStarted) {
+      console.error('[LOMOPAY][DEPOSIT] ambiguous initiation result:',err.message);
+      return res.status(202).json({
+        ok:true, reference:pendingReference, amount:Number(req.body.amount),
+        currency:lomoPayCountryCode(req.body.country_code || req.body.country)==='CM'?'XAF':'XOF',
+        status:'pending', next_action:'confirm_on_phone',
+        message:'La demande a peut-être déjà été envoyée. Vérifiez votre téléphone et ne relancez pas le paiement. Le statut sera actualisé automatiquement.'
+      });
+    }
     if (pendingId) await supabase.from('payment_transactions').update({
       status:'failed', provider_payload:{ error:String(err?.message || 'LomoPay initiation error') }
     }).eq('id',pendingId);
     console.error('[LOMOPAY][DEPOSIT] initiation error:',err.message);
     return res.status(err?.name==='AbortError'?504:500).json({
-      error:err?.name==='AbortError'?'LomoPay met trop de temps à répondre. Vérifiez votre téléphone avant de réessayer.':'Impossible de démarrer le dépôt.',
+      error:'Impossible de démarrer le dépôt.',
       detail:err?.message || 'Erreur serveur.'
     });
   }
@@ -595,12 +612,38 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
 
 app.get('/api/payments/lomopay/:reference', requireUser, async (req,res) => {
   try {
-    const {data,error}=await supabase.from('payment_transactions')
-      .select('reference,amount,currency,status,created_at,completed_at')
+    const {data:tx,error}=await supabase.from('payment_transactions')
+      .select('id,reference,user_id,amount,currency,status,provider_token,provider_payload,created_at,completed_at')
       .eq('reference',req.params.reference).eq('user_id',req.user.id).eq('provider','lomopay').maybeSingle();
     if(error) throw error;
-    if(!data) return res.status(404).json({error:'Transaction introuvable.'});
-    return res.json(data);
+    if(!tx) return res.status(404).json({error:'Transaction introuvable.'});
+    // LomoPay's status endpoint is the fallback if a webhook is delayed or lost.
+    if(tx.status==='pending' && tx.provider_token) {
+      const {response,data:providerResponse}=await lomoPayRequest('payments.php?id='+encodeURIComponent(tx.provider_token),{method:'GET'});
+      const providerData=providerResponse?.data || {};
+      if(response.ok && providerResponse?.success===true) {
+        const providerStatus=String(providerData.status || '').toLowerCase();
+        if(providerStatus==='completed') {
+          const {error:creditError}=await supabase.rpc('nova_confirm_lomopay_payment',{
+            p_payment_id:tx.id,p_provider_token:tx.provider_token,
+            p_paid_amount:Number(providerData.amount ?? tx.amount),
+            p_currency:String(providerData.currency || tx.currency).toUpperCase(),
+            p_provider_payload:providerResponse
+          });
+          if(creditError) throw creditError;
+        } else if(providerStatus==='failed') {
+          const {error:failedError}=await supabase.from('payment_transactions').update({
+            status:'failed',provider_payload:providerResponse
+          }).eq('id',tx.id).eq('status','pending');
+          if(failedError) throw failedError;
+        }
+      }
+    }
+    const {data:current,error:currentError}=await supabase.from('payment_transactions')
+      .select('reference,amount,currency,status,created_at,completed_at')
+      .eq('id',tx.id).single();
+    if(currentError) throw currentError;
+    return res.json(current);
   } catch(err) {
     console.error('[LOMOPAY] status lookup error:',err.message);
     return res.status(500).json({error:'Impossible de consulter le statut du dépôt.'});
@@ -656,7 +699,7 @@ app.post('/webhooks/lomopay', async (req,res) => {
 app.post('/api/payments/paydunya/create', requireUser, (_req,res) => res.status(410).json({error:'PayDunya est désactivé. Utilisez LomoPay pour les dépôts.'}));
 
 // Crée une facture PayDunya pour le compte authentifié. Aucun solde n'est crédité ici.
-app.post('/api/payments/paydunya/create', requireUser, async (req, res) => {
+app.post('/api/payments/paydunya/create-legacy', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     const requestedCountry = String(req.body.country_code || '').trim();
