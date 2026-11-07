@@ -249,7 +249,7 @@ function lomoPayOperatorCode(countryCode, operator) {
   const cc = lomoPayCountryCode(countryCode);
   const op = normalizeOperator(operator);
   const maps = {
-    TG: [['togocom','tmoney'],['t-money','tmoney'],['t-money-togo','tmoney'],['tmoney','tmoney'],['yas','tmoney'],['mixx by yas','tmoney'],['moov togo','flooz'],['moov-togo','flooz'],['moov','flooz'],['flooz','flooz']],
+    TG: [['togocom','tmoney'],['t-money','tmoney'],['t-money-togo','tmoney'],['tmoney','tmoney'],['yas','tmoney'],['mixx by yas','tmoney'],['moov togo','moov'],['moov money','moov'],['moov-togo','moov'],['moov','moov'],['flooz','moov']],
     CI: [['orange ci','orange'],['orange money ci','orange'],['orange-money-ci','orange'],['mtn ci','mtn'],['mtn-ci','mtn'],['moov ci','moov'],['moov-ci','moov'],['wave ci','wave'],['wave-ci','wave']],
     SN: [['orange sn','orange'],['orange money senegal','orange'],['orange-money-senegal','orange'],['free sn','free'],['free money','free'],['free-money-senegal','free'],['expresso','expresso'],['expresso-senegal','expresso'],['wave sn','wave'],['wave-senegal','wave']],
     BF: [['orange burkina','orange'],['orange money burkina','orange'],['orange-money-burkina','orange'],['moov burkina','moov'],['moov-burkina-faso','moov']],
@@ -565,6 +565,12 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
     const providerData = data?.data || {};
     const providerId = String(providerData.id || providerData.transaction_id || '').trim();
     if (!response.ok || data?.success !== true || !providerId) {
+      console.error('[LOMOPAY][DEPOSIT] provider rejected initiation', {
+        httpStatus: response.status,
+        providerCode: String(data?.error || data?.code || 'unknown'),
+        country, operator: operatorCode,
+        message: String(data?.message || data?.detail || 'No provider message').slice(0, 240)
+      });
       await supabase.from('payment_transactions').update({
         status:'failed', provider_payload:data || {http_status:response.status}
       }).eq('id',pending.id);
