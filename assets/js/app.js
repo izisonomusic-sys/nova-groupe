@@ -602,7 +602,7 @@
       var status=String(row&&row.status||"pending").toLowerCase();
       if(status==="completed"){
         if(statusNode)statusNode.textContent="Confirmé";
-        if(messageNode)messageNode.textContent="Paiement confirmé. Votre portefeuille NOVA a été crédité.";
+        if(messageNode)messageNode.textContent="Paiement confirmé. Votre portefeuille TTE Energy a été crédité.";
         localStorage.removeItem("nova:lastPendingPaymentReference");
         await loadAll();
         setText("wdAvail",money(wallet.balance));
