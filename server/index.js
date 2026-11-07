@@ -552,8 +552,8 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
     const webhookUrl = 'https://nova-groupe-dpnx.onrender.com/webhooks/lomopay';
     const payload = {
       amount, currency, country, operator: operatorCode, phone,
-      customer_name: String(profile?.display_name || '').slice(0,120),
-      customer_email: String(req.user.email || '').slice(0,180),
+      ...(profile?.display_name ? { customer_name: String(profile.display_name).slice(0,120) } : {}),
+      ...(req.user.email ? { customer_email: String(req.user.email).slice(0,180) } : {}),
       external_reference: reference, webhook_url: webhookUrl, method: 'mobile_money',
       ...(otp ? { otp } : {})
     };
