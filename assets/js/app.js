@@ -83,7 +83,12 @@
   function setText(id,v){var n=el(id);if(n)n.textContent=v==null?"":String(v);}
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
   function money(v){return S.fcn(Number(v)||0);}
-  function imagePath(v){return v||"assets/img/projet-solaire.jpg";}
+  function imagePath(v, project){
+    var source=String(v||""), text=[source,project&&project.title,project&&project.badge].join(" ").toLowerCase();
+    var match=text.match(/(bidon|baril)[-_ ]?(10|15|20|25|26|30|50|100|150|400)\s*l?/i);
+    if(match){var kind=match[1].toLowerCase(),litres=Number(match[2]);if(kind==="bidon"&&litres<=25)return "assets/img/products/bidon-"+litres+"l.jpg?v=20261102a";if(kind==="baril"&&litres>=26)return "assets/img/products/baril-"+litres+"l.jpg?v=20261102a";}
+    return source||"assets/img/projet-solaire.jpg";
+  }
   // Normalize the selected country prefix without stripping significant local zeroes.
   function normalizeWalletPhone(countryCode, raw){
     var cc=String(countryCode||"").replace(/\D/g,"");
@@ -314,7 +319,7 @@
   }
   function planCard(p){
     var daily=Number(p.daily_return_amount)||0,days=Number(p.duration_days)||0,amount=Number(p.minimum_amount)||0;
-    return '<article class="plan product-tile"><h3 class="product-tile-title">'+esc(p.badge||p.category||p.title||"Projet")+'</h3><div class="ph"><img src="'+esc(imagePath(p.image_url))+'" alt="'+esc(p.title)+'" loading="lazy"></div><div class="pb"><h3 class="product-name">'+esc(p.title)+'</h3><p class="muted product-description">'+esc(p.description||"")+'</p><div class="product-metrics"><p>Revenu quotidien: <strong>'+money(daily)+'</strong></p><p>Revenu total: <strong>'+money(daily*days)+'</strong></p><p>Période de validité: <strong>'+days+' jours</strong></p></div><div class="product-buy-row"><b class="product-price">'+money(amount)+'</b><button class="btn btn-primary product-buy" data-invest="'+esc(p.id)+'">Acheter</button></div></div></article>';
+    return '<article class="plan product-tile"><h3 class="product-tile-title">'+esc(p.badge||p.category||p.title||"Projet")+'</h3><div class="ph"><img src="'+esc(imagePath(p.image_url,p))+'" alt="'+esc(p.title)+'" loading="lazy"></div><div class="pb"><h3 class="product-name">'+esc(p.title)+'</h3><p class="muted product-description">'+esc(p.description||"")+'</p><div class="product-metrics"><p>Revenu quotidien: <strong>'+money(daily)+'</strong></p><p>Revenu total: <strong>'+money(daily*days)+'</strong></p><p>Période de validité: <strong>'+days+' jours</strong></p></div><div class="product-buy-row"><b class="product-price">'+money(amount)+'</b><button class="btn btn-primary product-buy" data-invest="'+esc(p.id)+'">Acheter</button></div></div></article>';
   }
   function renderPlans(tab){
     currentTab=tab||"plans";
