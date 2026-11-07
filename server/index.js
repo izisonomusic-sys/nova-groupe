@@ -249,13 +249,13 @@ function lomoPayOperatorCode(countryCode, operator) {
   const cc = lomoPayCountryCode(countryCode);
   const op = normalizeOperator(operator);
   const maps = {
-    TG: [['togocom','tmoney'],['t-money','tmoney'],['tmoney','tmoney'],['yas','tmoney'],['mixx by yas','tmoney'],['moov togo','flooz'],['moov','flooz'],['flooz','flooz']],
-    CI: [['orange ci','orange'],['orange money ci','orange'],['mtn ci','mtn'],['moov ci','moov'],['wave ci','wave']],
-    SN: [['orange sn','orange'],['orange money senegal','orange'],['free sn','free'],['free money','free'],['expresso','expresso'],['wave sn','wave']],
-    BF: [['orange burkina','orange'],['orange money burkina','orange'],['moov burkina','moov']],
-    BJ: [['mtn bénin','mtn'],['mtn benin','mtn'],['moov bénin','moov'],['moov benin','moov'],['celtiis cash','celtiis']],
-    ML: [['orange ml','orange'],['orange mali','orange'],['moov ml','moov'],['moov mali','moov']],
-    CM: [['mtn cm','mtn'],['mtn cameroun','mtn']]
+    TG: [['togocom','tmoney'],['t-money','tmoney'],['t-money-togo','tmoney'],['tmoney','tmoney'],['yas','tmoney'],['mixx by yas','tmoney'],['moov togo','flooz'],['moov-togo','flooz'],['moov','flooz'],['flooz','flooz']],
+    CI: [['orange ci','orange'],['orange money ci','orange'],['orange-money-ci','orange'],['mtn ci','mtn'],['mtn-ci','mtn'],['moov ci','moov'],['moov-ci','moov'],['wave ci','wave'],['wave-ci','wave']],
+    SN: [['orange sn','orange'],['orange money senegal','orange'],['orange-money-senegal','orange'],['free sn','free'],['free money','free'],['free-money-senegal','free'],['expresso','expresso'],['expresso-senegal','expresso'],['wave sn','wave'],['wave-senegal','wave']],
+    BF: [['orange burkina','orange'],['orange money burkina','orange'],['orange-money-burkina','orange'],['moov burkina','moov'],['moov-burkina-faso','moov']],
+    BJ: [['mtn bénin','mtn'],['mtn benin','mtn'],['mtn-benin','mtn'],['moov bénin','moov'],['moov benin','moov'],['moov-benin','moov'],['celtiis cash','celtiis'],['celtiis-cash','celtiis']],
+    ML: [['orange ml','orange'],['orange mali','orange'],['orange-money-mali','orange'],['moov ml','moov'],['moov mali','moov'],['moov-ml','moov']],
+    CM: [['mtn cm','mtn'],['mtn cameroun','mtn'],['mtn-cameroun','mtn']]
   };
   return (maps[cc] || []).find(([label]) => normalizeOperator(label) === op)?.[1] || '';
 }
