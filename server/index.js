@@ -519,13 +519,101 @@ app.post('/api/investments/reconcile', requireUser, async (req, res) => {
 });
 
 app.get('/api/health', (_req, res) => {
-  const callbackConfigured = false;
-  const callbackUrl = null;
   res.json({
-    ok: true, service: 'nova-api', configured: missing.length === 0 && lomoPayMissing.length === 0, missing: [...missing, ...lomoPayMissing],
-    lomopay: { mode: lomoPayKeys.mode, publicKey: { present: !!lomoPayKeys.publicKey, live: lomoPayKeys.publicKey.startsWith('pk_live_') }, secretKey: { present: !!lomoPayKeys.secretKey, live: lomoPayKeys.secretKey.startsWith('sk_live_') } },
-    paymentProvider: 'lomopay', lomoPayConfigured: lomoPayMissing.length === 0, lomoPayMissing
+    ok: true, service: 'tte-energy-api', configured: missing.length === 0,
+    paymentReady: (paydunyaMissing.length === 0 && !isTest) || lomoPayMissing.length === 0,
+    payments: {
+      automaticSelection: true,
+      paydunyaReady: paydunyaMissing.length === 0 && !isTest,
+      lomoPayReady: lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live'
+    }
   });
+});
+
+// Le choix du prestataire reste exclusivement côté serveur.
+// PayDunya LIVE est prioritaire lorsqu'il couvre le pays/opérateur demandé;
+// LomoPay est choisi lorsque PayDunya n'est pas configuré ou ne couvre pas ce canal.
+// Aucune seconde tentative n'est lancée après une réponse fournisseur ambiguë.
+app.post('/api/payments/deposit', requireUser, async (req, res) => {
+  try {
+    const countryCode = String(req.body?.country_code || req.body?.country || '').trim();
+    const operator = String(req.body?.operator || '').trim();
+    const paydunyaEligible = !isTest && paydunyaMissing.length === 0 && !!paydunyaSoftPayMode(countryCode, operator);
+    const lomoEligible = lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live' && !!lomoPayOperatorCode(countryCode, operator);
+    if (!paydunyaEligible && !lomoEligible) {
+      return res.status(503).json({ error: 'Aucun moyen de paiement automatique n’est disponible pour ce pays et cet opérateur.' });
+    }
+    const target = paydunyaEligible ? '/api/payments/paydunya/softpay' : '/api/payments/lomopay/direct';
+    const response = await fetch('http://127.0.0.1:' + Number(process.env.PORT || 3000) + target, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {})
+      },
+      body: JSON.stringify(req.body || {})
+    });
+    const raw = await response.text();
+    let payload;
+    try { payload = JSON.parse(raw); } catch (_) { payload = { error: 'Réponse de paiement invalide.' }; }
+    const safe = {
+      ok: payload?.ok === true,
+      ...(payload?.reference ? { reference: payload.reference } : {}),
+      ...(payload?.amount !== undefined ? { amount: payload.amount } : {}),
+      ...(payload?.currency ? { currency: payload.currency } : {}),
+      ...(payload?.operator ? { operator: payload.operator } : {}),
+      ...(payload?.phone ? { phone: payload.phone } : {}),
+      ...(payload?.status ? { status: payload.status } : {}),
+      ...(payload?.next_action ? { next_action: payload.next_action } : {}),
+      ...(payload?.payment_url ? { payment_url: payload.payment_url } : {}),
+      message: payload?.message || (response.ok ? 'Demande de paiement envoyée.' : 'Impossible de démarrer le paiement.')
+    };
+    if (!response.ok) return res.status(response.status).json({
+      error: payload?.error || 'Impossible de démarrer le paiement.',
+      ...(payload?.reference ? { reference: payload.reference } : {})
+    });
+    return res.status(response.status).json(safe);
+  } catch (err) {
+    console.error('[PAYMENTS][AUTO] dispatch error:', err.message);
+    return res.status(503).json({ error: 'Le service de paiement est momentanément indisponible. Aucun crédit n’a été effectué.' });
+  }
+});
+
+app.get('/api/payments/status/:reference', requireUser, async (req, res) => {
+  try {
+    const reference = String(req.params.reference || '').trim();
+    const { data: tx, error } = await supabase.from('payment_transactions')
+      .select('id,reference,user_id,amount,currency,status,provider,created_at,completed_at')
+      .eq('reference', reference).eq('user_id', req.user.id).maybeSingle();
+    if (error) throw error;
+    if (!tx) return res.status(404).json({ error: 'Transaction introuvable.' });
+    if (tx.status === 'pending' && tx.provider === 'lomopay') {
+      const response = await fetch('http://127.0.0.1:' + Number(process.env.PORT || 3000) + '/api/payments/lomopay/' + encodeURIComponent(reference), {
+        headers: { Authorization: req.headers.authorization || '' }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) return res.status(response.status).json({ error: 'Vérification du paiement momentanément indisponible.' });
+      return res.json(payload);
+    }
+    if (tx.status === 'pending' && tx.provider === 'paydunya') {
+      const response = await fetch('http://127.0.0.1:' + Number(process.env.PORT || 3000) + '/api/payments/paydunya/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: req.headers.authorization || '' },
+        body: JSON.stringify({ reference })
+      });
+      if (!response.ok) return res.status(502).json({ error: 'Vérification du paiement momentanément indisponible.' });
+      const { data: refreshed, error: refreshError } = await supabase.from('payment_transactions')
+        .select('reference,amount,currency,status,created_at,completed_at').eq('id', tx.id).single();
+      if (refreshError) throw refreshError;
+      return res.json(refreshed);
+    }
+    return res.json({
+      reference: tx.reference, amount: Number(tx.amount), currency: tx.currency,
+      status: tx.status, created_at: tx.created_at, completed_at: tx.completed_at
+    });
+  } catch (err) {
+    console.error('[PAYMENTS][AUTO] status error:', err.message);
+    return res.status(500).json({ error: 'Impossible de vérifier le paiement pour le moment.' });
+  }
 });
 
 
@@ -2212,13 +2300,18 @@ setInterval(() => {
   reconcileAllReferralBonuses().catch(err => console.error('[REFERRAL] scheduled reconciliation error:', err.message));
 }, 300000);
 
-console.log('[NOVA][CONFIG] LomoPay/Supabase configuration check', {
+console.log('[NOVA][CONFIG] Payment gateway readiness check', {
+  supabaseConfigured: !!supabase,
+  paydunyaMode: paydunyaMode,
+  paydunyaMasterConfigured: !!paydunyaKeys.master,
+  paydunyaPrivateConfigured: !!paydunyaKeys.privateKey,
+  paydunyaTokenConfigured: !!paydunyaKeys.token,
+  paydunyaReady: paydunyaMissing.length === 0 && !isTest,
+  paydunyaMissing,
   lomoPayMode: lomoPayKeys.mode,
-  supabaseUrlConfigured: !!process.env.SUPABASE_URL,
-  supabaseServiceRoleConfigured: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   lomoPayPublicConfigured: !!lomoPayKeys.publicKey,
   lomoPaySecretConfigured: !!lomoPayKeys.secretKey,
-  lomoPayCredentialsConfigured: lomoPayMissing.length === 0,
+  lomoPayReady: lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live',
   lomoPayMissing,
   lomoPayWebhook: 'https://nova-groupe-dpnx.onrender.com/webhooks/lomopay'
 });
