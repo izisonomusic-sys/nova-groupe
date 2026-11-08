@@ -197,37 +197,29 @@
     }
   }
   async function syncPendingPayment(reference) {
+    if(!reference)return null;
     try {
-      var body = reference ? { reference: reference } : {};
-      return await api("/api/payments/paydunya/sync", {
-        method: "POST",
-        body: JSON.stringify(body)
-      });
+      var row=await api("/api/payments/lomopay/"+encodeURIComponent(reference),{method:"GET"});
+      return {results:[row]};
     } catch (err) {
-      console.warn("PayDunya payment sync:", err.message);
+      console.warn("LomoPay payment status:", err.message);
       return null;
     }
   }
   async function confirmPaymentReturn(){
-    var params=new URLSearchParams(location.search);var token=params.get("token")||params.get("invoice_token");
-    if(!token){
-      var pendingReference=localStorage.getItem("nova:lastPendingPaymentReference");
-      if(pendingReference) await syncPendingPayment(pendingReference);
-      return;
-    }
-    try{
-      var result=await api("/api/payments/paydunya/confirm-return",{method:"POST",body:JSON.stringify({token:token})});
-      if(result.status==="completed"){
+    var params=new URLSearchParams(location.search);
+    var pendingReference=localStorage.getItem("nova:lastPendingPaymentReference");
+    if(pendingReference){
+      var result=await syncPendingPayment(pendingReference);
+      if(result&&result.results&&result.results.some(function(x){return x.status==="completed";})){
         localStorage.removeItem("nova:lastPendingPaymentReference");
         await loadAll();
-        S.toast("Paiement confirmé : votre portefeuille a été crédité.");
-      } else {
-        await syncPendingPayment(localStorage.getItem("nova:lastPendingPaymentReference")||"");
-        await loadAll();
-        S.toast("Paiement en cours de confirmation. Actualisez votre portefeuille dans quelques instants.");
+        S.toast("Paiement LomoPay confirmé : votre portefeuille a été crédité.");
       }
-    }catch(err){console.warn("PayDunya return confirmation:",err.message);S.toast(err.message||"La confirmation du paiement est encore en cours.");}
-    params.delete("token");params.delete("invoice_token");var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;history.replaceState(null,"",clean);
+    }
+    params.delete("token");params.delete("invoice_token");
+    var clean=location.pathname+(params.toString()?"?"+params.toString():"")+location.hash;
+    if(clean!==location.pathname+location.search+location.hash)history.replaceState(null,"",clean);
   }
   async function loadAll(){
     // Browser Supabase is the source of truth for member identity/wallet because RLS
@@ -599,7 +591,7 @@
     if(statusNode)statusNode.textContent="Vérification…";
     try{
       await syncPendingPayment(softpayReference);
-      var row=await api("/api/payments/paydunya/"+encodeURIComponent(softpayReference),{method:"GET"});
+      var row=await api("/api/payments/lomopay/"+encodeURIComponent(softpayReference),{method:"GET"});
       var status=String(row&&row.status||"pending").toLowerCase();
       if(status==="completed"){
         if(statusNode)statusNode.textContent="Confirmé";
@@ -669,7 +661,7 @@
     }
     var b=el("btnRecharge");b.disabled=true;
     try{
-      var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
+      var result=await api("/api/payments/lomopay/direct",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
       showSoftPayModal(result);
       if(result.status==="completed"){
@@ -679,7 +671,7 @@
       }else{
         startSoftPayPolling();
       }
-    }catch(e){S.toast(e.message||"Paiement PayDunya impossible. Aucun solde n'a été crédité.");}
+    }catch(e){S.toast(e.message||"Paiement LomoPay impossible. Aucun solde n'a été crédité.");}
     finally{b.disabled=false;}
   });
   listen("btnSaveWithdrawalAccount","click",async function(){
