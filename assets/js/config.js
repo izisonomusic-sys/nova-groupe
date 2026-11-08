@@ -50,22 +50,34 @@ window.NOVA = {
   /* ---------- Publications / actualités ---------- */
   news: [
     {
-      id: "n1", date: "22 septembre 2026", tag: "Solaire",
-      title: "Lancement de 12 kits solaires communautaires à Kpalimé",
-      img: "assets/img/projet-agri.jpg",
-      text: "Notre première tranche de financement solaire est partie : 12 kits de 1 kWc seront installés d'ici fin octobre dans des écoles et des foyers ruraux."
+      id: "station-lome", date: "Présentation du réseau · novembre 2026", tag: "Stations · Lomé",
+      title: "À la découverte des stations TotalEnergies de Lomé",
+      img: "assets/img/tte-energy-official.jpg",
+      text: "Lomé compte plusieurs stations TotalEnergies répertoriées, notamment Totsi, Hanoukopé, Cacavéli, Agoè, Hédzranawoé et Palais des Congrès. Chaque déplacement est une occasion d’avancer avec énergie, discipline et ambition. Informez-vous toujours auprès du réseau officiel pour les services disponibles dans chaque station."
     },
     {
-      id: "n2", date: "10 septembre 2026", tag: "Immobilier",
-      title: "Résidence Les Palmiers : 8 appartements meublés",
-      img: "assets/img/projet-immobilier.jpg",
-      text: "La résidence de Hédzranan (Lomé) accueille ses premiers locataires. Les revenus de location alimentent le projet NOVA 2."
+      id: "station-kara", date: "Présentation du réseau · novembre 2026", tag: "Stations · Kara",
+      title: "Kara : des points de service sur les grands axes",
+      img: "assets/img/tte-energy-official.jpg",
+      text: "Parmi les stations TotalEnergies répertoriées à Kara figurent Kara I, Kara II, Kara III et Kara Tomdè. Sur la route de vos projets, gardez le cap : la constance et la préparation transforment les ambitions en progrès."
     },
     {
-      id: "n3", date: "28 août 2026", tag: "Énergie",
-      title: "Partenariat avec une centrale éolienne du Littoral",
-      img: "assets/img/projet-vent.jpg",
-      text: "NOVA signe un accord-cadre pour accompagner le financement de 4 turbines sur la côte togolaise."
+      id: "station-sokode", date: "Présentation du réseau · novembre 2026", tag: "Stations · Sokodé",
+      title: "Sokodé : un réseau présent au cœur des déplacements",
+      img: "assets/img/tte-energy-official.jpg",
+      text: "Les annuaires consultés répertorient notamment les stations TotalEnergies Sokodé Barrière, Sokodé Entrée, Sokodé Kédia et Sokodé Marché. Avançons avec confiance : chaque étape compte, et chaque effort construit la réussite de demain."
+    },
+    {
+      id: "station-blitta", date: "Présentation du réseau · novembre 2026", tag: "Stations · Blitta",
+      title: "Blitta : une étape sur la Nationale 1",
+      img: "assets/img/tte-energy-official.jpg",
+      text: "Une station TotalEnergies est répertoriée sur la Nationale 1 à Blitta, sur l’axe Anié–Sokodé. Restons motivés, responsables et tournés vers l’avenir : les grandes réussites commencent par des actions régulières."
+    },
+    {
+      id: "reseau-national", date: "Information générale · novembre 2026", tag: "Énergie au Togo",
+      title: "L’énergie accompagne les activités de tous les jours",
+      img: "assets/img/tte-energy-official.jpg",
+      text: "TotalEnergies indique disposer d’un réseau d’environ 90 stations-service au Togo. Cette publication présente quelques implantations répertoriées à titre informatif. TTE Energy et TotalEnergies sont des entités distinctes ; cette présentation ne signifie ni propriété, ni partenariat, ni approbation commerciale."
     }
   ],
 
