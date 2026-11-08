@@ -1141,7 +1141,7 @@ app.put('/api/member/withdrawal-account', requireUser, async (req, res) => {
     const localPhone = localPhoneForPayDunya(phone, countryCode);
     if (!countryCode || countryCode.length > 8 || !operator || operator.length > 80 ||
         accountName.length < 3 || accountName.length > 120 ||
-        !validPayDunyaLocalPhone(countryCode, operator, localPhone)) {
+        (!lomoPayOperatorCode(countryCode, operator) || localPhone.length < 8 || localPhone.length > 15)) {
       return res.status(400).json({ error: 'Vérifiez le pays, l’opérateur, le numéro et le nom du titulaire.' });
     }
     if (!lomoPayOperatorCode(countryCode, operator)) {
@@ -1187,8 +1187,7 @@ async function checkWithdrawal24hLimit(userId) {
   return Number(count || 0);
 }
 
-// PayDunya is intentionally NOT called here. The request is reserved in NOVA and
-// remains pending until an authenticated administrator approves it.
+// The withdrawal is reserved in NOVA and sent to LomoPay only after an authenticated administrator approves it.
 app.post('/api/withdrawals', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
@@ -1686,6 +1685,13 @@ async function reconcilePayDunyaWithdrawals() {
 }
 
 
+setTimeout(() => {
+  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] initial reconcile error:', err.message));
+}, 12000);
+setInterval(() => {
+  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] scheduled reconcile error:', err.message));
+}, 60000);
+
 function paydunyaDisbursementCallbackHealth(_req, res) {
   return res.status(200).json({ ok: true, service: 'nova-paydunya-disbursement-callback' });
 }
@@ -1907,7 +1913,7 @@ app.get('/api/referrals/me', requireUser, async (req, res) => {
   }
 });
 
-// Admin withdrawals: a pending withdrawal is only sent to PayDunya after explicit approval.
+// Admin withdrawals: a pending withdrawal is only sent to LomoPay after explicit approval.
 app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (_req, res) => {
   try {
     const { data: rows, error } = await supabase.from('withdrawal_requests')
