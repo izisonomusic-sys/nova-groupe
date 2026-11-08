@@ -20,6 +20,31 @@
   var user=session.user, profile={}, wallet={balance:0}, projects=[], investments=[], ledger=[], withdrawals=[];
   var withdrawalAccount=null, withdrawalAccountLoaded=false, withdrawalAccountLoading=null;
   var currentTab="plans", selectedProject=null, handlersReady=false;
+  var investmentRequestKeys={};
+  function investmentRequestStorageKey(){return "tte:investment-request-keys:"+String(user.id||"anonymous");}
+  function createInvestmentRequestUuid(){
+    if(window.crypto&&typeof window.crypto.randomUUID==="function")return window.crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(ch){var r=Math.random()*16|0;return (ch==="x"?r:(r&3|8)).toString(16);});
+  }
+  function getInvestmentRequestKey(projectId){
+    var pid=String(projectId);
+    if(investmentRequestKeys[pid])return investmentRequestKeys[pid];
+    var storageKey=investmentRequestStorageKey(),saved={};
+    try{saved=JSON.parse(localStorage.getItem(storageKey)||"{}")||{};}catch(_){saved={};}
+    if(saved[pid]){investmentRequestKeys[pid]=saved[pid];return saved[pid];}
+    var key=createInvestmentRequestUuid();
+    investmentRequestKeys[pid]=key;
+    saved[pid]=key;
+    try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch(_){}
+    return key;
+  }
+  function clearInvestmentRequestKey(projectId){
+    var pid=String(projectId),storageKey=investmentRequestStorageKey(),saved={};
+    delete investmentRequestKeys[pid];
+    try{saved=JSON.parse(localStorage.getItem(storageKey)||"{}")||{};}catch(_){saved={};}
+    delete saved[pid];
+    try{if(Object.keys(saved).length)localStorage.setItem(storageKey,JSON.stringify(saved));else localStorage.removeItem(storageKey);}catch(_){}
+  }
 
   // Public activity feed, independent of member authentication and visible throughout the member shell.
   (function initMemberWithdrawalActivity(){
@@ -517,9 +542,21 @@
   function closeModal(id){var n=el(id);if(n)n.classList.remove("open");}
   listen("investCancel","click",()=>closeModal("investModal"));
   listen("investConfirm","click",async function(){
-    if(!selectedProject)return;var b=el("investConfirm");b.disabled=true;
-    try{await api("/api/investments",{method:"POST",body:JSON.stringify({project_id:selectedProject.id})});closeModal("investModal");await loadAll();render(location.hash.replace(/^#\//,"")||"home");S.toast("Investissement confirmé : le solde a été débité.");}
-    catch(e){S.toast(e.message||"Investissement impossible.");}finally{b.disabled=false;}
+    if(!selectedProject)return;
+    var b=el("investConfirm");
+    if(b.disabled)return;
+    b.disabled=true;
+    var projectId=String(selectedProject.id);
+    var requestKey=getInvestmentRequestKey(projectId);
+    try{
+      await api("/api/investments",{method:"POST",body:JSON.stringify({project_id:projectId,request_key:requestKey})});
+      clearInvestmentRequestKey(projectId);
+      closeModal("investModal");
+      S.toast("Investissement confirmé : le solde a été débité.");
+      try{await loadAll();render(location.hash.replace(/^#\//,"")||"home");}
+      catch(refreshError){console.warn("Investment confirmed; wallet refresh deferred:",refreshError.message);}
+    }catch(e){S.toast(e.message||"Investissement impossible. Vous pouvez réessayer sans risque de double débit.");}
+    finally{b.disabled=false;}
   });
   var softpayPollTimer=null,softpayReference="";
   var chips=document.querySelectorAll("#rcChips .chip");
