@@ -154,7 +154,7 @@
         if(!r.ok){
           var message=data.error||((r.status===404)?"API introuvable sur le serveur NOVA (404).":("Erreur API HTTP "+r.status+"."));
           if(data.detail)message += " — "+data.detail;
-          if(data.provider_code)message += " (code PayDunya: "+data.provider_code+")";
+          if(data.provider_code)message += " (code prestataire: "+data.provider_code+")";
           throw new Error(message);
         }
         return data;
