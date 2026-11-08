@@ -521,7 +521,7 @@ app.post('/api/investments/reconcile', requireUser, async (req, res) => {
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true, service: 'tte-energy-api', configured: missing.length === 0,
-    paymentReady: (paydunyaMissing.length === 0 && !isTest) || lomoPayMissing.length === 0,
+    paymentReady: (paydunyaMissing.length === 0 && !isTest) || (lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live'),
     payments: {
       automaticSelection: true,
       paydunyaReady: paydunyaMissing.length === 0 && !isTest,
@@ -568,7 +568,7 @@ app.post('/api/payments/deposit', requireUser, async (req, res) => {
       message: payload?.message || (response.ok ? 'Demande de paiement envoyée.' : 'Impossible de démarrer le paiement.')
     };
     if (!response.ok) return res.status(response.status).json({
-      error: payload?.error || 'Impossible de démarrer le paiement.',
+      error: 'Impossible de démarrer le paiement. Vérifiez les informations ou réessayez plus tard.',
       ...(payload?.reference ? { reference: payload.reference } : {})
     });
     return res.status(response.status).json(safe);
