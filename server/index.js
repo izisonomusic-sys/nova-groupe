@@ -2251,8 +2251,10 @@ app.get('/api/public/withdrawal-activity', async (_req, res) => {
 app.post('/api/investments', requireUser, async (req, res) => {
   try {
     const projectId = String(req.body.project_id || '');
+    const requestKey = String(req.body.request_key || crypto.randomUUID()).trim();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(projectId)) return res.status(400).json({ error: 'Projet invalide.' });
-    const { data, error } = await supabase.rpc('nova_create_investment', { p_user_id: req.user.id, p_project_id: projectId });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestKey)) return res.status(400).json({ error: 'Demande d’investissement invalide.' });
+    const { data, error } = await supabase.rpc('nova_create_investment', { p_user_id: req.user.id, p_project_id: projectId, p_request_key: requestKey });
     if (error) {
       if (/Solde insuffisant/i.test(error.message)) return res.status(409).json({ error: 'Solde insuffisant. Rechargez votre portefeuille.' });
       if (/Project is not available/i.test(error.message)) return res.status(409).json({ error: 'Ce projet n’est plus disponible.' });
