@@ -519,22 +519,17 @@ app.post('/api/investments/reconcile', requireUser, async (req, res) => {
 });
 
 app.get('/api/health', (_req, res) => {
-  const callbackConfigured = !!process.env.PAYDUNYA_CALLBACK_URL;
-  const callbackUrl = callbackConfigured ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
+  const callbackConfigured = false;
+  const callbackUrl = null;
   res.json({
-    ok: true, service: 'nova-api', configured: missing.length === 0 && paydunyaMissing.length === 0, missing: [...missing, ...paydunyaMissing],
-    lomopay: { mode: lomoPayKeys.mode, publicKey: maskedKeyInfo(lomoPayKeys.publicKey), secretKey: maskedKeyInfo(lomoPayKeys.secretKey) },
-    paydunya: {
-      mode: isTest ? 'test' : 'live', base: paydunyaBase,
-      master: maskedKeyInfo(paydunyaKeys.master), privateKey: maskedKeyInfo(paydunyaKeys.privateKey),
-      token: maskedKeyInfo(paydunyaKeys.token), callbackConfigured, disbursementCallbackConfigured: !!publicHttpsUrl(paydunyaDisbursementCallbackUrl),
-      callbackUrlValid: !!callbackUrl, callbackUrl: callbackUrl || null
-    }
+    ok: true, service: 'nova-api', configured: missing.length === 0 && lomoPayMissing.length === 0, missing: [...missing, ...lomoPayMissing],
+    lomopay: { mode: lomoPayKeys.mode, publicKey: { present: !!lomoPayKeys.publicKey, live: lomoPayKeys.publicKey.startsWith('pk_live_') }, secretKey: { present: !!lomoPayKeys.secretKey, live: lomoPayKeys.secretKey.startsWith('sk_live_') } },
+    paymentProvider: 'lomopay', lomoPayConfigured: lomoPayMissing.length === 0, lomoPayMissing
   });
 });
 
 
-app.post('/api/payments/lomopay/direct-disabled', requireUser, async (req, res) => {
+app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
   let pendingId = null;
   let pendingReference = null;
   let providerRequestStarted = false;
@@ -638,7 +633,7 @@ app.post('/api/payments/lomopay/direct-disabled', requireUser, async (req, res) 
   }
 });
 
-app.get('/api/payments/lomopay-disabled/:reference', requireUser, async (req,res) => {
+app.get('/api/payments/lomopay/:reference', requireUser, async (req,res) => {
   try {
     const {data:tx,error}=await supabase.from('payment_transactions')
       .select('id,reference,user_id,amount,currency,status,provider_token,provider_payload,created_at,completed_at')
@@ -678,47 +673,57 @@ app.get('/api/payments/lomopay-disabled/:reference', requireUser, async (req,res
   }
 });
 
-app.post('/webhooks/lomopay-disabled', async (req,res) => {
+app.post('/webhooks/lomopay', async (req,res) => {
   try {
     if (!supabase || lomoPayMissing.length) return res.status(503).send('Not configured');
     if (!verifyLomoPaySignature(req)) return res.status(401).send('Invalid signature');
-    const event=req.body || {};
-    const eventId=String(req.headers['x-lomopay-event-id'] || event.id || '').trim();
-    const eventType=String(event.type || '').trim();
-    const data=event.data || {};
+    const event = req.body || {}, eventId = String(req.headers['x-lomopay-event-id'] || event.id || '').trim();
+    const eventType = String(event.type || '').trim(), data = event.data || {};
     if (!eventId || !eventType || !data.external_reference) return res.status(400).send('Invalid event');
-    const reference=String(data.external_reference);
     if (eventType.startsWith('payment.')) {
-      const {data:tx,error}=await supabase.from('payment_transactions')
-        .select('id,reference,amount,currency,status,provider_token')
-        .eq('reference',reference).eq('provider','lomopay').maybeSingle();
-      if(error) throw error;
-      if(!tx) return res.status(404).send('Unknown payment');
-      const providerId=String(data.transaction_id || data.id || '').trim();
-      if(tx.provider_token && providerId && tx.provider_token!==providerId) return res.status(409).send('Provider id mismatch');
-      if(Number(data.amount)!==Number(tx.amount) || String(data.currency||'').toUpperCase()!==tx.currency) return res.status(409).send('Amount/currency mismatch');
-      if(eventType==='payment.succeeded' || String(data.status).toLowerCase()==='completed') {
-        const {error:creditError}=await supabase.rpc('nova_confirm_lomopay_payment',{
-          p_payment_id:tx.id,p_provider_token:providerId,p_paid_amount:Number(data.amount),
-          p_currency:String(data.currency).toUpperCase(),p_provider_payload:event
+      const { data: tx, error } = await supabase.from('payment_transactions').select('id,reference,amount,currency,status,provider_token')
+        .eq('reference', String(data.external_reference)).eq('provider', 'lomopay').maybeSingle();
+      if (error) throw error;
+      if (!tx) return res.status(404).send('Unknown payment');
+      const providerId = String(data.transaction_id || data.id || '').trim();
+      if (tx.provider_token && providerId && tx.provider_token !== providerId) return res.status(409).send('Provider id mismatch');
+      if (Number(data.amount) !== Number(tx.amount) || String(data.currency || '').toUpperCase() !== tx.currency) return res.status(409).send('Amount/currency mismatch');
+      if (eventType === 'payment.succeeded' || String(data.status).toLowerCase() === 'completed') {
+        const { error: creditError } = await supabase.rpc('nova_confirm_lomopay_payment', {
+          p_payment_id: tx.id, p_provider_token: providerId, p_paid_amount: Number(data.amount),
+          p_currency: String(data.currency).toUpperCase(), p_provider_payload: event
         });
-        if(creditError) throw creditError;
-      } else if(['failed','cancelled','expired'].includes(String(data.status||'').toLowerCase())) {
-        const {error:stateError}=await supabase.from('payment_transactions').update({
-          status:'failed',provider_token:providerId || tx.provider_token,provider_payload:event
-        }).eq('id',tx.id).eq('status','pending');
-        if(stateError) throw stateError;
+        if (creditError) throw creditError;
+      } else if (['failed','cancelled','expired'].includes(String(data.status || '').toLowerCase())) {
+        const { error: stateError } = await supabase.from('payment_transactions').update({ status: 'failed', provider_token: providerId || tx.provider_token, provider_payload: event })
+          .eq('id', tx.id).eq('status', 'pending');
+        if (stateError) throw stateError;
       }
-    } else {
-      return res.status(200).send('Ignored');
-    }
-    const {error:eventError}=await supabase.from('lomopay_webhook_events').upsert({
-      event_id:eventId,event_type:eventType,payload:event
-    },{onConflict:'event_id',ignoreDuplicates:true});
-    if(eventError) throw eventError;
+    } else if (eventType.startsWith('payout.')) {
+      const { data: wr, error: lookupError } = await supabase.from('withdrawal_requests')
+        .select('id,amount,payout_amount,status,provider_token').eq('id', String(data.external_reference)).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!wr) return res.status(404).send('Unknown payout');
+      const providerId = String(data.payout_id || data.transaction_id || data.id || '').trim();
+      if (wr.provider_token && providerId && wr.provider_token !== providerId) return res.status(409).send('Provider id mismatch');
+      const amount = Number(data.amount ?? data.payout_amount);
+      if (Number.isFinite(amount) && amount !== Number(wr.payout_amount || wr.amount)) return res.status(409).send('Amount mismatch');
+      const payoutStatus = eventType === 'payout.paid' ? 'paid' : eventType === 'payout.failed' ? 'failed' : String(data.status || '').toLowerCase();
+      if (payoutStatus === 'paid' || payoutStatus === 'failed') {
+        await finalizeLomoPayWithdrawal(wr.id, providerId || wr.provider_token || '', event, payoutStatus);
+      } else {
+        if (providerId) {
+          const { error: processingError } = await supabase.rpc('nova_set_withdrawal_processing', { p_withdrawal_id: wr.id, p_provider_token: providerId, p_provider_payload: event });
+          if (processingError) throw processingError;
+        }
+        await supabase.from('withdrawal_requests').update({ provider: 'lomopay', provider_status: payoutStatus || 'processing', provider_payload: event }).eq('id', wr.id);
+      }
+    } else return res.status(200).send('Ignored');
+    const { error: eventError } = await supabase.from('lomopay_webhook_events').upsert({ event_id: eventId, event_type: eventType, payload: event }, { onConflict: 'event_id', ignoreDuplicates: true });
+    if (eventError) throw eventError;
     return res.status(200).send('OK');
-  } catch(err) {
-    console.error('[LOMOPAY][WEBHOOK] processing error:',err.message);
+  } catch (err) {
+    console.error('[LOMOPAY][WEBHOOK] processing error:', err.message);
     return res.status(500).send('Webhook processing failed');
   }
 });
@@ -910,7 +915,7 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
       return res.status(400).json({ error: 'Le montant doit être un nombre entier entre 3 000 et 5 000 000 FCFA.' });
     }
     if (!softpayMode) return res.status(400).json({ error: 'Ce pays/opérateur ne dispose pas d’un mode PayDunya SoftPay configuré.' });
-    if (!validPayDunyaLocalPhone(countryCode, operator, localPhone)) {
+    if ((!lomoPayOperatorCode(countryCode, operator) || localPhone.length < 8 || localPhone.length > 15)) {
       return res.status(400).json({ error: 'Le numéro ne correspond pas au format attendu pour ce pays et cet opérateur.' });
     }
     const otp = String(req.body.otp || '').trim();
@@ -1139,7 +1144,7 @@ app.put('/api/member/withdrawal-account', requireUser, async (req, res) => {
         !validPayDunyaLocalPhone(countryCode, operator, localPhone)) {
       return res.status(400).json({ error: 'Vérifiez le pays, l’opérateur, le numéro et le nom du titulaire.' });
     }
-    if (!paydunyaWithdrawMode(countryCode, operator)) {
+    if (!lomoPayOperatorCode(countryCode, operator)) {
       return res.status(400).json({ error: 'Ce moyen de retrait n’est pas disponible automatiquement pour le moment.' });
     }
     const { data, error } = await supabase.from('profiles').update({
@@ -1191,7 +1196,7 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     const operator = String(req.body.operator || '').trim();
     const phone = String(req.body.phone || '').replace(/[^0-9+]/g, '');
     const accountName = String(req.body.account_name || '').trim();
-    const withdrawMode = paydunyaWithdrawMode(countryCode, operator);
+    const payoutOperator = lomoPayOperatorCode(countryCode, operator);
     const accountAlias = localPhoneForPayDunya(phone, countryCode);
 
     if (!Number.isSafeInteger(amount) || amount < 2000 || amount > 5000000) {
@@ -1202,19 +1207,19 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
         accountName.length < 3 || accountName.length > 120) {
       return res.status(400).json({ error: 'Informations du bénéficiaire invalides.' });
     }
-    if (!validPayDunyaLocalPhone(countryCode, operator, accountAlias)) {
+    if (!payoutOperator || accountAlias.length < 8 || accountAlias.length > 15) {
       return res.status(400).json({ error: 'Numéro de retrait invalide pour le pays/opérateur sélectionné.' });
     }
-    if (!withdrawMode) {
+    if (!payoutOperator) {
       return res.status(400).json({
-        error: 'Ce moyen de retrait n’est pas encore disponible automatiquement via PayDunya.',
+        error: 'Ce moyen de retrait n’est pas encore disponible automatiquement via LomoPay.',
         operator, country_code: countryCode
       });
     }
-    if (paydunyaMissing.length) {
+    if (lomoPayMissing.length) {
       return res.status(503).json({
-        error: 'Retraits PayDunya indisponibles : configuration marchand incomplète. Aucun montant n’a été réservé.',
-        missing: paydunyaMissing
+        error: 'Retraits LomoPay indisponibles : configuration marchand incomplète. Aucun montant n’a été réservé.',
+        missing: lomoPayMissing
       });
     }
 
@@ -1262,8 +1267,8 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
       fee_amount: Math.ceil(amount * 0.15),
       payout_amount: amount - Math.ceil(amount * 0.15),
       status: 'pending',
-      provider: 'paydunya',
-      message: 'Demande reçue. Votre retrait sera envoyé à PayDunya après validation par l’administrateur.'
+      provider: 'lomopay',
+      message: 'Demande reçue. Votre retrait sera envoyé à LomoPay après validation par l’administrateur.'
     });
   } catch (err) {
     console.error('Withdrawal request error:', err?.message || err);
@@ -1271,96 +1276,98 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
   }
 });
 
-// Legacy PayDunya payout implementation retained only for historical in-flight payouts.
-// Starts the real PayDunya disbursement only after the admin approval RPC has succeeded.
-async function startApprovedPayDunyaWithdrawal(withdrawalId) {
+// LomoPay Payout: send a withdrawal only after explicit administrator approval.
+async function finalizeLomoPayWithdrawal(withdrawalId, providerId, providerData, status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'paid') {
+    const { error } = await supabase.rpc('nova_finalize_withdrawal_success', {
+      p_withdrawal_id: withdrawalId, p_provider_token: providerId, p_provider_payload: providerData
+    });
+    if (error) throw error;
+    await supabase.from('withdrawal_requests').update({ provider: 'lomopay', provider_status: 'paid', provider_payload: providerData }).eq('id', withdrawalId);
+    return 'paid';
+  }
+  if (normalized === 'failed') {
+    const detail = String(providerData?.message || providerData?.detail || providerData?.error || 'Retrait LomoPay échoué.');
+    const { error } = await supabase.rpc('nova_finalize_withdrawal_failure', {
+      p_withdrawal_id: withdrawalId, p_provider_token: providerId,
+      p_provider_payload: providerData, p_failure_reason: detail
+    });
+    if (error) throw error;
+    await supabase.from('withdrawal_requests').update({ provider: 'lomopay', provider_status: 'failed', provider_payload: providerData }).eq('id', withdrawalId);
+    return 'rejected';
+  }
+  return normalized || 'processing';
+}
+async function startApprovedLomoPayWithdrawal(withdrawalId) {
   if (!supabase || !withdrawalId) throw new Error('Retrait invalide.');
-  const { data: wr, error: readError } = await supabase
-    .from('withdrawal_requests')
+  const { data: wr, error: readError } = await supabase.from('withdrawal_requests')
     .select('id,user_id,amount,fee_amount,payout_amount,country_code,operator,phone,account_name,status,provider,provider_token,admin_approved_at')
     .eq('id', withdrawalId).maybeSingle();
   if (readError) throw readError;
-  if (!wr) throw new Error('Withdrawal not found');
-  if (!wr.admin_approved_at) throw new Error('Admin approval required');
+  if (!wr) throw new Error('Retrait introuvable.');
+  if (!wr.admin_approved_at) throw new Error('Validation administrateur requise.');
   if (wr.status === 'paid') return { status: 'paid', withdrawal_id: wr.id };
-  if (wr.status === 'rejected' || wr.status === 'cancelled') throw new Error('Withdrawal is closed');
+  if (wr.status === 'rejected' || wr.status === 'cancelled') throw new Error('Ce retrait est déjà clôturé.');
   if (wr.provider_token) return { status: wr.status || 'processing', withdrawal_id: wr.id };
-
-  const countryCode = String(wr.country_code || '').trim();
-  const operator = String(wr.operator || '').trim();
-  const accountAlias = localPhoneForPayDunya(wr.phone, countryCode);
-  const withdrawMode = paydunyaWithdrawMode(countryCode, operator);
-  if (!withdrawMode) throw new Error('Ce moyen de retrait n’est pas disponible via PayDunya.');
-  if (!validPayDunyaLocalPhone(countryCode, operator, accountAlias)) {
-    throw new Error('Numéro de retrait invalide pour le pays/opérateur sélectionné.');
-  }
-  if (!paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) throw new Error('Configuration PayDunya de déboursement incomplète.');
-
-  const callbackUrl = publicHttpsUrl(paydunyaDisbursementCallbackUrl);
-  if (!callbackUrl) throw new Error('URL de callback PayDunya pour les retraits invalide.');
-
-  const { response: createResponse, data: created } = await paydunyaDisbursementRequest('get-invoice', {
-    account_alias: accountAlias, amount: Number(wr.payout_amount || wr.amount), withdraw_mode: withdrawMode,
-    callback_url: callbackUrl
-  });
-  if (!createResponse.ok || created.response_code !== '00' || !created.disburse_token) {
-    const detail = created?.response_text || created?.description || `Réponse HTTP ${createResponse.status}`;
-    await supabase.rpc('nova_finalize_withdrawal_failure', {
-      p_withdrawal_id: wr.id, p_provider_token: '', p_provider_payload: created || { http_status: createResponse.status },
-      p_failure_reason: detail
-    });
+  const country = lomoPayCountryCode(wr.country_code);
+  const operator = lomoPayOperatorCode(wr.country_code, wr.operator);
+  const phone = String(wr.phone || '').trim();
+  const amount = Number(wr.payout_amount || wr.amount);
+  if (!country || !operator || !/^\\+?\\d{8,15}$/.test(phone.replace(/[\\s().-]/g, ''))) throw new Error('Pays, opérateur ou numéro de retrait non pris en charge par LomoPay.');
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('Montant net du retrait invalide.');
+  if (lomoPayMissing.length) throw new Error('Configuration LomoPay incomplète : ' + lomoPayMissing.join(', '));
+  const payload = {
+    amount, country, operator, phone, name: String(wr.account_name || '').slice(0, 120),
+    external_reference: String(wr.id), webhook_url: 'https://nova-groupe-dpnx.onrender.com/webhooks/lomopay'
+  };
+  const { response, data } = await lomoPayRequest('payout.php', { payload, idempotencyKey: 'nova-withdrawal-' + wr.id });
+  const providerData = data?.data || {};
+  const providerId = String(providerData.id || providerData.payout_id || providerData.transaction_id || '').trim();
+  const providerStatus = String(providerData.status || '').toLowerCase();
+  if (!response.ok || data?.success !== true || !providerId) {
+    const code = String(data?.error_code || data?.error || data?.code || '').slice(0, 100);
+    const detail = String(data?.message || data?.detail || data?.description || code || 'Réponse LomoPay invalide.').slice(0, 240);
+    console.error('[LOMOPAY][PAYOUT] provider rejected request', { httpStatus: response.status, providerCode: code || 'not_provided', withdrawalId: wr.id, country, operator, providerIdReturned: !!providerId });
+    if ((response.status >= 400 && response.status < 500) || (response.ok && data?.success === false)) {
+      await finalizeLomoPayWithdrawal(wr.id, '', { ...data, message: detail }, 'failed');
+    }
     throw new Error(detail);
   }
-
-  const disburseToken = String(created.disburse_token);
   const { error: processingError } = await supabase.rpc('nova_set_withdrawal_processing', {
-    p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: created
+    p_withdrawal_id: wr.id, p_provider_token: providerId, p_provider_payload: providerData
   });
   if (processingError) throw processingError;
-
-  const { response: submitResponse, data: submitted } = await paydunyaDisbursementRequest('submit-invoice', {
-    disburse_invoice: disburseToken, disburse_id: wr.id
-  });
-
-  if (submitResponse.ok && submitted.response_code === '00') {
-    const providerStatus = String(submitted.status || '').toLowerCase();
-    if (providerStatus === 'success') {
-      await supabase.rpc('nova_finalize_withdrawal_success', {
-        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: submitted
-      });
-      return { status: 'paid', withdrawal_id: wr.id };
-    }
-    if (providerStatus === 'failed') {
-      const detail = submitted.response_text || submitted.description || 'PayDunya a refusé le retrait.';
-      await supabase.rpc('nova_finalize_withdrawal_failure', {
-        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: submitted, p_failure_reason: detail
-      });
-      return { status: 'rejected', withdrawal_id: wr.id };
-    }
-    return { status: 'processing', withdrawal_id: wr.id };
+  await supabase.from('withdrawal_requests').update({ provider: 'lomopay', provider_status: providerStatus || 'processing', provider_payload: providerData }).eq('id', wr.id);
+  if (providerStatus === 'paid' || providerStatus === 'failed') {
+    const finalStatus = await finalizeLomoPayWithdrawal(wr.id, providerId, providerData, providerStatus);
+    return { status: finalStatus, withdrawal_id: wr.id };
   }
-
-  const { response: checkResponse, data: checked } = await paydunyaDisbursementRequest('check-status', {
-    disburse_invoice: disburseToken
-  });
-  if (checkResponse.ok && checked.response_code === '00') {
-    const checkedStatus = String(checked.status || '').toLowerCase();
-    if (checkedStatus === 'success') {
-      await supabase.rpc('nova_finalize_withdrawal_success', {
-        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: checked
-      });
-      return { status: 'paid', withdrawal_id: wr.id };
-    }
-    if (checkedStatus === 'failed') {
-      const detail = checked.response_text || checked.description || 'Retrait PayDunya échoué.';
-      await supabase.rpc('nova_finalize_withdrawal_failure', {
-        p_withdrawal_id: wr.id, p_provider_token: disburseToken, p_provider_payload: checked, p_failure_reason: detail
-      });
-      return { status: 'rejected', withdrawal_id: wr.id };
-    }
-  }
-  return { status: 'processing', withdrawal_id: wr.id };
+  return { status: providerStatus || 'processing', withdrawal_id: wr.id, provider_id: providerId };
 }
+async function reconcileLomoPayWithdrawals() {
+  if (!supabase || lomoPayMissing.length) return;
+  const { data: rows, error } = await supabase.from('withdrawal_requests')
+    .select('id,amount,payout_amount,status,provider_token,created_at')
+    .eq('provider', 'lomopay').in('status', ['processing','pending'])
+    .not('provider_token', 'is', null).order('created_at', { ascending: true }).limit(20);
+  if (error) { console.error('[LOMOPAY][PAYOUT] reconciliation query error:', error.message); return; }
+  for (const row of rows || []) {
+    try {
+      const { response, data } = await lomoPayRequest('payout.php?id=' + encodeURIComponent(row.provider_token), { method: 'GET' });
+      if (!response.ok || data?.success !== true) continue;
+      const payout = data?.data || {};
+      const status = String(payout.status || '').toLowerCase();
+      const amount = Number(payout.amount ?? payout.net_amount);
+      if (Number.isFinite(amount) && amount !== Number(row.payout_amount || row.amount)) {
+        console.error('[LOMOPAY][PAYOUT] amount mismatch', { withdrawalId: row.id }); continue;
+      }
+      if (status === 'paid' || status === 'failed') await finalizeLomoPayWithdrawal(row.id, String(payout.id || row.provider_token), payout, status);
+      else if (status) await supabase.from('withdrawal_requests').update({ provider_status: status, provider_payload: payout }).eq('id', row.id);
+    } catch (err) { console.error('[LOMOPAY][PAYOUT] reconciliation error:', err.message); }
+  }
+}
+
 // Statut d'une recharge : un utilisateur ne peut consulter que ses propres transactions.
 app.get('/api/payments/paydunya/:reference', requireUser, async (req, res) => {
   try {
@@ -1777,10 +1784,10 @@ app.post(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/pa
 });
 
 setInterval(() => {
-  reconcilePayDunyaWithdrawals().catch(err => console.error('[PAYDUNYA][WITHDRAWAL] scheduler error:', err.message));
+  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] scheduler error:', err.message));
 }, 60000);
 setTimeout(() => {
-  reconcilePayDunyaWithdrawals().catch(err => console.error('[PAYDUNYA][WITHDRAWAL] initial reconcile error:', err.message));
+  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] initial reconcile error:', err.message));
 }, 10000);
 
 
@@ -1931,10 +1938,10 @@ app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (_req, res) =
 
 app.post('/api/admin/withdrawals/:id/approve', requireUser, requireAdmin, async (req, res) => {
   try {
-    if (paydunyaMissing.length) {
+    if (lomoPayMissing.length) {
       return res.status(503).json({
-        error: 'Configuration PayDunya incomplète. La demande n’a pas été approuvée.',
-        missing: paydunyaMissing
+        error: 'Configuration LomoPay incomplète. La demande n’a pas été approuvée.',
+        missing: lomoPayMissing
       });
     }
     const { data: approved, error: approvalError } = await supabase.rpc('nova_admin_approve_withdrawal', {
@@ -1944,9 +1951,9 @@ app.post('/api/admin/withdrawals/:id/approve', requireUser, requireAdmin, async 
       if (/not awaiting admin approval|already rejected|not found/i.test(approvalError.message)) return res.status(409).json({ error: approvalError.message });
       throw approvalError;
     }
-    const result = await startApprovedPayDunyaWithdrawal(approved.id);
+    const result = await startApprovedLomoPayWithdrawal(approved.id);
     return res.status(200).json({ ok: true, withdrawal_id: approved.id, status: result.status,
-      message: result.status === 'paid' ? 'Retrait payé avec succès.' : 'Retrait validé et transmis à PayDunya.' });
+      message: result.status === 'paid' ? 'Retrait payé avec succès.' : 'Retrait validé et transmis à LomoPay.' });
   } catch (err) {
     console.error('Admin withdrawal approval error:', err.message);
     return res.status(500).json({ error: err.message || 'Impossible de valider le retrait.' });
