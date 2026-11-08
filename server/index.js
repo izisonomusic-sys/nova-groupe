@@ -1211,6 +1211,12 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
         operator, country_code: countryCode
       });
     }
+    if (paydunyaMissing.length) {
+      return res.status(503).json({
+        error: 'Retraits PayDunya indisponibles : configuration marchand incomplète. Aucun montant n’a été réservé.',
+        missing: paydunyaMissing
+      });
+    }
 
     const { data: withdrawalId, error: withdrawalError } = await supabase.rpc('nova_request_withdrawal', {
       p_user_id: req.user.id, p_amount: amount, p_country_code: countryCode,
@@ -1925,6 +1931,12 @@ app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (_req, res) =
 
 app.post('/api/admin/withdrawals/:id/approve', requireUser, requireAdmin, async (req, res) => {
   try {
+    if (paydunyaMissing.length) {
+      return res.status(503).json({
+        error: 'Configuration PayDunya incomplète. La demande n’a pas été approuvée.',
+        missing: paydunyaMissing
+      });
+    }
     const { data: approved, error: approvalError } = await supabase.rpc('nova_admin_approve_withdrawal', {
       p_withdrawal_id: req.params.id, p_admin_id: req.user.id
     });
