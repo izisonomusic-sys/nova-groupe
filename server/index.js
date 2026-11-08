@@ -162,6 +162,10 @@ const lomoPayKeys = {
   secretKey: envFirst('LOMOPAY_SECRET_KEY'),
   mode: envFirst('LOMOPAY_MODE').toLowerCase() || 'live'
 };
+const paydunyaMissing = [];
+if (!paydunyaKeys.master) paydunyaMissing.push('PAYDUNYA_MASTER_KEY');
+if (!paydunyaKeys.privateKey) paydunyaMissing.push(isTest ? 'PAYDUNYA_TEST_PRIVATE_KEY' : 'PAYDUNYA_LIVE_PRIVATE_KEY');
+if (!paydunyaKeys.token) paydunyaMissing.push(isTest ? 'PAYDUNYA_TEST_TOKEN' : 'PAYDUNYA_LIVE_TOKEN');
 const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 const missing = [];
 if (!process.env.SUPABASE_URL) missing.push('SUPABASE_URL');
@@ -518,7 +522,7 @@ app.get('/api/health', (_req, res) => {
   const callbackConfigured = !!process.env.PAYDUNYA_CALLBACK_URL;
   const callbackUrl = callbackConfigured ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) : '';
   res.json({
-    ok: true, service: 'nova-api', configured: missing.length === 0 && lomoPayMissing.length === 0, missing: [...missing, ...lomoPayMissing],
+    ok: true, service: 'nova-api', configured: missing.length === 0 && paydunyaMissing.length === 0, missing: [...missing, ...paydunyaMissing],
     lomopay: { mode: lomoPayKeys.mode, publicKey: maskedKeyInfo(lomoPayKeys.publicKey), secretKey: maskedKeyInfo(lomoPayKeys.secretKey) },
     paydunya: {
       mode: isTest ? 'test' : 'live', base: paydunyaBase,
@@ -530,7 +534,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 
-app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
+app.post('/api/payments/lomopay/direct-disabled', requireUser, async (req, res) => {
   let pendingId = null;
   let pendingReference = null;
   let providerRequestStarted = false;
@@ -634,7 +638,7 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
   }
 });
 
-app.get('/api/payments/lomopay/:reference', requireUser, async (req,res) => {
+app.get('/api/payments/lomopay-disabled/:reference', requireUser, async (req,res) => {
   try {
     const {data:tx,error}=await supabase.from('payment_transactions')
       .select('id,reference,user_id,amount,currency,status,provider_token,provider_payload,created_at,completed_at')
@@ -674,7 +678,7 @@ app.get('/api/payments/lomopay/:reference', requireUser, async (req,res) => {
   }
 });
 
-app.post('/webhooks/lomopay', async (req,res) => {
+app.post('/webhooks/lomopay-disabled', async (req,res) => {
   try {
     if (!supabase || lomoPayMissing.length) return res.status(503).send('Not configured');
     if (!verifyLomoPaySignature(req)) return res.status(401).send('Invalid signature');
@@ -893,9 +897,7 @@ async function paydunyaJsonRequest(url, method, payload) {
   }
 }
 
-app.post('/api/payments/paydunya/softpay', requireUser, (_req,res) => res.status(410).json({error:'PayDunya est désactivé. Utilisez LomoPay pour les dépôts.'}));
-
-app.post('/api/payments/paydunya/softpay-legacy-disabled', requireUser, async (req, res) => {
+app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     const countryCode = String(req.body.country_code || '').trim();
@@ -916,7 +918,10 @@ app.post('/api/payments/paydunya/softpay-legacy-disabled', requireUser, async (r
       return res.status(400).json({ error: 'Le code de paiement/OTP fourni par cet opérateur est requis (4 à 8 chiffres).' });
     }
     if (missing.length) {
-      return res.status(503).json({ error: 'Configuration serveur PayDunya incomplète.', missing });
+      return res.status(503).json({ error: 'Configuration Supabase incomplète.', missing });
+    }
+    if (paydunyaMissing.length) {
+      return res.status(503).json({ error: 'Configuration PayDunya incomplète.', missing: paydunyaMissing });
     }
 
     const callbackUrl = publicHttpsUrl(
@@ -2188,7 +2193,8 @@ console.log('[NOVA][CONFIG] PayDunya/Supabase configuration check', {
   supabaseServiceRoleConfigured: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   lomoPayPublicConfigured: !!lomoPayKeys.publicKey,
   lomoPaySecretConfigured: !!lomoPayKeys.secretKey,
-  paydunyaLegacyConfigured: !!(paydunyaKeys.master && paydunyaKeys.privateKey && paydunyaKeys.token),
+  paydunyaCredentialsConfigured: paydunyaMissing.length === 0,
+  paydunyaMissing,
   paymentCallback: process.env.PAYDUNYA_CALLBACK_URL ? optionalHttpUrl(process.env.PAYDUNYA_CALLBACK_URL) || 'invalid' : 'default',
   disbursementCallback: publicHttpsUrl(paydunyaDisbursementCallbackUrl) || 'invalid'
 });
