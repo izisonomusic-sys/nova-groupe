@@ -395,7 +395,7 @@ async function reconcileInvestmentIncomeForUser(userId) {
   try {
     const { data: investments, error: investmentError } = await supabase
       .from('investments')
-      .select('id,user_id,principal_amount,status,started_at,ends_at,created_at,project_id,projects(daily_return_amount,duration_days,title)')
+      .select('id,user_id,principal_amount,status,started_at,ends_at,created_at,project_id,daily_return_amount,duration_days,projects(title)')
       .eq('user_id', userId)
       .in('status', ['active', 'completed'])
       .order('created_at', { ascending: true })
@@ -408,8 +408,10 @@ async function reconcileInvestmentIncomeForUser(userId) {
 
     for (const inv of investments || []) {
       const project = Array.isArray(inv.projects) ? inv.projects[0] : inv.projects;
-      const daily = Number(project?.daily_return_amount || 0);
-      const durationDays = Number(project?.duration_days || 0);
+      // Use the terms snapshotted when the member invested. The project
+      // catalogue may be edited later without changing an existing contract.
+      const daily = Number(inv.daily_return_amount || project?.daily_return_amount || 0);
+      const durationDays = Number(inv.duration_days || project?.duration_days || 0);
       const startedAt = new Date(inv.started_at || inv.created_at || 0);
       if (!Number.isSafeInteger(daily) || daily <= 0 || !Number.isSafeInteger(durationDays) || durationDays <= 0 || Number.isNaN(startedAt.getTime())) continue;
 
@@ -1584,17 +1586,29 @@ async function reconcilePendingPayDunyaPayments() {
   if (!supabase || !paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) return { checked: 0, completed: 0, failed: 0, pending: 0 };
   try {
     const { data: rows, error } = await supabase.from('payment_transactions')
-      .select('id,reference,amount,status,provider_token,created_at')
+      .select('id,reference,amount,status,provider_token,created_at,last_reconciled_at')
       .eq('provider','paydunya')
       .eq('status','pending')
       .not('provider_token','is',null)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('last_reconciled_at', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })
       .limit(25);
     if (error) throw error;
     let completed=0, failed=0, pending=0;
     for (const tx of rows || []) {
       try {
+        // Mark the attempt before calling the provider so one slow/invalid
+        // transaction cannot starve the rest of the pending queue.
+        const { data: marked, error: markError } = await supabase
+          .from('payment_transactions')
+          .update({ last_reconciled_at: new Date().toISOString() })
+          .eq('id', tx.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
+        if (markError) throw markError;
+        if (!marked) continue;
+
         const token=String(tx.provider_token||'').trim();
         const response=await fetch(paydunyaBase + '/checkout-invoice/confirm/' + encodeURIComponent(token), { method:'GET', headers:paydunyaHeaders() });
         const confirmed=await response.json();
