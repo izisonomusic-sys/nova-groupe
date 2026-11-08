@@ -1313,7 +1313,7 @@ async function startApprovedLomoPayWithdrawal(withdrawalId) {
   const operator = lomoPayOperatorCode(wr.country_code, wr.operator);
   const phone = String(wr.phone || '').trim();
   const amount = Number(wr.payout_amount || wr.amount);
-  if (!country || !operator || !/^\\+?\\d{8,15}$/.test(phone.replace(/[\\s().-]/g, ''))) throw new Error('Pays, opérateur ou numéro de retrait non pris en charge par LomoPay.');
+  if (!country || !operator || !/^\+?\d{8,15}$/.test(phone.replace(/[\s().-]/g, ''))) throw new Error('Pays, opérateur ou numéro de retrait non pris en charge par LomoPay.');
   if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('Montant net du retrait invalide.');
   if (lomoPayMissing.length) throw new Error('Configuration LomoPay incomplète : ' + lomoPayMissing.join(', '));
   const payload = {
