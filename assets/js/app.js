@@ -661,7 +661,7 @@
     }
     var b=el("btnRecharge");b.disabled=true;
     try{
-      var result=await api("/api/payments/deposit",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})};
+      var result=await api("/api/payments/deposit",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
       showSoftPayModal(result);
       if(result.status==="completed"){
