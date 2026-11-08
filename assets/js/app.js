@@ -154,7 +154,7 @@
         if(!r.ok){
           var message=data.error||((r.status===404)?"API introuvable sur le serveur NOVA (404).":("Erreur API HTTP "+r.status+"."));
           if(data.detail)message += " — "+data.detail;
-          if(data.provider_code)message += " (code PayDunya: "+data.provider_code+")";
+          if(data.provider_code)message += " (code prestataire: "+data.provider_code+")";
           throw new Error(message);
         }
         return data;
@@ -199,10 +199,10 @@
   async function syncPendingPayment(reference) {
     if(!reference)return null;
     try {
-      var row=await api("/api/payments/lomopay/"+encodeURIComponent(reference),{method:"GET"});
+      var row=await api("/api/payments/status/"+encodeURIComponent(reference),{method:"GET"});
       return {results:[row]};
     } catch (err) {
-      console.warn("LomoPay payment status:", err.message);
+      console.warn("Payment status:", err.message);
       return null;
     }
   }
@@ -214,7 +214,7 @@
       if(result&&result.results&&result.results.some(function(x){return x.status==="completed";})){
         localStorage.removeItem("nova:lastPendingPaymentReference");
         await loadAll();
-        S.toast("Paiement LomoPay confirmé : votre portefeuille a été crédité.");
+        S.toast("Paiement confirmé : votre portefeuille a été crédité.");
       }
     }
     params.delete("token");params.delete("invoice_token");
@@ -591,7 +591,7 @@
     if(statusNode)statusNode.textContent="Vérification…";
     try{
       await syncPendingPayment(softpayReference);
-      var row=await api("/api/payments/lomopay/"+encodeURIComponent(softpayReference),{method:"GET"});
+      var row=await api("/api/payments/status/"+encodeURIComponent(softpayReference),{method:"GET"});
       var status=String(row&&row.status||"pending").toLowerCase();
       if(status==="completed"){
         if(statusNode)statusNode.textContent="Confirmé";
@@ -661,7 +661,7 @@
     }
     var b=el("btnRecharge");b.disabled=true;
     try{
-      var result=await api("/api/payments/lomopay/direct",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
+      var result=await api("/api/payments/deposit",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
       showSoftPayModal(result);
       if(result.status==="completed"){
@@ -671,7 +671,7 @@
       }else{
         startSoftPayPolling();
       }
-    }catch(e){S.toast(e.message||"Paiement LomoPay impossible. Aucun solde n'a été crédité.");}
+    }catch(e){S.toast(e.message||"Paiement impossible. Aucun solde n'a été crédité.");}
     finally{b.disabled=false;}
   });
   listen("btnSaveWithdrawalAccount","click",async function(){
