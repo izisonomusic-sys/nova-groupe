@@ -197,14 +197,6 @@
     }
   }
   async function syncPendingPayment(reference) {
-    if(reference) {
-      try {
-        var current = await api("/api/payments/lomopay/"+encodeURIComponent(reference),{method:"GET"});
-        return {results:[current]};
-      } catch (lomoError) {
-        // Existing PayDunya transactions remain readable during the migration.
-      }
-    }
     try {
       var body = reference ? { reference: reference } : {};
       return await api("/api/payments/paydunya/sync", {
@@ -212,7 +204,7 @@
         body: JSON.stringify(body)
       });
     } catch (err) {
-      console.warn("Legacy payment sync:", err.message);
+      console.warn("PayDunya payment sync:", err.message);
       return null;
     }
   }
@@ -606,7 +598,8 @@
     if(verify)verify.disabled=true;
     if(statusNode)statusNode.textContent="Vérification…";
     try{
-      var row=await api("/api/payments/lomopay/"+encodeURIComponent(softpayReference),{method:"GET"});
+      await syncPendingPayment(softpayReference);
+      var row=await api("/api/payments/paydunya/"+encodeURIComponent(softpayReference),{method:"GET"});
       var status=String(row&&row.status||"pending").toLowerCase();
       if(status==="completed"){
         if(statusNode)statusNode.textContent="Confirmé";
@@ -676,7 +669,7 @@
     }
     var b=el("btnRecharge");b.disabled=true;
     try{
-      var result=await api("/api/payments/lomopay/direct",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
+      var result=await api("/api/payments/paydunya/softpay",{method:"POST",body:JSON.stringify({amount:amount,country_code:country,operator:operator,phone:phone,otp:softpayOtp})});
       localStorage.setItem("nova:lastPendingPaymentReference",result.reference||"");
       showSoftPayModal(result);
       if(result.status==="completed"){
@@ -686,7 +679,7 @@
       }else{
         startSoftPayPolling();
       }
-    }catch(e){S.toast(e.message||"Paiement LomoPay impossible. Aucun solde n'a été crédité.");}
+    }catch(e){S.toast(e.message||"Paiement PayDunya impossible. Aucun solde n'a été crédité.");}
     finally{b.disabled=false;}
   });
   listen("btnSaveWithdrawalAccount","click",async function(){
