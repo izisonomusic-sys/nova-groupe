@@ -1586,17 +1586,29 @@ async function reconcilePendingPayDunyaPayments() {
   if (!supabase || !paydunyaKeys.master || !paydunyaKeys.privateKey || !paydunyaKeys.token) return { checked: 0, completed: 0, failed: 0, pending: 0 };
   try {
     const { data: rows, error } = await supabase.from('payment_transactions')
-      .select('id,reference,amount,status,provider_token,created_at')
+      .select('id,reference,amount,status,provider_token,created_at,last_reconciled_at')
       .eq('provider','paydunya')
       .eq('status','pending')
       .not('provider_token','is',null)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('last_reconciled_at', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })
       .limit(25);
     if (error) throw error;
     let completed=0, failed=0, pending=0;
     for (const tx of rows || []) {
       try {
+        // Mark the attempt before calling the provider so one slow/invalid
+        // transaction cannot starve the rest of the pending queue.
+        const { data: marked, error: markError } = await supabase
+          .from('payment_transactions')
+          .update({ last_reconciled_at: new Date().toISOString() })
+          .eq('id', tx.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
+        if (markError) throw markError;
+        if (!marked) continue;
+
         const token=String(tx.provider_token||'').trim();
         const response=await fetch(paydunyaBase + '/checkout-invoice/confirm/' + encodeURIComponent(token), { method:'GET', headers:paydunyaHeaders() });
         const confirmed=await response.json();
