@@ -577,19 +577,25 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
     const providerData = data?.data || {};
     const providerId = String(providerData.id || providerData.transaction_id || '').trim();
     if (!response.ok || data?.success !== true || !providerId) {
+      // LomoPay documents both "code" and "error_code" variants.
+      // Keep provider diagnostics useful without logging phone numbers or API credentials.
+      const code = String(data?.error_code || data?.error || data?.code || '').slice(0, 100);
+      const detail = String(data?.message || data?.detail || data?.description || code || 'Réponse du prestataire invalide.').slice(0, 240);
       console.error('[LOMOPAY][DEPOSIT] provider rejected initiation', {
         httpStatus: response.status,
-        providerCode: String(data?.error || data?.code || 'unknown'),
+        providerCode: code || 'not_provided',
         country, operator: operatorCode,
-        message: String(data?.message || data?.detail || 'No provider message').slice(0, 240)
+        message: detail,
+        responseSuccess: data?.success === true,
+        providerIdReturned: Boolean(providerId),
+        responseFormat: data && typeof data === 'object' ? Object.keys(data).slice(0, 20) : typeof data
       });
       await supabase.from('payment_transactions').update({
         status:'failed', provider_payload:data || {http_status:response.status}
       }).eq('id',pending.id);
-      const code = String(data?.error || data?.code || '');
       return res.status(response.status >= 400 ? response.status : 502).json({
         error: 'LomoPay n’a pas pu démarrer le paiement.',
-        detail: data?.message || data?.detail || code || 'Réponse du prestataire invalide.',
+        detail,
         provider_code: code || null
       });
     }
