@@ -1867,6 +1867,32 @@ async function startApprovedLomoPayWithdrawal(withdrawalId) {
   }
   return { status: providerStatus || 'processing', withdrawal_id: wr.id, provider: 'lomopay', provider_id: providerId };
 }
+async function reconcilePendingLomoPayPayoutFallbacks() {
+  if (!supabase) return;
+  try {
+    const { data: rows, error } = await supabase.from('withdrawal_requests')
+      .select('id,provider,provider_status,provider_payload,status,admin_approved_at')
+      .eq('provider', 'lomopay')
+      .in('provider_status', ['rejected_before_acceptance', 'failed_confirmed'])
+      .in('status', ['pending', 'processing'])
+      .not('admin_approved_at', 'is', null)
+      .order('updated_at', { ascending: true })
+      .limit(20);
+    if (error) throw error;
+    for (const row of rows || []) {
+      try {
+        await startApprovedPayDunyaWithdrawal(
+          row.id, 'lomopay', row.provider_status, row.provider_payload
+        );
+      } catch (err) {
+        console.error('[PAYDUNYA][PAYOUT][FALLBACK] retry error:', { withdrawalId: row.id, message: err.message });
+      }
+    }
+  } catch (err) {
+    console.error('[PAYDUNYA][PAYOUT][FALLBACK] query error:', err.message);
+  }
+}
+
 async function reconcileLomoPayWithdrawals() {
   if (!supabase || lomoPayMissing.length) return;
   const { data: rows, error } = await supabase.from('withdrawal_requests')
@@ -2250,6 +2276,12 @@ setTimeout(() => {
 }, 18000);
 setInterval(() => {
   reconcilePayDunyaWithdrawals().catch(err => console.error('[PAYDUNYA][PAYOUT] scheduled reconcile error:', err.message));
+}, 60000);
+setTimeout(() => {
+  reconcilePendingLomoPayPayoutFallbacks().catch(err => console.error('[PAYDUNYA][PAYOUT][FALLBACK] initial sweep error:', err.message));
+}, 25000);
+setInterval(() => {
+  reconcilePendingLomoPayPayoutFallbacks().catch(err => console.error('[PAYDUNYA][PAYOUT][FALLBACK] scheduled sweep error:', err.message));
 }, 60000);
 
 function paydunyaDisbursementCallbackHealth(_req, res) {
