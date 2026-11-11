@@ -293,3 +293,65 @@ end;
 $function$;
 
 grant execute on function public.nova_request_withdrawal(uuid,bigint,text,text,text,text) to service_role;
+
+
+-- Atomically claim exactly one payout provider attempt. This prevents concurrent
+-- admin approvals/retries from creating two payouts. A confirmed LomoPay failure
+-- may transition to PayDunya; an ambiguous state may never transition.
+create or replace function public.nova_claim_withdrawal_provider_attempt(
+  p_withdrawal_id uuid,
+  p_provider text,
+  p_expected_provider text,
+  p_expected_status text,
+  p_provider_payload jsonb
+) returns boolean
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  wr public.withdrawal_requests%rowtype;
+begin
+  if p_provider not in ('lomopay', 'paydunya') then
+    raise exception 'Unsupported withdrawal provider';
+  end if;
+
+  select * into wr
+  from public.withdrawal_requests
+  where id = p_withdrawal_id
+  for update;
+
+  if not found then raise exception 'Withdrawal not found'; end if;
+  if wr.status in ('paid', 'rejected', 'cancelled') then return false; end if;
+  if wr.admin_approved_at is null then raise exception 'Admin approval required'; end if;
+
+  if wr.provider is distinct from p_expected_provider
+     or wr.provider_status is distinct from p_expected_status then
+    return false;
+  end if;
+
+  -- A token from LomoPay is allowed to be replaced only after the provider has
+  -- explicitly confirmed failure. Preserve the old attempt in provider_payload.
+  if wr.provider_token is not null
+     and not (p_expected_provider = 'lomopay' and p_expected_status = 'failed_confirmed') then
+    return false;
+  end if;
+
+  update public.withdrawal_requests
+  set provider = p_provider,
+      provider_status = 'initiating',
+      provider_token = null,
+      provider_disburse_id = null,
+      provider_transaction_id = null,
+      provider_payload = coalesce(p_provider_payload, '{}'::jsonb),
+      updated_at = now()
+  where id = p_withdrawal_id;
+
+  return true;
+end;
+$function$;
+
+revoke all on function public.nova_claim_withdrawal_provider_attempt(uuid,text,text,text,jsonb)
+  from public, anon, authenticated;
+grant execute on function public.nova_claim_withdrawal_provider_attempt(uuid,text,text,text,jsonb)
+  to service_role;
