@@ -534,7 +534,8 @@
       }
       var modalText=el("investModalText");
       var modal=el("investModal");
-      if(modalText)modalText.textContent="Projet "+selectedProject.title+" — "+money(selectedProject.minimum_amount)+" pour "+selectedProject.duration_days+" jours. Solde disponible : "+money(wallet.balance);
+      var investableBalance=Math.max(0,(Number(wallet.balance)||0)-(Number(wallet.bonus_locked)||0));
+      if(modalText)modalText.textContent="Projet "+selectedProject.title+" — "+money(selectedProject.minimum_amount)+" pour "+selectedProject.duration_days+" jours. Solde investissable (hors bonus protégés) : "+money(investableBalance);
       if(modal)modal.classList.add("open");
     }
   });
