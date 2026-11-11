@@ -322,7 +322,7 @@ begin
   for update;
 
   if not found then raise exception 'Withdrawal not found'; end if;
-  if wr.status in ('paid', 'rejected', 'cancelled') then return false; end if;
+  if wr.status not in ('pending', 'processing') then return false; end if;
   if wr.admin_approved_at is null then raise exception 'Admin approval required'; end if;
 
   if wr.provider is distinct from p_expected_provider
