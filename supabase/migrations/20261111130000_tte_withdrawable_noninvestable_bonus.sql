@@ -355,3 +355,82 @@ revoke all on function public.nova_claim_withdrawal_provider_attempt(uuid,text,t
   from public, anon, authenticated;
 grant execute on function public.nova_claim_withdrawal_provider_attempt(uuid,text,text,text,jsonb)
   to service_role;
+
+
+-- Referral qualification used to move referral bonuses from bonus_balance into
+-- the main wallet. New credits are already posted directly to balance and locked,
+-- so this function now supports both new credits and any legacy bonus_balance.
+create or replace function private.nova_transfer_referral_bonus(
+  p_user_id uuid,
+  p_referral_id uuid,
+  p_amount bigint,
+  p_role text,
+  p_related_user_id uuid
+) returns boolean
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  v_release_ref text := 'REF-BONUS-RELEASE-' || p_referral_id::text || '-' || p_role;
+  v_bonus_ref text := 'REF-BONUS-' || p_referral_id::text || '-' || p_role;
+  v_wallet public.wallet_balances%rowtype;
+  v_legacy_to_release bigint := 0;
+begin
+  if p_user_id is null or p_referral_id is null or p_amount <= 0 then
+    return false;
+  end if;
+
+  if exists (
+    select 1 from public.wallet_ledger
+    where reference = v_release_ref and status = 'posted'
+  ) then
+    return false;
+  end if;
+
+  if not exists (
+    select 1 from public.wallet_ledger
+    where reference = v_bonus_ref and status = 'posted'
+  ) then
+    perform private.nova_credit_bonus(
+      p_user_id, p_amount, 'referral_bonus', v_bonus_ref,
+      case when p_role = 'PARRAIN' then 'Bonus de parrainage — 250 FCFA'
+           else 'Bonus de bienvenue par parrainage — 250 FCFA' end,
+      p_related_user_id
+    );
+  end if;
+
+  select * into v_wallet
+  from public.wallet_balances
+  where user_id = p_user_id
+  for update;
+
+  if not found then
+    raise exception 'Referral bonus wallet not found';
+  end if;
+
+  -- Legacy balances are released immediately and remain non-investable.
+  -- New bonus credits already have bonus_balance=0 and bonus_locked=p_amount.
+  v_legacy_to_release := least(coalesce(v_wallet.bonus_balance, 0), p_amount);
+  if v_legacy_to_release > 0 then
+    update public.wallet_balances
+    set balance = balance + v_legacy_to_release,
+        bonus_balance = bonus_balance - v_legacy_to_release,
+        bonus_locked = bonus_locked + v_legacy_to_release,
+        updated_at = now()
+    where user_id = p_user_id;
+  end if;
+
+  insert into public.wallet_ledger(
+    user_id, entry_type, amount, status, reference, description, related_user_id, posted_at
+  )
+  values(
+    p_user_id, 'referral_bonus_release', p_amount, 'posted', v_release_ref,
+    'Bonus de parrainage libéré immédiatement — retirable, non réinvestissable',
+    p_related_user_id, now()
+  )
+  on conflict(reference) do nothing;
+
+  return found;
+end;
+$function$;
