@@ -945,6 +945,8 @@ app.post('/api/payments/paydunya/create-legacy', requireUser, async (req, res) =
       user_id: req.user.id, reference, amount, provider: 'paydunya', status: 'pending', currency: 'XOF'
     }).select('id, reference, amount').single();
     if (dbError) throw dbError;
+    pendingId = pending.id;
+    pendingReference = pending.reference;
 
     const profileResult = await supabase.from('profiles')
       .select('display_name,phone,country_code')
@@ -1093,6 +1095,10 @@ async function paydunyaJsonRequest(url, method, payload) {
 }
 
 app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
+  let pendingId = null;
+  let pendingReference = null;
+  let providerRequestStarted = false;
+  let providerToken = null;
   try {
     const amount = Number(req.body.amount);
     const countryCode = String(req.body.country_code || '').trim();
@@ -1176,25 +1182,39 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
       actions: { callback_url: callbackUrl }
     };
 
+    providerRequestStarted = true;
     const invoiceResult = await paydunyaJsonRequest(
       `${paydunyaBase}/checkout-invoice/create`,
       'POST',
       invoicePayload
     );
-    if (
-      !invoiceResult.response.ok ||
-      invoiceResult.data?.response_code !== '00' ||
-      !invoiceResult.data?.token
-    ) {
+    const token = String(invoiceResult.data?.token || '').trim();
+    if (token) {
+      providerToken = token;
+      await supabase.from('payment_transactions').update({
+        provider_token: token,
+        provider_payload: invoiceResult.data
+      }).eq('id', pending.id);
+    }
+    if (!invoiceResult.response.ok || invoiceResult.data?.response_code !== '00' || !token) {
+      const detail = invoiceResult.data?.response_text || invoiceResult.data?.description || `Réponse HTTP ${invoiceResult.response.status}`;
+      const definiteRejection = !token && invoiceResult.response.status >= 400 && invoiceResult.response.status < 500;
+      if (!definiteRejection) {
+        await supabase.from('payment_transactions').update({
+          provider_payload: { ...(invoiceResult.data || {}), phase: 'invoice_create', outcome: 'ambiguous' }
+        }).eq('id', pending.id).eq('status', 'pending');
+        return res.status(202).json({
+          ok: true, reference, amount, currency: 'XOF', status: 'pending',
+          next_action: 'confirm_on_phone',
+          message: 'PayDunya n’a pas encore donné une réponse certaine. Ne relancez pas le dépôt ; le statut sera vérifié automatiquement.'
+        });
+      }
       await supabase.from('payment_transactions').update({
         status: 'failed',
         provider_payload: invoiceResult.data || { http_status: invoiceResult.response.status }
-      }).eq('id', pending.id);
-      const detail = invoiceResult.data?.response_text || invoiceResult.data?.description || `Réponse HTTP ${invoiceResult.response.status}`;
-      return res.status(502).json({ error: 'PayDunya n’a pas pu initialiser le paiement SoftPay.', detail });
+      }).eq('id', pending.id).eq('status', 'pending');
+      return res.status(409).json({ error: 'PayDunya a refusé la création de la facture avant son acceptation.', detail });
     }
-
-    const token = String(invoiceResult.data.token);
     await supabase.from('payment_transactions').update({
       provider_token: token,
       provider_payload: invoiceResult.data
@@ -1214,12 +1234,24 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
 
     if (!softpayResult.response.ok || softpayResult.data?.success !== true) {
       const detail = softpayResult.data?.message || softpayResult.data?.response_text || `Réponse HTTP ${softpayResult.response.status}`;
+      const definiteRejection = (softpayResult.response.status >= 400 && softpayResult.response.status < 500) ||
+        (softpayResult.response.ok && softpayResult.data?.success === false);
+      if (!definiteRejection) {
+        await supabase.from('payment_transactions').update({
+          provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data, phase: 'softpay', outcome: 'ambiguous' }
+        }).eq('id', pending.id).eq('status', 'pending');
+        return res.status(202).json({
+          ok: true, reference, amount, currency: 'XOF', status: 'pending',
+          next_action: 'confirm_on_phone',
+          message: 'La demande PayDunya est en cours de vérification. Ne relancez pas le dépôt ; le statut sera actualisé automatiquement.'
+        });
+      }
       await supabase.from('payment_transactions').update({
         status: 'failed',
         provider_payload: { invoice: invoiceResult.data, softpay: softpayResult.data, softpay_fallback: 'disabled' }
-      }).eq('id', pending.id);
-      console.warn('[PAYDUNYA][SOFTPAY] provider rejected SoftPay request', { reference, mode: softpayMode, httpStatus: softpayResult.response.status, detail });
-      return res.status(502).json({ error: 'PayDunya a refusé cette demande SoftPay. Aucune redirection classique n’a été lancée.', detail, reference });
+      }).eq('id', pending.id).eq('status', 'pending');
+      console.warn('[PAYDUNYA][SOFTPAY] provider rejected SoftPay request', { reference, mode: softpayMode, httpStatus: softpayResult.response.status });
+      return res.status(409).json({ error: 'PayDunya a refusé cette demande SoftPay.', detail, reference });
     }
 
     // Le SoftPay peut répondre "en cours". On demande alors l'état réel de la facture.
@@ -1278,8 +1310,23 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
     });
   } catch (err) {
     console.error('[PAYDUNYA][SOFTPAY] create error:', err.message);
-    if (err?.name === 'AbortError') {
-      return res.status(504).json({ error: 'PayDunya a mis trop de temps à répondre. Vérifiez votre téléphone et réessayez la vérification.' });
+    if (pendingId && providerRequestStarted) {
+      await supabase.from('payment_transactions').update({
+        provider_payload: {
+          ...(providerToken ? { token_saved: true } : {}),
+          phase: providerToken ? 'softpay_or_confirmation' : 'invoice_create',
+          outcome: 'ambiguous',
+          error: String(err?.message || 'PayDunya request error')
+        }
+      }).eq('id', pendingId).eq('status', 'pending');
+      return res.status(202).json({
+        ok: true, reference: pendingReference, status: 'pending',
+        next_action: 'confirm_on_phone',
+        message: 'La réponse PayDunya est incertaine. Ne relancez pas le dépôt ; le statut sera vérifié automatiquement.'
+      });
+    }
+    if (pendingId) {
+      await supabase.from('payment_transactions').update({ status: 'failed' }).eq('id', pendingId).eq('status', 'pending');
     }
     return res.status(500).json({ error: 'Impossible de démarrer le paiement SoftPay.', detail: err?.message || 'Erreur serveur inconnue.' });
   }
