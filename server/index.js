@@ -1386,6 +1386,9 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     const phone = String(req.body.phone || '').replace(/[^0-9+]/g, '');
     const accountName = String(req.body.account_name || '').trim();
     const payoutOperator = lomoPayOperatorCode(countryCode, operator);
+    const paydunyaMode = paydunyaWithdrawMode(countryCode, operator);
+    const lomoEligible = !lomoPayMissing.length && !!payoutOperator;
+    const paydunyaEligible = !paydunyaMissing.length && !!paydunyaMode;
     const accountAlias = localPhoneForPayDunya(phone, countryCode);
 
     if (!Number.isSafeInteger(amount) || amount < 2000 || amount > 5000000) {
@@ -1396,19 +1399,14 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
         accountName.length < 3 || accountName.length > 120) {
       return res.status(400).json({ error: 'Informations du bénéficiaire invalides.' });
     }
-    if (!payoutOperator || accountAlias.length < 8 || accountAlias.length > 15) {
+    if (accountAlias.length < 8 || accountAlias.length > 15) {
       return res.status(400).json({ error: 'Numéro de retrait invalide pour le pays/opérateur sélectionné.' });
     }
-    if (!payoutOperator) {
-      return res.status(400).json({
-        error: 'Ce moyen de retrait n’est pas encore disponible automatiquement via LomoPay.',
-        operator, country_code: countryCode
-      });
-    }
-    if (lomoPayMissing.length) {
+    if (!lomoEligible && !paydunyaEligible) {
       return res.status(503).json({
-        error: 'Retraits LomoPay indisponibles : configuration marchand incomplète. Aucun montant n’a été réservé.',
-        missing: lomoPayMissing
+        error: 'Aucun prestataire de retrait n’est disponible pour ce pays et cet opérateur. Aucun montant n’a été réservé.',
+        lomo_missing: lomoPayMissing,
+        paydunya_missing: paydunyaMissing
       });
     }
 
@@ -1450,8 +1448,8 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
       fee_amount: Math.ceil(amount * 0.15),
       payout_amount: amount - Math.ceil(amount * 0.15),
       status: 'pending',
-      provider: 'lomopay',
-      message: 'Demande reçue. Votre retrait sera envoyé à LomoPay après validation par l’administrateur.'
+      provider: 'automatic',
+      message: 'Demande reçue. Le prestataire disponible sera sélectionné automatiquement après validation par l’administrateur.'
     });
   } catch (err) {
     console.error('Withdrawal request error:', err?.message || err);
@@ -2139,9 +2137,21 @@ async function reconcilePayDunyaWithdrawals() {
       try {
         const { response, data } = await paydunyaDisbursementRequest('check-status', { disburse_invoice: token });
         if (!response.ok || data.response_code !== '00') continue;
-        const status = String(data.status || '').toLowerCase();
+        let status = String(data.status || '').toLowerCase();
+        if (status === 'created') {
+          // PayDunya says CREATED means the invoice exists but has not been submitted.
+          // Submit the same token again; never create another invoice.
+          const submitted = await paydunyaDisbursementRequest('submit-invoice', {
+            disburse_invoice: token, disburse_id: String(row.id)
+          });
+          if (!submitted.response.ok || submitted.data?.response_code !== '00') continue;
+          const refreshed = await paydunyaDisbursementRequest('check-status', { disburse_invoice: token });
+          if (!refreshed.response.ok || refreshed.data?.response_code !== '00') continue;
+          Object.assign(data, refreshed.data);
+          status = String(data.status || '').toLowerCase();
+        }
         const providerAmount = Number(data.amount ?? data.total_amount);
-        if (!Number.isSafeInteger(providerAmount) || providerAmount !== Number(row.payout_amount || row.amount)) {
+        if (status !== 'failed' && (!Number.isSafeInteger(providerAmount) || providerAmount !== Number(row.payout_amount || row.amount))) {
           console.error('[PAYDUNYA][WITHDRAWAL] amount mismatch', { withdrawalId: row.id });
           continue;
         }
@@ -2184,6 +2194,12 @@ setTimeout(() => {
 }, 12000);
 setInterval(() => {
   reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] scheduled reconcile error:', err.message));
+}, 60000);
+setTimeout(() => {
+  reconcilePayDunyaWithdrawals().catch(err => console.error('[PAYDUNYA][PAYOUT] initial reconcile error:', err.message));
+}, 18000);
+setInterval(() => {
+  reconcilePayDunyaWithdrawals().catch(err => console.error('[PAYDUNYA][PAYOUT] scheduled reconcile error:', err.message));
 }, 60000);
 
 function paydunyaDisbursementCallbackHealth(_req, res) {
@@ -2433,12 +2449,6 @@ app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (_req, res) =
 
 app.post('/api/admin/withdrawals/:id/approve', requireUser, requireAdmin, async (req, res) => {
   try {
-    if (lomoPayMissing.length) {
-      return res.status(503).json({
-        error: 'Configuration LomoPay incomplète. La demande n’a pas été approuvée.',
-        missing: lomoPayMissing
-      });
-    }
     const { data: approved, error: approvalError } = await supabase.rpc('nova_admin_approve_withdrawal', {
       p_withdrawal_id: req.params.id, p_admin_id: req.user.id
     });
@@ -2448,7 +2458,8 @@ app.post('/api/admin/withdrawals/:id/approve', requireUser, requireAdmin, async 
     }
     const result = await startApprovedLomoPayWithdrawal(approved.id);
     return res.status(200).json({ ok: true, withdrawal_id: approved.id, status: result.status,
-      message: result.status === 'paid' ? 'Retrait payé avec succès.' : 'Retrait validé et transmis à LomoPay.' });
+      provider: result.provider || null,
+      message: result.status === 'paid' ? 'Retrait payé avec succès.' : 'Retrait validé et transmis au prestataire sélectionné.' });
   } catch (err) {
     console.error('Admin withdrawal approval error:', err.message);
     return res.status(500).json({ error: err.message || 'Impossible de valider le retrait.' });
