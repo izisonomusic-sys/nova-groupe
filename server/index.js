@@ -1897,12 +1897,7 @@ app.post(['/api/payments/paydunya/disbursement-callback', '/payments/webhooks/pa
   }
 });
 
-setInterval(() => {
-  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] scheduler error:', err.message));
-}, 60000);
-setTimeout(() => {
-  reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] initial reconcile error:', err.message));
-}, 10000);
+// LomoPay payout reconciliation is scheduled once above (startup + every 60 seconds).
 
 
 async function requireAdmin(req, res, next) {
