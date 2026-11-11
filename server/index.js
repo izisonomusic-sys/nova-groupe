@@ -528,15 +528,12 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Le choix du prestataire reste exclusivement côté serveur.
-// PayDunya LIVE est prioritaire lorsqu'il couvre le pays/opérateur demandé;
-// LomoPay est choisi lorsque PayDunya n'est pas configuré ou ne couvre pas ce canal.
-// Aucune seconde tentative n'est lancée après une réponse fournisseur ambiguë.
+// Provider selection stays server-side: LomoPay primary, PayDunya backup.
+// Never switch providers after a pending/ambiguous provider response.
 app.post('/api/payments/deposit', requireUser, async (req, res) => {
   try {
     const countryCode = String(req.body?.country_code || req.body?.country || '').trim();
     const operator = String(req.body?.operator || '').trim();
-    const paydunyaAvailable = !isTest && paydunyaMissing.length === 0 && !!paydunyaSoftPayMode(countryCode, operator);
     const lomoAvailable = lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live' && !!lomoPayOperatorCode(countryCode, operator);
     // LomoPay is primary. PayDunya is used only when LomoPay is unavailable for
     // this channel, or after an explicit pre-acceptance rejection (4xx).
@@ -688,8 +685,10 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
       // start a second provider while LomoPay may have accepted the request.
       const code = String(data?.error_code || data?.error || data?.code || '').slice(0, 100);
       const detail = String(data?.message || data?.detail || data?.description || code || 'Réponse du prestataire invalide.').slice(0, 240);
-      const definiteRejection = (response.status >= 400 && response.status < 500) ||
-        (response.ok && data?.success === false);
+      const definiteRejection = !providerId && (
+        (response.status >= 400 && response.status < 500) ||
+        (response.ok && data?.success === false)
+      );
       console.error('[LOMOPAY][DEPOSIT] initiation response without provider ID', {
         httpStatus: response.status, providerCode: code || 'not_provided',
         country, operator: operatorCode, responseSuccess: data?.success === true,
@@ -697,6 +696,7 @@ app.post('/api/payments/lomopay/direct', requireUser, async (req, res) => {
       });
       if (!definiteRejection) {
         await supabase.from('payment_transactions').update({
+          ...(providerId ? { provider_token: providerId } : {}),
           provider_payload: { ...(data && typeof data === 'object' ? data : {}), reconciliation_required: true }
         }).eq('id', pending.id).eq('status', 'pending');
         return res.status(202).json({
