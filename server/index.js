@@ -1642,14 +1642,20 @@ async function startApprovedPayDunyaWithdrawal(withdrawalId, expectedProvider = 
     return { status: 'pending', withdrawal_id: wr.id, provider: 'paydunya' };
   }
 
-  const { error: tokenError } = await supabase.from('withdrawal_requests').update({
+  const { data: tokenRow, error: tokenError } = await supabase.from('withdrawal_requests').update({
     provider_token: token,
     provider_disburse_id: String(wr.id),
     provider_status: 'created',
     status: 'processing',
     provider_payload: { ...invoiceData, phase: 'created', disburse_token: token }
-  }).eq('id', wr.id).eq('provider', 'paydunya').eq('provider_status', 'initiating').is('provider_token', null);
+  }).eq('id', wr.id).eq('provider', 'paydunya').eq('provider_status', 'initiating').is('provider_token', null)
+    .select('id').maybeSingle();
   if (tokenError) throw tokenError;
+  if (!tokenRow) {
+    // Do not submit a payout unless the exact provider token is safely persisted.
+    console.error('[PAYDUNYA][PAYOUT] token was created but could not be attached to the reserved withdrawal; not submitting', { withdrawalId: wr.id });
+    return { status: 'pending', withdrawal_id: wr.id, provider: 'paydunya' };
+  }
 
   // Submit once using the same token. If the response is ambiguous, status
   // reconciliation below will inspect this token; it will never create a new invoice.
