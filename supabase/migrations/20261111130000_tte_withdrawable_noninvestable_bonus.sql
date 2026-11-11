@@ -357,80 +357,99 @@ grant execute on function public.nova_claim_withdrawal_provider_attempt(uuid,tex
   to service_role;
 
 
--- Referral qualification used to move referral bonuses from bonus_balance into
--- the main wallet. New credits are already posted directly to balance and locked,
--- so this function now supports both new credits and any legacy bonus_balance.
-create or replace function private.nova_transfer_referral_bonus(
-  p_user_id uuid,
-  p_referral_id uuid,
-  p_amount bigint,
-  p_role text,
-  p_related_user_id uuid
-) returns boolean
+
+-- The current referral qualification path credits a 400 FCFA reward to each
+-- side after a qualifying deposit. Route both credits through nova_credit_bonus
+-- so the amounts remain withdrawable but are excluded from investment funds.
+create or replace function private.nova_qualify_referrals_for_user(p_user_id uuid)
+returns bigint
 language plpgsql
 security definer
 set search_path to ''
 as $function$
 declare
-  v_release_ref text := 'REF-BONUS-RELEASE-' || p_referral_id::text || '-' || p_role;
-  v_bonus_ref text := 'REF-BONUS-' || p_referral_id::text || '-' || p_role;
-  v_wallet public.wallet_balances%rowtype;
-  v_legacy_to_release bigint := 0;
+  r public.referrals%rowtype;
+  v_count bigint := 0;
+  v_qualifying_deposit boolean;
+  v_ref_old_paid boolean;
+  v_child_old_paid boolean;
 begin
-  if p_user_id is null or p_referral_id is null or p_amount <= 0 then
-    return false;
-  end if;
+  if p_user_id is null then return 0; end if;
 
-  if exists (
-    select 1 from public.wallet_ledger
-    where reference = v_release_ref and status = 'posted'
-  ) then
-    return false;
-  end if;
+  for r in
+    select * from public.referrals
+    where (referrer_id = p_user_id or referred_user_id = p_user_id)
+      and status in ('pending', 'eligible')
+    for update
+  loop
+    select exists(
+      select 1 from public.wallet_ledger
+      where user_id = r.referrer_id and status = 'posted'
+        and reference in (
+          'REF-' || r.id::text || '-PARRAIN',
+          'REF-BONUS-' || r.id::text || '-PARRAIN',
+          'REFERRAL-400-' || r.id::text || '-PARRAIN'
+        )
+    ) into v_ref_old_paid;
 
-  if not exists (
-    select 1 from public.wallet_ledger
-    where reference = v_bonus_ref and status = 'posted'
-  ) then
-    perform private.nova_credit_bonus(
-      p_user_id, p_amount, 'referral_bonus', v_bonus_ref,
-      case when p_role = 'PARRAIN' then 'Bonus de parrainage — 250 FCFA'
-           else 'Bonus de bienvenue par parrainage — 250 FCFA' end,
-      p_related_user_id
-    );
-  end if;
+    select exists(
+      select 1 from public.wallet_ledger
+      where user_id = r.referred_user_id and status = 'posted'
+        and reference in (
+          'REF-' || r.id::text || '-FILLEUL',
+          'REF-BONUS-' || r.id::text || '-FILLEUL',
+          'REFERRAL-400-' || r.id::text || '-FILLEUL'
+        )
+    ) into v_child_old_paid;
 
-  select * into v_wallet
-  from public.wallet_balances
-  where user_id = p_user_id
-  for update;
+    if v_ref_old_paid and v_child_old_paid then
+      update public.referrals
+      set status = 'credited',
+          referrer_qualified_at = coalesce(referrer_qualified_at, now()),
+          referred_qualified_at = coalesce(referred_qualified_at, now())
+      where id = r.id;
+      v_count := v_count + 1;
+      continue;
+    end if;
 
-  if not found then
-    raise exception 'Referral bonus wallet not found';
-  end if;
+    select exists(
+      select 1 from public.wallet_ledger l
+      where l.user_id = r.referred_user_id
+        and l.entry_type = 'deposit' and l.status = 'posted'
+        and l.amount >= 3000
+    ) into v_qualifying_deposit;
 
-  -- Legacy balances are released immediately and remain non-investable.
-  -- New bonus credits already have bonus_balance=0 and bonus_locked=p_amount.
-  v_legacy_to_release := least(coalesce(v_wallet.bonus_balance, 0), p_amount);
-  if v_legacy_to_release > 0 then
-    update public.wallet_balances
-    set balance = balance + v_legacy_to_release,
-        bonus_balance = bonus_balance - v_legacy_to_release,
-        bonus_locked = bonus_locked + v_legacy_to_release,
-        updated_at = now()
-    where user_id = p_user_id;
-  end if;
+    if not v_qualifying_deposit then
+      update public.referrals set status = 'pending'
+      where id = r.id and status in ('pending', 'eligible');
+      continue;
+    end if;
 
-  insert into public.wallet_ledger(
-    user_id, entry_type, amount, status, reference, description, related_user_id, posted_at
-  )
-  values(
-    p_user_id, 'referral_bonus_release', p_amount, 'posted', v_release_ref,
-    'Bonus de parrainage libéré immédiatement — retirable, non réinvestissable',
-    p_related_user_id, now()
-  )
-  on conflict(reference) do nothing;
+    if not v_ref_old_paid then
+      perform private.nova_credit_bonus(
+        r.referrer_id, 400, 'referral_commission',
+        'REFERRAL-400-' || r.id::text || '-PARRAIN',
+        'Bonus de parrainage TTE Energy après dépôt confirmé >= 3000 FCFA',
+        r.referred_user_id
+      );
+    end if;
 
-  return found;
+    if not v_child_old_paid then
+      perform private.nova_credit_bonus(
+        r.referred_user_id, 400, 'referral_reward',
+        'REFERRAL-400-' || r.id::text || '-FILLEUL',
+        'Bonus filleul TTE Energy après dépôt confirmé >= 3000 FCFA',
+        r.referrer_id
+      );
+    end if;
+
+    update public.referrals
+    set status = 'credited', bonus_amount = 400,
+        referrer_qualified_at = coalesce(referrer_qualified_at, now()),
+        referred_qualified_at = coalesce(referred_qualified_at, now())
+    where id = r.id;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
 end;
 $function$;
