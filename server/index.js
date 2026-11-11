@@ -536,8 +536,12 @@ app.post('/api/payments/deposit', requireUser, async (req, res) => {
   try {
     const countryCode = String(req.body?.country_code || req.body?.country || '').trim();
     const operator = String(req.body?.operator || '').trim();
-    const paydunyaEligible = !isTest && paydunyaMissing.length === 0 && !!paydunyaSoftPayMode(countryCode, operator);
-    const lomoEligible = lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live' && !!lomoPayOperatorCode(countryCode, operator);
+    const providerOverride = String(process.env.PAYMENT_PROVIDER_OVERRIDE || 'auto').trim().toLowerCase();
+    const paydunyaAvailable = !isTest && paydunyaMissing.length === 0 && !!paydunyaSoftPayMode(countryCode, operator);
+    const lomoAvailable = lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live' && !!lomoPayOperatorCode(countryCode, operator);
+    // Temporary routing override for controlled provider testing. Credentials and endpoints remain intact.
+    const paydunyaEligible = providerOverride === 'lomopay' ? false : (providerOverride === 'paydunya' ? paydunyaAvailable : paydunyaAvailable);
+    const lomoEligible = providerOverride === 'paydunya' ? false : lomoAvailable;
     if (!paydunyaEligible && !lomoEligible) {
       return res.status(503).json({ error: 'Aucun moyen de paiement automatique n’est disponible pour ce pays et cet opérateur.' });
     }
