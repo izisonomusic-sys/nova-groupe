@@ -1,4 +1,4 @@
-const CACHE_NAME = "tte-pwa-v34-20261111c";
+const CACHE_NAME = "tte-pwa-v35-20261111d";
 const SHELL = [
   "./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html",
   "./manifest.webmanifest",
