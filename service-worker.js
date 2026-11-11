@@ -1,9 +1,9 @@
-const CACHE_NAME = "tte-pwa-v31-20261102b";
+const CACHE_NAME = "tte-pwa-v32-20261111a";
 const SHELL = [
   "./", "./index.html", "./login.html", "./register.html", "./app.html", "./admin.html",
   "./manifest.webmanifest",
   "./assets/img/tte-energy-official.jpg?v=20261102b",
-  "./assets/css/style.css?v=20261027f",
+  "./assets/css/style.css?v=20261111a",
   "./assets/js/config.js?v=20261028c", "./assets/js/icons.js?v=20261026a",
   "./assets/js/store.js?v=20261026a", "./assets/js/main.js?v=20261027f",
   "./assets/js/auth.js?v=20261028b", "./assets/js/app.js?v=20261028c",
