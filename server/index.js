@@ -763,6 +763,81 @@ app.get('/api/payments/lomopay/:reference', requireUser, async (req,res) => {
   }
 });
 
+// Background reconciliation: do not rely on the member keeping the payment modal open.
+async function reconcilePendingLomoPayPayments() {
+  if (!supabase || lomoPayMissing.length) return { checked: 0, completed: 0, failed: 0, pending: 0 };
+  try {
+    const { data: rows, error } = await supabase.from('payment_transactions')
+      .select('id,reference,amount,currency,status,provider_token')
+      .eq('provider', 'lomopay')
+      .eq('status', 'pending')
+      .not('provider_token', 'is', null)
+      .order('created_at', { ascending: true })
+      .limit(25);
+    if (error) throw error;
+
+    let completed = 0, failed = 0, pending = 0;
+    for (const tx of rows || []) {
+      try {
+        const { response, data } = await lomoPayRequest(
+          'payments.php?id=' + encodeURIComponent(tx.provider_token),
+          { method: 'GET' }
+        );
+        if (!response.ok || data?.success !== true) { pending += 1; continue; }
+        const payment = data?.data || {};
+        const providerStatus = String(payment.status || '').toLowerCase();
+        const providerId = String(payment.id || payment.transaction_id || '').trim();
+        const externalReference = String(payment.external_reference || '').trim();
+        if ((providerId && providerId !== tx.provider_token) ||
+            (externalReference && externalReference !== tx.reference)) {
+          console.error('[LOMOPAY][PAYMENT][RECONCILE] provider identity mismatch', { reference: tx.reference });
+          pending += 1;
+          continue;
+        }
+        const amount = Number(payment.amount);
+        const currency = String(payment.currency || '').toUpperCase();
+        if (!Number.isSafeInteger(amount) || amount !== Number(tx.amount) ||
+            currency !== String(tx.currency || '').toUpperCase()) {
+          console.error('[LOMOPAY][PAYMENT][RECONCILE] amount/currency mismatch', { reference: tx.reference });
+          pending += 1;
+          continue;
+        }
+
+        if (providerStatus === 'completed') {
+          const { error: creditError } = await supabase.rpc('nova_confirm_lomopay_payment', {
+            p_payment_id: tx.id,
+            p_provider_token: tx.provider_token,
+            p_paid_amount: amount,
+            p_currency: currency,
+            p_provider_payload: data
+          });
+          if (creditError) throw creditError;
+          completed += 1;
+        } else if (providerStatus === 'failed') {
+          const { error: failedError } = await supabase.from('payment_transactions')
+            .update({ status: 'failed', provider_payload: data })
+            .eq('id', tx.id)
+            .eq('status', 'pending');
+          if (failedError) throw failedError;
+          failed += 1;
+        } else {
+          pending += 1;
+        }
+      } catch (err) {
+        console.error('[LOMOPAY][PAYMENT][RECONCILE] transaction error', { reference: tx.reference, message: err.message });
+        pending += 1;
+      }
+    }
+    console.log('[LOMOPAY][PAYMENT][RECONCILE] sweep completed', {
+      checked: (rows || []).length, completed, failed, pending
+    });
+    return { checked: (rows || []).length, completed, failed, pending };
+  } catch (err) {
+    console.error('[LOMOPAY][PAYMENT][RECONCILE] sweep error:', err.message);
+    return { checked: 0, completed: 0, failed: 0, pending: 0, error: err.message };
+  }
+}
+
 app.post('/webhooks/lomopay', async (req,res) => {
   try {
     if (!supabase || lomoPayMissing.length) return res.status(503).send('Not configured');
@@ -1792,6 +1867,13 @@ async function reconcilePayDunyaWithdrawals() {
   }
 }
 
+
+setTimeout(() => {
+  reconcilePendingLomoPayPayments().catch(err => console.error('[LOMOPAY][PAYMENT][RECONCILE] initial sweep error:', err.message));
+}, 20000);
+setInterval(() => {
+  reconcilePendingLomoPayPayments().catch(err => console.error('[LOMOPAY][PAYMENT][RECONCILE] scheduled sweep error:', err.message));
+}, 60000);
 
 setTimeout(() => {
   reconcileLomoPayWithdrawals().catch(err => console.error('[LOMOPAY][PAYOUT] initial reconcile error:', err.message));
