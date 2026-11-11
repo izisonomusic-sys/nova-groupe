@@ -995,7 +995,7 @@ async function paydunyaJsonRequest(url, method, payload) {
 app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
   // TEMPORARY TEST SWITCH: PayDunya integration and credentials remain intact.
   // Re-enable by changing this flag to true after the LomoPay test if needed.
-  const PAYDUNYA_DEPOSITS_ENABLED = false;
+  const PAYDUNYA_DEPOSITS_ENABLED = true;
   if (!PAYDUNYA_DEPOSITS_ENABLED) {
     return res.status(503).json({ error: 'PayDunya est temporairement désactivé pour le test LomoPay. Aucun paiement PayDunya ne sera lancé.' });
   }
