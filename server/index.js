@@ -1206,7 +1206,9 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
         return res.status(202).json({
           ok: true, reference, amount, currency: 'XOF', status: 'pending',
           next_action: 'confirm_on_phone',
-          message: 'PayDunya n’a pas encore donné une réponse certaine. Ne relancez pas le dépôt ; le statut sera vérifié automatiquement.'
+          message: token
+            ? 'PayDunya n’a pas encore donné une réponse certaine. Ne relancez pas le dépôt ; le statut sera vérifié automatiquement.'
+            : 'La création de la facture PayDunya est incertaine et aucun jeton de suivi n’a été reçu. Ne relancez pas le dépôt ; une vérification manuelle est nécessaire.'
         });
       }
       await supabase.from('payment_transactions').update({
@@ -1322,7 +1324,9 @@ app.post('/api/payments/paydunya/softpay', requireUser, async (req, res) => {
       return res.status(202).json({
         ok: true, reference: pendingReference, status: 'pending',
         next_action: 'confirm_on_phone',
-        message: 'La réponse PayDunya est incertaine. Ne relancez pas le dépôt ; le statut sera vérifié automatiquement.'
+        message: providerToken
+          ? 'La réponse PayDunya est incertaine. Ne relancez pas le dépôt ; le statut sera vérifié automatiquement.'
+          : 'La création du paiement PayDunya est incertaine et aucun jeton de suivi n’a été reçu. Ne relancez pas le dépôt ; une vérification manuelle est nécessaire.'
       });
     }
     if (pendingId) {
