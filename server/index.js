@@ -803,7 +803,7 @@ app.post('/webhooks/lomopay', async (req,res) => {
         await finalizeLomoPayWithdrawal(wr.id, providerId || wr.provider_token || '', event, payoutStatus);
       } else {
         if (providerId) {
-          const { error: processingError } = await supabase.rpc('nova_set_withdrawal_processing', { p_withdrawal_id: wr.id, p_provider_token: providerId, p_provider_payload: event });
+          const { error: processingError } = await supabase.rpc('nova_set_lomopay_withdrawal_processing', { p_withdrawal_id: wr.id, p_provider_token: providerId, p_provider_payload: event });
           if (processingError) throw processingError;
         }
         await supabase.from('withdrawal_requests').update({ provider: 'lomopay', provider_status: payoutStatus || 'processing', provider_payload: event }).eq('id', wr.id);
@@ -1375,7 +1375,7 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
 async function finalizeLomoPayWithdrawal(withdrawalId, providerId, providerData, status) {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'paid') {
-    const { error } = await supabase.rpc('nova_finalize_withdrawal_success', {
+    const { error } = await supabase.rpc('nova_finalize_lomopay_withdrawal_success', {
       p_withdrawal_id: withdrawalId, p_provider_token: providerId, p_provider_payload: providerData
     });
     if (error) throw error;
@@ -1384,7 +1384,7 @@ async function finalizeLomoPayWithdrawal(withdrawalId, providerId, providerData,
   }
   if (normalized === 'failed') {
     const detail = String(providerData?.message || providerData?.detail || providerData?.error || 'Retrait LomoPay échoué.');
-    const { error } = await supabase.rpc('nova_finalize_withdrawal_failure', {
+    const { error } = await supabase.rpc('nova_finalize_lomopay_withdrawal_failure', {
       p_withdrawal_id: withdrawalId, p_provider_token: providerId,
       p_provider_payload: providerData, p_failure_reason: detail
     });
@@ -1429,7 +1429,7 @@ async function startApprovedLomoPayWithdrawal(withdrawalId) {
     }
     throw new Error(detail);
   }
-  const { error: processingError } = await supabase.rpc('nova_set_withdrawal_processing', {
+  const { error: processingError } = await supabase.rpc('nova_set_lomopay_withdrawal_processing', {
     p_withdrawal_id: wr.id, p_provider_token: providerId, p_provider_payload: providerData
   });
   if (processingError) throw processingError;
