@@ -1590,10 +1590,7 @@ async function startApprovedPayDunyaWithdrawal(withdrawalId, expectedProvider = 
 
   const amount = Number(wr.payout_amount || wr.amount);
   const alias = localPhoneForPayDunya(wr.phone, wr.country_code);
-  const callbackUrl = publicHttpsUrl(
-    process.env.PAYDUNYA_DISBURSEMENT_CALLBACK_URL ||
-    'https://nova-groupe-dpnx.onrender.com/payments/webhooks/paydunya/disbursement'
-  );
+  const callbackUrl = publicHttpsUrl(paydunyaDisbursementCallbackUrl);
   if (!Number.isSafeInteger(amount) || amount <= 0 || !alias || !callbackUrl) {
     const detail = 'Données du bénéficiaire ou URL de callback PayDunya invalides.';
     const { error } = await supabase.rpc('nova_finalize_withdrawal_failure', {
