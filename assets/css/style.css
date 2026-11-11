@@ -1713,3 +1713,47 @@ p,.muted,.hint,.app-note { color:var(--muted); }
 .withdrawal-step small{display:block;color:var(--muted);font-size:11px;margin-top:4px;line-height:1.45}
 .withdrawal-track-meta{display:flex;flex-wrap:wrap;gap:7px 14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 .withdrawal-track-note{margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff4f2;color:#8b3028;font-size:12px}
+
+
+/* TTE Energy — contraste renforcé de la fenêtre de validation Mobile Money */
+#softpayModal .modal {
+  color: #17140D;
+  background: #FFFFFF;
+}
+#softpayModal .modal h3,
+#softpayModal #softpayTitle {
+  color: #17140D !important;
+  opacity: 1;
+}
+#softpayModal #softpayMessage,
+#softpayModal #softpaySecurity {
+  color: #4B5563 !important;
+  opacity: 1;
+}
+#softpayModal .modal > div[style*="background:#f7f9fc"],
+#softpayModal .modal > div[style*="background: #f7f9fc"] {
+  background: #F1F5F9 !important;
+  color: #172033 !important;
+}
+#softpayModal .modal > div[style*="background:#f7f9fc"] span,
+#softpayModal .modal > div[style*="background: #f7f9fc"] span {
+  color: #475569 !important;
+}
+#softpayModal .modal > div[style*="background:#f7f9fc"] b,
+#softpayModal .modal > div[style*="background: #f7f9fc"] b,
+#softpayModal #softpayAmount,
+#softpayModal #softpayOperator,
+#softpayModal #softpayPhone,
+#softpayModal #softpayStatus {
+  color: #111827 !important;
+  font-weight: 800;
+  opacity: 1;
+}
+#softpayModal .m-ic.mi-teal {
+  background: #FFF3C4;
+  color: #6A4B00;
+}
+#softpayModal #softpayVerify {
+  color: #111111 !important;
+  font-weight: 800;
+}
