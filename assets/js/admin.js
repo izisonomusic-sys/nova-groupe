@@ -7,6 +7,12 @@
   function txt(id,v){var n=$(id);if(n)n.textContent=v==null?"":String(v);}
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function money(n){return S.fcn(n);}
+  function productImagePath(url,title,badge){
+    var source=String(url||""),text=[source,title||"",badge||""].join(" ").toLowerCase();
+    var match=text.match(/(bidon|baril)[-_ ]?(10|15|20|25|26|30|50|100|150|400)\s*l?/i);
+    if(match){var kind=match[1].toLowerCase(),litres=Number(match[2]);if(kind==="bidon"&&litres<=25)return "assets/img/products/bidon-"+litres+"l.jpg?v=20261102a";if(kind==="baril"&&litres>=26)return "assets/img/products/baril-"+litres+"l.jpg?v=20261102a";}
+    return source||"assets/img/logo.svg";
+  }
   async function request(path,opts){
     opts=opts||{};
     var ss=await A.auth.getSession(),session=ss.data&&ss.data.session;
@@ -125,7 +131,7 @@
   }
   function preview(){
     var d=draft(),total=(d.daily_return_amount||0)*(d.duration_days||0);
-    $("previewCard").innerHTML='<article class="plan-card"><div class="plan-head"><img src="'+esc(d.image_url)+'" alt=""><span class="badge">'+esc($("pBadge").value.trim()||"Projet")+'</span></div><div class="plan-body"><h3>'+esc(d.title||"Titre du projet")+'</h3><p class="desc">'+esc(d.description||"Description du projet")+'</p><div class="plan-stats"><div class="plan-stat"><span>Prix</span><b>'+money(d.minimum_amount)+'</b></div><div class="plan-stat"><span>Gain/jour</span><b>'+money(d.daily_return_amount)+'</b></div><div class="plan-stat"><span>Durée</span><b>'+d.duration_days+' jours</b></div><div class="plan-stat"><span>Gain total estimé</span><b>'+money(total)+'</b></div></div></div></article>';
+    $("previewCard").innerHTML='<article class="plan-card"><div class="plan-head"><img src="'+esc(productImagePath(d.image_url,d.title,$("pBadge").value))+'" alt=""><span class="badge">'+esc($("pBadge").value.trim()||"Projet")+'</span></div><div class="plan-body"><h3>'+esc(d.title||"Titre du projet")+'</h3><p class="desc">'+esc(d.description||"Description du projet")+'</p><div class="plan-stats"><div class="plan-stat"><span>Prix</span><b>'+money(d.minimum_amount)+'</b></div><div class="plan-stat"><span>Gain/jour</span><b>'+money(d.daily_return_amount)+'</b></div><div class="plan-stat"><span>Durée</span><b>'+d.duration_days+' jours</b></div><div class="plan-stat"><span>Gain total estimé</span><b>'+money(total)+'</b></div></div></div></article>';
   }
   ["pType","pBadge","pTitle","pDesc","pPrice","pDaily","pDays","pImg"].forEach(id=>$(id).addEventListener("input",preview));
   $("pImg").addEventListener("change",function(){autoProjectText();preview();});
@@ -140,7 +146,7 @@
   });
   function card(p){
     var status=p.status==="published",category=p.category==="special"?"Plan spécial":p.category==="petroleum"?"Pétrole":p.category==="fuel"?"Carburants":p.category==="solar"?"Solaire":p.category==="wind"?"Éolien":p.category==="agriculture"?"Agriculture":p.category;
-    return '<div class="admin-row"><img class="ar-img" src="'+esc(p.image_url||"assets/img/logo.svg")+'" alt=""><div class="ar-info"><span class="badge">'+esc(p.badge||category)+'</span><b>'+esc(p.title)+'</b><small>'+esc(p.description)+'</small></div><div class="ar-right"><div class="ar-stats"><div class="ar-stat"><span>Investissement</span><b>'+money(p.minimum_amount)+'</b></div><div class="ar-stat"><span>Gain/jour</span><b>'+money(p.daily_return_amount)+'</b></div><div class="ar-stat"><span>Durée</span><b>'+p.duration_days+' j</b></div></div><div class="ar-actions"><span class="badge '+(status?"badge-teal":"badge-amber")+'">'+(status?"Publié":"Masqué")+'</span><button class="btn btn-sm btn-outline" data-toggle="'+esc(p.id)+'">'+(status?"Masquer":"Publier")+'</button><button class="btn btn-sm btn-danger" data-del="'+esc(p.id)+'">Supprimer</button></div></div></div>';
+    return '<div class="admin-row"><img class="ar-img" src="'+esc(productImagePath(p.image_url,p.title,p.badge))+'" alt=""><div class="ar-info"><span class="badge">'+esc(p.badge||category)+'</span><b>'+esc(p.title)+'</b><small>'+esc(p.description)+'</small></div><div class="ar-right"><div class="ar-stats"><div class="ar-stat"><span>Investissement</span><b>'+money(p.minimum_amount)+'</b></div><div class="ar-stat"><span>Gain/jour</span><b>'+money(p.daily_return_amount)+'</b></div><div class="ar-stat"><span>Durée</span><b>'+p.duration_days+' j</b></div></div><div class="ar-actions"><span class="badge '+(status?"badge-teal":"badge-amber")+'">'+(status?"Publié":"Masqué")+'</span><button class="btn btn-sm btn-outline" data-toggle="'+esc(p.id)+'">'+(status?"Masquer":"Publier")+'</button><button class="btn btn-sm btn-danger" data-del="'+esc(p.id)+'">Supprimer</button></div></div></div>';
   }
   async function loadProjects(){
     var data=await request("/api/admin/projects");var list=data.projects||[];
