@@ -33,6 +33,11 @@ server {
         add_header Cache-Control "public, max-age=604800";
     }
 
+    # Compatibilité avec les anciens liens applicatifs gérés auparavant par Express.
+    location ~ ^/app\\.html/(home|recharger|retrait|presence|assistance|equipe|publications|investissements|historique|compte)/?$ {
+        return 302 /app.html#/$1;
+    }
+
     # Fichiers racine (manifest, icônes, etc.) : pas de fallback vers le backend.
     location / {
         try_files $uri $uri/ =404;
