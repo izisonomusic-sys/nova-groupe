@@ -528,17 +528,16 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Provider selection stays server-side: LomoPay primary, PayDunya backup.
-// Never switch providers after a pending/ambiguous provider response.
+// PayDunya is the only provider for new deposits. LomoPay remains available
+// only to reconcile transactions that were created before this change.
 app.post('/api/payments/deposit', requireUser, async (req, res) => {
   try {
     const countryCode = String(req.body?.country_code || req.body?.country || '').trim();
     const operator = String(req.body?.operator || '').trim();
-    const lomoAvailable = lomoPayMissing.length === 0 && lomoPayKeys.mode === 'live' && !!lomoPayOperatorCode(countryCode, operator);
     // LomoPay is primary. PayDunya is used only when LomoPay is unavailable for
     // this channel, or after an explicit pre-acceptance rejection (4xx).
     const paydunyaEligible = !isTest && paydunyaMissing.length === 0 && !!paydunyaSoftPayMode(countryCode, operator);
-    const lomoEligible = lomoAvailable;
+    const lomoEligible = false; // Temporarily disabled for all new deposits.
     if (!paydunyaEligible && !lomoEligible) {
       return res.status(503).json({ error: 'Aucun moyen de paiement automatique n’est disponible pour ce pays et cet opérateur.' });
     }
@@ -1438,7 +1437,7 @@ app.post('/api/withdrawals', requireUser, async (req, res) => {
     const accountName = String(req.body.account_name || '').trim();
     const payoutOperator = lomoPayOperatorCode(countryCode, operator);
     const paydunyaMode = paydunyaWithdrawMode(countryCode, operator);
-    const lomoEligible = !lomoPayMissing.length && !!payoutOperator;
+    const lomoEligible = false; // New withdrawal requests must use PayDunya only.
     const paydunyaEligible = !paydunyaMissing.length && !!paydunyaMode;
     const accountAlias = localPhoneForPayDunya(phone, countryCode);
 
@@ -1760,9 +1759,7 @@ async function startApprovedLomoPayWithdrawal(withdrawalId) {
 
   const paydunyaMode = paydunyaWithdrawMode(wr.country_code, wr.operator);
   const paydunyaEligible = !paydunyaMissing.length && !!paydunyaMode;
-  const country = lomoPayCountryCode(wr.country_code);
-  const operator = lomoPayOperatorCode(wr.country_code, wr.operator);
-  const lomoEligible = !lomoPayMissing.length && !!country && !!operator;
+  const lomoEligible = false; // New approvals use PayDunya; legacy LomoPay attempts stay untouched.
 
   if (wr.provider === 'paydunya') {
     return { status: wr.provider_status || wr.status || 'pending', withdrawal_id: wr.id, provider: 'paydunya' };
@@ -1774,18 +1771,9 @@ async function startApprovedLomoPayWithdrawal(withdrawalId) {
     return { status: 'pending', withdrawal_id: wr.id, provider: 'lomopay' };
   }
   if (wr.provider === 'lomopay' && ['rejected_before_acceptance', 'failed_confirmed'].includes(String(wr.provider_status || '').toLowerCase())) {
-    if (paydunyaEligible) {
-      return startApprovedPayDunyaWithdrawal(wr.id, 'lomopay', wr.provider_status, wr.provider_payload);
-    }
-    const detail = 'LomoPay a refusé ou échoué et PayDunya ne prend pas en charge ce canal.';
-    const { error } = await supabase.rpc('nova_finalize_lomopay_withdrawal_failure', {
-      p_withdrawal_id: wr.id, p_provider_token: wr.provider_token || '',
-      p_provider_payload: wr.provider_payload || {}, p_failure_reason: detail
-    });
-    if (error) throw error;
-    return { status: 'rejected', withdrawal_id: wr.id, provider: 'lomopay' };
+    // Do not reroute an existing LomoPay withdrawal to another provider.
+    return { status: wr.provider_status, withdrawal_id: wr.id, provider: 'lomopay' };
   }
-
   if (!lomoEligible) {
     if (paydunyaEligible) return startApprovedPayDunyaWithdrawal(wr.id, null, null, null);
     throw new Error('Aucun prestataire de retrait n’est disponible pour ce pays et cet opérateur.');
